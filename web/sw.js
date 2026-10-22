@@ -1,14 +1,50 @@
-/* واحة اللسان العربي: يعمل دون إنترنت بعد أول فتح (في نسخة الويب). أندرويد وسطح المكتب يقرآن الملفات من الجهاز مباشرة. */
-const CACHE = "waha-v1.5";
-const ASSETS = ["./", "./index.html", "./manifest.json", "./js/android-shim.js", "./fonts/fonts.css",
-  "./fonts/Amiri-Regular.woff", "./fonts/Amiri-Bold.woff", "./fonts/Tajawal-Regular.woff", "./fonts/Tajawal-Medium.woff", "./fonts/Tajawal-Bold.woff", "./fonts/Tajawal-ExtraBold.woff", "./fonts/ArefRuqaa-Regular.woff", "./fonts/ArefRuqaa-Bold.woff"];
-self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS.map(u => new Request(u, { cache: "reload" })))).then(() => self.skipWaiting())); });
-self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
-self.addEventListener("fetch", e => {
-  if (e.request.method !== "GET" || !e.request.url.startsWith("http")) return;
-  const url = new URL(e.request.url); if (url.pathname.includes("/hasaniya/")) return; /* للحسنية عامل الخدمة الخاص بها */
-  const nav = e.request.mode === "navigate";
-  e.respondWith(caches.match(e.request, { ignoreSearch: nav }).then(c => c || (nav ? caches.match("./index.html") : undefined)).then(cached => {
-    const net = fetch(e.request).then(res => { if (res && res.status === 200 && res.type === "basic") { const cl = res.clone(); caches.open(CACHE).then(c => c.put(e.request, cl)); } return res; }).catch(() => cached);
-    return cached || net; }));
+/* واحة اللسان العربي — عامل الخدمة الوحيد للمنتج كله: الواحة (./) و«كنوز البيان» (kunuz/) والحسنية (hasaniya/).
+   يحفظ كل الملفات عند أول فتح فيعمل التطبيق دون إنترنت. بيانات الأطفال لا تمرّ من هنا: هي في ذاكرة المتصفح على الجهاز.
+   لا يمسح إلا ذاكرته هو (waha-…) وذاكرة النسخ القديمة من هذا المنتج، ولا يقترب من ذاكرة أي تطبيق آخر على النطاق نفسه.
+   أندرويد وسطح المكتب يقرآن الملفات من الجهاز مباشرة، فلا يُسجَّل فيهما. */
+var CACHE = 'waha-63b7118ad2';
+var ASSETS = ["./", "./index.html", "./manifest.json", "./fonts/Amiri-Bold.woff", "./fonts/Amiri-Regular.woff", "./fonts/AmiriQuran-Regular.woff", "./fonts/ArefRuqaa-Bold.woff", "./fonts/ArefRuqaa-Regular.woff", "./fonts/NotoNaskhArabic-Var.woff", "./fonts/ReemKufi-Var.woff", "./fonts/Tajawal-Bold.woff", "./fonts/Tajawal-ExtraBold.woff", "./fonts/Tajawal-Medium.woff", "./fonts/Tajawal-Regular.woff", "./fonts/fonts.css", "./hasaniya/index.html", "./hasaniya/css/styles.css", "./hasaniya/img/scenes/s10v14.webp", "./hasaniya/img/scenes/s11av11.webp", "./hasaniya/img/scenes/s11av5.webp", "./hasaniya/img/scenes/s11bv3.webp", "./hasaniya/img/scenes/s11bv4.webp", "./hasaniya/img/scenes/s11bv9.webp", "./hasaniya/img/scenes/s12av3.webp", "./hasaniya/img/scenes/s12bv5.webp", "./hasaniya/img/scenes/s12cv6.webp", "./hasaniya/img/scenes/s13v1.webp", "./hasaniya/img/scenes/s13v4.webp", "./hasaniya/img/scenes/s2v1.webp", "./hasaniya/img/scenes/s3v7.webp", "./hasaniya/img/scenes/s4v11.webp", "./hasaniya/img/scenes/s4v12.webp", "./hasaniya/img/scenes/s4v14.webp", "./hasaniya/img/scenes/s5v1.webp", "./hasaniya/img/scenes/s5v10.webp", "./hasaniya/img/scenes/s5v9.webp", "./hasaniya/img/scenes/s6v4.webp", "./hasaniya/img/scenes/s6v7.webp", "./hasaniya/img/scenes/s7v1.webp", "./hasaniya/img/scenes/s8v2.webp", "./hasaniya/img/scenes/s9v1.webp", "./hasaniya/img/scenes/s9v3.webp", "./hasaniya/js/achievements.js", "./hasaniya/js/android-shim.js", "./hasaniya/js/app.js", "./hasaniya/js/ask.js", "./hasaniya/js/audio.js", "./hasaniya/js/backup.js", "./hasaniya/js/companion.js", "./hasaniya/js/config.js", "./hasaniya/js/dashboard.js", "./hasaniya/js/editor.js", "./hasaniya/js/exercises.js", "./hasaniya/js/extras.js", "./hasaniya/js/game.js", "./hasaniya/js/guide.js", "./hasaniya/js/i18n.js", "./hasaniya/js/journey.js", "./hasaniya/js/leitner.js", "./hasaniya/js/parent.js", "./hasaniya/js/parser.js", "./hasaniya/js/pin.js", "./hasaniya/js/places.js", "./hasaniya/js/print.js", "./hasaniya/js/profile.js", "./hasaniya/js/progress.js", "./hasaniya/js/quiz.js", "./hasaniya/js/recall.js", "./hasaniya/js/recitation.js", "./hasaniya/js/safety.js", "./hasaniya/js/shadow.js", "./hasaniya/js/storage.js", "./hasaniya/js/studio.js", "./hasaniya/js/tools.js", "./hasaniya/js/ui.js", "./hasaniya/js/upgrades.js", "./hasaniya/js/users.js", "./hasaniya/js/utils.js", "./hasaniya/js/voice.js", "./hasaniya/js/voicepack.js", "./hasaniya/js/waha-early.js", "./hasaniya/js/waha-late.js", "./hasaniya/js/weekly.js", "./hasaniya/js/data/discussion.js", "./hasaniya/js/data/explanations.js", "./hasaniya/js/data/khilaf.js", "./hasaniya/js/data/links.js", "./hasaniya/js/data/manzumah.js", "./hasaniya/js/data/places.js", "./hasaniya/js/data/quizzes.js", "./hasaniya/js/data/riddles.js", "./hasaniya/js/data/scenes.js", "./hasaniya/js/data/stickers.js", "./hasaniya/js/data/stories.js", "./js/android-shim.js", "./kunuz/index.html"];
+var OLD = /^(waha-|kunuz-app-|kunuz-fonts$)/;
+
+function precache() {
+  return caches.open(CACHE).then(function (c) {
+    return c.addAll(ASSETS.map(function (u) { return new Request(u, { cache: 'reload' }); }));
+  });
+}
+self.addEventListener('install', function (e) {
+  e.waitUntil(precache().then(function () { return self.skipWaiting(); }));
+});
+self.addEventListener('activate', function (e) {
+  e.waitUntil(caches.keys().then(function (ks) {
+    return Promise.all(ks.filter(function (k) { return OLD.test(k) && k !== CACHE; }).map(function (k) { return caches.delete(k); }));
+  }).then(function () { return self.clients.claim(); }));
+});
+
+/* the page for a navigation: the section's own index.html */
+function pageFor(u) {
+  var p = u.pathname, base = new URL('./', self.location.href).pathname;
+  var rest = p.indexOf(base) === 0 ? p.slice(base.length) : p;
+  if (/^kunuz\//.test(rest)) return './kunuz/index.html';
+  if (/^hasaniya\//.test(rest)) return './hasaniya/index.html';
+  return './index.html';
+}
+self.addEventListener('fetch', function (e) {
+  var r = e.request;
+  if (r.method !== 'GET' || !/^https?:/.test(r.url)) return;
+  var u = new URL(r.url);
+  if (u.origin !== self.location.origin) return;
+  var nav = r.mode === 'navigate';
+  e.respondWith(caches.open(CACHE).then(function (c) {
+    return c.match(r, { ignoreSearch: nav }).then(function (hit) {
+      if (hit) return hit;
+      if (nav) {
+        /* another app on this origin may have emptied our store: refill it in the background */
+        c.keys().then(function (ks) { if (ks.length < ASSETS.length) precache().catch(function () {}); });
+      }
+      return fetch(r).then(function (res) {
+        if (res && res.status === 200 && res.type === 'basic') { var cp = res.clone(); c.put(r, cp); }
+        return res;
+      }).catch(function () { return nav ? c.match(pageFor(u)) : undefined; });
+    });
+  }));
 });

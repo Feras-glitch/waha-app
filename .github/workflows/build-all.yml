@@ -3,7 +3,8 @@
 #   2) أندرويد APK موقّع بالمفتاح الثابت (أو نسخة تجريبية إن لم تُضف المفاتيح بعد)
 #   3) ويندوز ولينكس (Electron)، وملفات الويب
 #   4) إصدار في صفحة Releases باسم رقم النسخة، فيه كل الملفات
-# ملاحظة: web/index.html يُبنى خارج المستودع من أجزاء المشروع (tools/build_app.py في مشروع Claude) ثم يُرفع هنا.
+# ملاحظة: web/ (إلا web/tests) يُبنى خارج المستودع من أجزاء المشروع في مشروع Claude (tools/build.py ثم tools/publish.py) ثم يُرفع هنا:
+#   الواحة web/index.html، و«كنوز البيان» web/kunuz/، والحسنية web/hasaniya/ (نسخة مثبّتة من مستودعها + طبقة تكامل)، وعامل خدمة واحد web/sw.js.
 name: Build all
 
 on:
@@ -40,7 +41,7 @@ jobs:
       - name: Copy web app into Android assets
         run: |
           mkdir -p android/app/src/main/assets/www
-          cp -r web/index.html web/sw.js web/manifest.json web/js web/fonts web/hasaniya android/app/src/main/assets/www/
+          cp -r web/index.html web/sw.js web/manifest.json web/js web/fonts web/kunuz web/hasaniya android/app/src/main/assets/www/
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -97,7 +98,7 @@ jobs:
       - name: Web zip
         run: |
           mkdir -p out
-          (cd web && zip -qr ../out/waha-web.zip index.html sw.js manifest.json js fonts hasaniya)
+          (cd web && zip -qr ../out/waha-web.zip index.html sw.js manifest.json js fonts kunuz hasaniya)
       - name: Windows and Linux (Electron)
         run: bash desktop/package.sh "$ELECTRON_VERSION" desk
       - name: Check that the Linux version opens the app
@@ -128,7 +129,7 @@ jobs:
       - name: Prepare site
         run: |
           rm -rf site && mkdir -p site
-          cp -r web/index.html web/sw.js web/manifest.json web/js web/fonts web/hasaniya site/
+          cp -r web/index.html web/sw.js web/manifest.json web/js web/fonts web/kunuz web/hasaniya site/
           touch site/.nojekyll
       - uses: peaceiris/actions-gh-pages@v4
         with:

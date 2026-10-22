@@ -7,3 +7,7 @@
 @font-face{font-family:'Tajawal';src:url(Tajawal-ExtraBold.woff) format('woff');font-weight:800;font-display:swap}
 @font-face{font-family:'Aref Ruqaa';src:url(ArefRuqaa-Regular.woff) format('woff');font-weight:400;font-display:swap}
 @font-face{font-family:'Aref Ruqaa';src:url(ArefRuqaa-Bold.woff) format('woff');font-weight:700;font-display:swap}
+/* خطوط «كنوز البيان» (kunuz/): خطّ المصحف، والنسخ للنصوص، والكوفي للعناوين. Noto Naskh Arabic وReem Kufi خطّان متغيّرا الوزن (400–700). */
+@font-face{font-family:'Amiri Quran';src:url(AmiriQuran-Regular.woff) format('woff');font-weight:400;font-display:swap}
+@font-face{font-family:'Noto Naskh Arabic';src:url(NotoNaskhArabic-Var.woff) format('woff');font-weight:400 700;font-display:swap}
+@font-face{font-family:'Reem Kufi';src:url(ReemKufi-Var.woff) format('woff');font-weight:400 700;font-display:swap}
