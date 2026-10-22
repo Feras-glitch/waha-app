@@ -282,7 +282,7 @@ mark.cn{background:var(--sky-soft);color:var(--sky);font-weight:700}
 .ktile .n{position:absolute;top:6px;inset-inline-end:8px;background:var(--date);color:#fff;border-radius:999px;font-size:.8rem;padding:0 7px}
 .dots{display:flex;gap:6px;justify-content:center}
 .dots i{width:12px;height:12px;border-radius:50%;background:var(--line)}
-.dots i.ok{background:var(--palm-deep)}.dots i.learn{border-radius:3px;background:var(--date-soft)}.dots i.learn.ok{background:var(--palm)}.kcard.learn .big{font-size:1.5rem;line-height:1.9;margin:6px 0}.kbag{display:flex;flex-direction:column;gap:10px}.kcard.kw{padding:10px 12px;gap:4px}.kwords{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:6px}.kwords span{background:var(--date-soft);color:#3a2a12;border-radius:10px;padding:3px 10px;font-size:.95rem}.kcard .lrn{margin:4px 0;font-size:1.15rem;line-height:1.9;text-align:center}.dots i.bad{background:var(--date)}.dots i.now{outline:3px solid var(--date-soft)}
+.dots i.ok{background:var(--palm-deep)}.dots i.learn{border-radius:3px;background:var(--date-soft)}.dots i.learn.ok{background:var(--palm)}.kcard.learn .big{font-size:1.5rem;line-height:1.9;margin:6px 0}.kscene .kav{position:absolute;top:8px;inset-inline-start:8px;border:2px solid var(--paper);border-radius:50%;line-height:0}.kcard.msg{border:2px solid var(--date-soft)}.kbag{display:flex;flex-direction:column;gap:10px}.kcard.kw{padding:10px 12px;gap:4px}.kwords{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:6px}.kwords span{background:var(--date-soft);color:#3a2a12;border-radius:10px;padding:3px 10px;font-size:.95rem}.kcard .lrn{margin:4px 0;font-size:1.15rem;line-height:1.9;text-align:center}.dots i.bad{background:var(--date)}.dots i.now{outline:3px solid var(--date-soft)}
 .kcard{background:var(--paper);border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 2px 10px rgba(60,40,10,.1)}
 .kcard .kq{font-size:1.45rem;line-height:1.8;font-weight:700;text-align:center}
 .kopts{display:grid;gap:10px}
@@ -317,6 +317,7 @@ mark.cn{background:var(--sky-soft);color:var(--sky);font-weight:700}
   <section id="kidHello" class="kid" hidden></section>
   <section id="kidBag" class="kid" hidden></section>
   <section id="kidSay" class="kid" hidden></section>
+  <section id="kidFam" class="kid" hidden></section>
   <section id="home">
     <div class="scene" id="scene"></div>
     <div class="card" id="placeBox" hidden style="padding:12px 14px"></div>
@@ -1211,6 +1212,7 @@ const OASES = [
  {id:'hello', name:'أهلًا', bl:'', games:[], tabs:[['kidHello','أهلًا']], hide:true},
  {id:'bag', name:'كلماتي', bl:'', games:[], tabs:[['kidBag','كلماتي']], hide:true},
  {id:'say', name:'قل الجملة', bl:'', games:[], tabs:[['kidSay','قل الجملة']], hide:true},
+ {id:'fam', name:'تحدّي العائلة', bl:'', games:[], tabs:[['kidFam','تحدّي العائلة']], hide:true},
  {id:'review', name:'مراجعة اليوم', bl:'', games:[], tabs:[['rvCard','مراجعة اليوم']], hide:true},
  {id:'place', name:'تحديد المستوى', bl:'', games:[], tabs:[['plCard','تحديد المستوى']], hide:true},
  {id:'dad', name:'لوحة ولي الأمر', bl:'', games:[], tabs:[['dad','لوحة الأب']], hide:true},
@@ -1854,18 +1856,19 @@ INIT.test = renderTest;
 RESETS.push(() => { TS = null; });
 
 /* ================= لوحة الأب ================= */
-let ddTab = 'progress';
+let ddTab = 'today';
 function renderDad(){
   const C = $('ddCard');
   if (TEACHER){ C.innerHTML = `<div class="row" style="justify-content:space-between"><p class="lbl" style="margin:0">ملف المعلم</p><button class="back" type="button" id="ddHome">→ الواحات</button></div><p class="note">استورد ملف الطالب الذي أرسله ولي الأمر، واستمع، واضغط الكلمات الخاطئة، واكتب أو سجّل ملاحظتك، ثم اعتمد أو اطلب التصحيح، وصدّر الملف لولي الأمر.</p><div id="ddRec" class="queue"></div>`;
     C.querySelector('#ddHome').addEventListener('click', () => { TEACHER = false; go('home'); }); renderReview($('ddRec'), true); return; }
-  const tabs = [['progress','التقدّم'],['rec','التسجيلات'],['gift','الهدايا'],['amal','اعمل به'],['voice','صوت الرفيق'],['kidset','واجهة الطفل'],['tri','ثلاث لغات'],['week','تقرير الجمعة'],['write','الكتابات'],['kq','أسئلة الأبناء']];
+  const tabs = [['today','سطر اليوم'],['progress','التقدّم'],['rec','التسجيلات'],['gift','الهدايا'],['amal','اعمل به'],['voice','صوت الرفيق'],['kidset','واجهة الطفل'],['tri','ثلاث لغات'],['week','تقرير الجمعة'],['write','الكتابات'],['kq','أسئلة الأبناء']];
   C.innerHTML = `<div class="row" style="justify-content:space-between"><p class="lbl" style="margin:0">لوحة ولي الأمر — ${avatarHtml(K(), 28)} ${esc(K().name)} (${K().age} سنوات)</p><button class="back" type="button" id="ddHome">→ واحتي</button></div>
    <div class="chips" id="ddTabs">${tabs.map(([k, l]) => `<button class="chip2" type="button" data-k="${k}" aria-pressed="${k === ddTab}">${l}</button>`).join('')}</div><div id="ddBody" style="display:flex;flex-direction:column;gap:10px"></div>`;
   C.querySelector('#ddHome').addEventListener('click', () => go('home'));
   C.querySelector('#ddTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; ddTab = b.dataset.k; renderDad(); });
   const B = C.querySelector('#ddBody');
-  if (ddTab === 'progress'){
+  if (ddTab === 'today'){ renderTodayLine(B); }
+  else if (ddTab === 'progress'){
     const queue = store.get(`queue:${kid}`, []); const hist = store.get(`tests:${kid}`, []);
     const rows = Object.keys(GNAME).map(g => { const s = gstats(g); return s.seen ? `<tr><td>${GNAME[g]}</td><td>${s.mastered}</td><td>${s.seen}</td><td>${s.wrong}</td></tr>` : ''; }).join('');
     const hard = Object.keys(GNAME).flatMap(g => seen(g).map(id => ({g, id, m: mget(g, id)}))).filter(x => x.m.wrong >= 2 && !mastered(x.g, x.id)).sort((a, b) => b.m.wrong - a.m.wrong).slice(0, 10);
@@ -1914,6 +1917,22 @@ function renderDad(){
       ok.addEventListener('click', () => { store.set('kq', pend.filter(x => x.id !== q.id)); store.set('kqa', [...appr, q]); renderDad(); checkStages(); }); no.addEventListener('click', () => { store.set('kq', pend.filter(x => x.id !== q.id)); renderDad(); });
       row.append(ok, no); d.appendChild(row); Kq.appendChild(d); });
   }
+}
+/* «سطر اليوم»: لكل طفل سطر واحد — رحلة اليوم، وما أخطأ فيه، وآخر ما قاله بصوته — ورسالة منك إليه بصوتك أو بكلمة */
+async function renderTodayLine(B){
+  B.innerHTML = '<p class="note">كل الأطفال في شاشة واحدة. اسمع ما قالوه اليوم، وأرسل لكل واحد كلمة أو صوتك: يسمعها من رفيقه عند فتح واحته.</p>';
+  const all = await recAll(); const td = today();
+  kids.forEach((k, i) => {
+    const log = store.get(`tripLog:${i}`, [])[0]; const doneToday = log && log.date === td && !log.extra; const recs = all.filter(r => r.kid === i && r.date === td && ['أخبرني', 'جملة', 'كلمة', 'رأيتُها اليوم'].includes(r.kind)).sort((a, b) => b.id.localeCompare(a.id));
+    const wrong = doneToday ? log.wrong : []; const bag = store.get(`bag:${i}`, []).filter(w => w.day === dayN()).map(w => w.w);
+    const d = el('div','qi'); d.innerHTML = `<div class="row" style="justify-content:space-between;align-items:center"><span>${avatarHtml(k, 28)} <b>${esc(k.name)}</b> ${doneToday ? '<span class="badge ok">رحلة اليوم ✓</span>' : '<span class="badge wait">لم يرحل اليوم</span>'}</span><span class="ref">🔥 ${(() => { const kk = kid; kid = i; const n = dayStreak(); kid = kk; return n; })()} يوم</span></div>
+      ${doneToday ? `<p class="note" style="margin:4px 0">تعلّم: ${bag.length ? bag.map(esc).join('، ') : (log.learned.length ? log.learned.length + ' دروس' : '—')} · أصاب ${log.ok.length} · ${wrong.length ? `<span style="color:var(--date)">أخطأ في: ${wrong.map(esc).join(' · ')}</span>` : 'بلا أخطاء'}</p>` : ''}`;
+    recs.slice(0, 3).forEach(r => { const row = el('div','row'); row.style.alignItems = 'center'; row.innerHTML = `<span class="chip">${esc(r.kind)}</span> <span class="note">${esc(r.text).slice(0, 70)}</span>`; const m = mediaEl(r); if (m.tagName === 'AUDIO'){ m.style.width = '160px'; } row.appendChild(m); d.appendChild(row); });
+    const mrow = el('div','row'); mrow.style.cssText = 'align-items:center;flex-wrap:wrap;gap:6px'; const tx = el('input','f'); tx.placeholder = 'كلمة له (تُقرأ بصوت الرفيق)'; tx.style.cssText = 'flex:1 1 100%;min-width:100%'; const sendT = el('button','btn ghost sm','أرسل الكلمة'); sendT.type = 'button'; const mic = el('button','btn sm','🎙 سجّل رسالة بصوتك'); mic.type = 'button'; const mb = el('div'); const fb = el('p','fb');
+    sendT.addEventListener('click', async () => { const t = tx.value.trim(); if (!t) return; await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid: -1, to: i, kind: 'من أبي', ref: td, text: t, date: td, type: '', blob: null, status: 'approved', notes: [], source: 'local', heard: false}); tx.value = ''; fb.textContent = `أُرسلت إلى ${k.name}؛ يسمعها عند فتح واحته.`; fb.className = 'fb ok'; });
+    mic.addEventListener('click', () => { if (mb.childElementCount){ mb.innerHTML = ''; return; } micWidget(mb, {label: 'اضغط وسجّل رسالتك', max: 60000, onSaved: async blob => { await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid: -1, to: i, kind: 'من أبي', ref: td, text: tx.value.trim(), date: td, type: blob.type || 'audio/webm', blob, status: 'approved', notes: [], source: 'local', heard: false}); fb.textContent = `أُرسلت رسالتك الصوتية إلى ${k.name}.`; fb.className = 'fb ok'; }}); });
+    mrow.append(tx, sendT, mic); d.append(mrow, mb, fb); B.appendChild(d);
+  });
 }
 INIT.dad = renderDad;
 
@@ -2041,7 +2060,7 @@ let IDB = null;
 function idb(){ if (IDB) return IDB; IDB = new Promise((res, rej) => { try { const r = indexedDB.open('oasisRec', 3); r.onupgradeneeded = () => { const d = r.result; if (!d.objectStoreNames.contains('rec')) d.createObjectStore('rec', {keyPath:'id'}); if (!d.objectStoreNames.contains('gift')) d.createObjectStore('gift', {keyPath:'id'}); if (!d.objectStoreNames.contains('voice')) d.createObjectStore('voice', {keyPath:'id'}); }; r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); } }); return IDB; }
 async function recAll(){ try { const d = await idb(); return await new Promise((res, rej) => { const q = d.transaction('rec').objectStore('rec').getAll(); q.onsuccess = () => res(q.result || []); q.onerror = () => rej(q.error); }); } catch (e) { return []; } }
 /* ترحيل kid في التسجيلات والهدايا عند حذف طفل */
-async function shiftKidIdb(from){ try { const d = await idb(); for (const [st, fields] of [['rec', ['kid']], ['gift', ['to', 'from']]]){ await new Promise((res, rej) => { const t = d.transaction(st, 'readwrite'); const os = t.objectStore(st); const q = os.openCursor(); q.onsuccess = () => { const c = q.result; if (!c){ return; } const r = c.value; let drop = false, ch = false; fields.forEach(f => { if (typeof r[f] !== 'number') return; if (r[f] === from) drop = true; else if (r[f] > from){ r[f]--; ch = true; } }); if (drop) c.delete(); else if (ch) c.update(r); c.continue(); }; t.oncomplete = res; t.onerror = () => rej(t.error); }); } } catch (e) {} }
+async function shiftKidIdb(from){ try { const d = await idb(); for (const [st, fields] of [['rec', ['kid', 'to']], ['gift', ['to', 'from']]]){ await new Promise((res, rej) => { const t = d.transaction(st, 'readwrite'); const os = t.objectStore(st); const q = os.openCursor(); q.onsuccess = () => { const c = q.result; if (!c){ return; } const r = c.value; let drop = false, ch = false; fields.forEach(f => { if (typeof r[f] !== 'number') return; if (r[f] === from) drop = true; else if (r[f] > from){ r[f]--; ch = true; } }); if (drop) c.delete(); else if (ch) c.update(r); c.continue(); }; t.oncomplete = res; t.onerror = () => rej(t.error); }); } } catch (e) {} }
 async function recPut(r){ const d = await idb(); return new Promise((res, rej) => { const t = d.transaction('rec', 'readwrite'); t.objectStore('rec').put(r); t.oncomplete = res; t.onerror = () => rej(t.error); }); }
 async function recDel(id){ const d = await idb(); return new Promise((res, rej) => { const t = d.transaction('rec', 'readwrite'); t.objectStore('rec').delete(id); t.oncomplete = res; t.onerror = () => rej(t.error); }); }
 async function recCountApproved(){ const all = await recAll(); kids.forEach((k, i) => store.set(`recApproved:${i}`, all.filter(r => r.kid === i && r.status === 'approved' && r.source !== 'import').length)); checkStages(); }
@@ -2051,6 +2070,7 @@ const STATUS = {pending:['بانتظار المراجعة','wait'], approved:['�
 const isQuran = r => r.kind === 'آية' || r.kind === 'صفحة';
 const giftable = r => r.status === 'approved' && (!isQuran(r) || r.approvedBy === 'المعلم');
 function statusBadge(r){ if (r.status === 'approved' && isQuran(r) && r.approvedBy !== 'المعلم') return '<span class="badge wait">معتمد مبدئيًّا (القرآن يعتمده الشيخ)</span>'; return `<span class="badge ${STATUS[r.status][1]}">${STATUS[r.status][0]}</span>`; }
+function mediaEl(r){ if (r && r.type && String(r.type).startsWith('image/')){ const i = document.createElement('img'); i.src = URL.createObjectURL(r.blob); i.alt = ''; i.style.cssText = 'max-width:70%;max-height:260px;border-radius:12px;display:block;margin:6px auto'; return i; } return audioEl(r.blob); }
 function audioEl(blob){ const a = document.createElement('audio'); a.controls = true; a.preload = 'none'; a.style.width = '100%'; a.src = URL.createObjectURL(blob); return a; }
 function wordsHtml(text, marks, clickable){ return text.split(/\s+/).map((w, i) => `<span class="${clickable ? 'tok' : ''} ${marks.includes(i) ? 'rw' : ''}" data-i="${i}" style="${marks.includes(i) ? 'background:color-mix(in srgb,var(--bad) 22%,var(--bg));border-radius:6px;padding:0 4px' : ''}">${esc(w)}</span>`).join(' '); }
 function recordFrom(kind, ref, text, fromGift, opts){
@@ -2075,7 +2095,7 @@ async function renderShelf(){
   if (!list.length){ L.innerHTML = `<p class="note">${all.length ? 'لا شيء في هذه الحالة.' : 'لا تسجيلات بعد. في كل آية وحديث وبيت زرُّ 🎙، أو ابدأ من «تسجيل جديد».'}</p>`; return; }
   list.forEach(r => { const d = el('div','qi'); const last = r.notes[r.notes.length - 1]; const marks = last ? last.marks || [] : [];
     d.innerHTML = `<div class="row" style="justify-content:space-between"><span><span class="chip">${esc(r.kind)}</span> ${esc(r.ref)} <span class="ref">${esc(r.date)}</span></span>${statusBadge(r)}</div><p class="tx" style="font-size:1.2rem">${wordsHtml(r.text, marks, false)}</p>`;
-    d.appendChild(audioEl(r.blob));
+    d.appendChild(mediaEl(r));
     r.notes.forEach(n => { const nn = el('div','ai', `<span class="h">${esc(n.by)} · ${esc(n.date || '')}</span>${n.text ? `<p style="margin:0">${esc(n.text)}</p>` : ''}${n.marks && n.marks.length ? `<p class="note">الكلمات المعلَّمة بالأحمر هي التي يطلب منك إعادتها.</p>` : ''}`); if (n.audio) nn.appendChild(audioEl(n.audio)); d.appendChild(nn); });
     const row = el('div','btns'); row.style.justifyContent = 'flex-start';
     if (r.status !== 'approved'){ const re = el('button','btn ghost sm','🎙 أعد التسجيل'); re.type='button'; re.addEventListener('click', () => recordFrom(r.kind, r.ref, r.text, r.fromGift, r.page ? {extra:{page:r.page, unit:r.unit}} : undefined)); row.appendChild(re); }
@@ -2119,7 +2139,7 @@ async function renderReview(box, teacher){
   all.forEach(r => { const d = el('div','qi'); const last = r.notes[r.notes.length - 1]; let marks = last && last.by === (teacher ? 'المعلم' : 'ولي الأمر') ? [...(last.marks || [])] : [];
     d.innerHTML = `<div class="row" style="justify-content:space-between"><span>${teacher ? `<b>${esc(r.kidName || '')}</b> · ` : ''}<span class="chip">${esc(r.kind)}</span> ${esc(r.ref)} <span class="ref">${esc(r.date)}</span></span>${statusBadge(r)}</div>${isQuran(r) && !teacher ? '<p class="note">القرآن: اعتمادك مبدئي ولا يُهدى به؛ الهدية بعد اعتماد الشيخ.</p>' : ''}
       <p class="note">اضغط الكلمة التي أخطأ فيها لتعليمها:</p><p class="tx" style="font-size:1.2rem" data-w>${wordsHtml(r.text, marks, true)}</p>`;
-    d.appendChild(audioEl(r.blob));
+    d.appendChild(mediaEl(r));
     r.notes.forEach(n => { const nn = el('div','ai', `<span class="h">${esc(n.by)} · ${esc(n.date || '')}</span>${n.text ? `<p style="margin:0">${esc(n.text)}</p>` : ''}`); if (n.audio) nn.appendChild(audioEl(n.audio)); d.appendChild(nn); });
     const ta = document.createElement('textarea'); ta.placeholder = 'ملاحظتك (الخطأ والصواب كما يُكتب ويُقرأ)'; ta.style.minHeight = '4em'; ta.id = 'nt' + r.id; d.appendChild(ta);
     const af = document.createElement('input'); af.type = 'file'; af.accept = 'audio/*'; af.setAttribute('capture', ''); af.hidden = true; af.id = 'na' + r.id; d.appendChild(af);
@@ -2460,6 +2480,7 @@ const RADIO_SEGS = [
   {id:'matn',   title:'فقرة المتون', kinds:['متن']},
   {id:'news',   title:'خبر الصحيفة', fallback: seed => { const x = sPick(familyNews(), seed); return x && {text:`${x.title ? x.title + ': ' : ''}${x.text}`, ref:`بقلم ${x.who}`}; }},
   {id:'tri',    title:'كلمة بثلاث لغات', fallback: seed => { const x = sPick(triApproved(), seed); return x && {text:`${x.lemma} — ${[x.zh, x.en].filter(Boolean).join(' · ')}`, ref:`كتبها ${(kids[x.kid] || {}).name || x.by || ''}`}; }},
+  {id:'fam',    title:'تحدّي العائلة', fallback: seed => { const ks = store.keys().filter(k => /^fam:\d{4}-/.test(k)).sort().slice(-1); const f = ks.length ? store.get(ks[0], null) : null; return f && {text:`فريق ${f.players.join(' و')} أصاب ${f.score} من ${f.n} في تحدّي العائلة${f.score >= 3 ? '. أحسنتم!' : '. الجولة القادمة أفضل'}`, ref:f.date}; }},
   {id:'kq',     title:'سؤال الإذاعة', fallback: seed => { const x = sPick(store.get('kqa', []), seed); return x && {text:x.q, ref:`سؤال ${(kids[x.kid] || {}).name || ''}`, answer:x.a}; }},
   {id:'amal',   title:'عمل اليوم', fallback: () => { const a = (typeof amalToday === 'function') ? amalToday() : null; return a && {text:a.deed, ref:'اعمل به اليوم'}; }},
 ];
@@ -2700,11 +2721,24 @@ function renderHello(){
 }
 
 /* ---------------- الشاشة الأولى: الواحة وزر واحد ---------------- */
+/* ذاكرة الرفيق: يذكّر بكلمة الأمس، ويلاحظ الغياب */
+function lastActiveDay(){ let best = null; store.keys().forEach(k => { const m = /^dailyDone:(\d+):(\d{4})-(\d\d)-(\d\d)$/.exec(k); if (m && +m[1] === kid){ const d = dayN(new Date(+m[2], +m[3] - 1, +m[4])); if (best == null || d > best) best = d; } }); return best; }
+function companionMemory(first){ const out = []; const last = lastActiveDay(); const gap = last == null ? 0 : dayN() - last;
+  if (first && gap >= 3) out.push(T(`غبتَ ${gap === 3 ? 'ثلاثة أيام' : gap <= 10 ? gap + ' أيام' : 'أيامًا كثيرة'}! اشتقتُ إليك`, `غبتِ ${gap === 3 ? 'ثلاثة أيام' : gap <= 10 ? gap + ' أيام' : 'أيامًا كثيرة'}! اشتقتُ إليكِ`));
+  else out.push(CL.greet());
+  const y = store.get(`bag:${kid}`, []).find(w => w.day === dayN() - 1 || w.day === dayN() - 2);
+  if (first && y && Math.random() < .8) out.push(T(`أمس تعلّمتَ كلمة «${y.w}». هل تذكر معناها؟`, `أمس تعلّمتِ كلمة «${y.w}». هل تذكرين معناها؟`));
+  return out; }
 async function renderKidHome(){
   const C = $('kidHome'); C.innerHTML = ''; const u = unlockedSet(); if (store.get(`planted:${kid}`, false)) u.add('seed');
   const tripDone = store.get(`trip:${kid}:${today()}`, null) && store.get(`trip:${kid}:${today()}`).done;
-  C.appendChild(talkRow(tripDone ? CL.doneToday() : [K().name, CL.greet()], {say: !store.get(`greeted:${kid}:${today()}`, false)})); store.set(`greeted:${kid}:${today()}`, true);
-  const sc = el('div','kscene'); const ds = dayStreak(); sc.innerHTML = kidScene(u, '') + `<span class="cnt">🌴 ${tripsDone()} · 🟤 ${dates()}${ds > 1 ? ` · 🔥 ${ds}` : ''}</span>`; C.appendChild(sc);
+  const firstToday = !store.get(`greeted:${kid}:${today()}`, false);
+  C.appendChild(talkRow(tripDone ? CL.doneToday() : [K().name, ...companionMemory(firstToday)], {say: firstToday})); store.set(`greeted:${kid}:${today()}`, true);
+  /* رسالة من ولي الأمر لم تُسمع بعد */
+  try { const msgs = (await recAll()).filter(r => r.kind === 'من أبي' && r.to === kid && !r.heard).sort((a, b) => b.id.localeCompare(a.id)); if (msgs.length){ const m = msgs[0]; const box = el('div','kcard msg'); box.innerHTML = `<p class="kq" style="margin:0">💌 ${T('رسالة لك من أبيك', 'رسالة لكِ من أبيكِ')}${m.text ? `: ${esc(m.text)}` : ''}</p>`; const pl = el('button','bigplay','▶ ' + T('اسمعها', 'اسمعيها')); pl.type = 'button'; pl.style.marginTop = '6px';
+    pl.addEventListener('click', async () => { voiceStop(); if (m.blob){ const a = new Audio(URL.createObjectURL(m.blob)); a.dataset.keep = '1'; VX.audio = a; companionTalk(true); a.onended = () => companionTalk(false); a.play().catch(() => {}); } else if (m.text) say(m.text); m.heard = true; try { await recPut(m); } catch (e) {} pl.textContent = '✓ ' + T('سمعتَها', 'سمعتِها'); cmpHappy(); }); box.appendChild(pl); C.appendChild(box); } } catch (e) {}
+  { const y = store.get(`bag:${kid}`, []).find(w => w.day === dayN() - 1 || w.day === dayN() - 2); if (firstToday && y && !tripDone && C.firstChild && C.firstChild.textContent.includes(y.w)){ const rv = el('button','tiny', T('أرني المعنى', 'أريني المعنى')); rv.type = 'button'; rv.addEventListener('click', () => { rv.replaceWith(el('p','lrn', `${y.w}: ${y.m}`)); say([y.w, y.m]); }); C.appendChild(rv); } }
+  const sc = el('div','kscene'); const ds = dayStreak(); sc.innerHTML = kidScene(u, '') + `<span class="cnt">🌴 ${tripsDone()} · 🟤 ${dates()}${ds > 1 ? ` · 🔥 ${ds}` : ''}</span>` + (K().photo ? `<span class="kav">${avatarHtml(K(), 44)}</span>` : ''); C.appendChild(sc);
   if (!tripDone){ const nx = el('p','note', T(`رحلة اليوم تكبر نخلتك وتأتيك بهدية جديدة`, `رحلة اليوم تكبر نخلتكِ وتأتيكِ بهدية جديدة`)); nx.style.cssText = 'text-align:center;margin:0'; C.appendChild(nx); }
   const t = store.get(`trip:${kid}:${today()}`, null);
   const play = el('button', 'bigplay' + (tripDone ? ' done' : ''), tripDone ? '▶ رحلة إضافية' : t && t.i > 0 ? '▶ أكمل رحلة اليوم' : '▶ رحلة اليوم'); play.type = 'button';
@@ -2715,6 +2749,7 @@ async function renderKidHome(){
   const tiles = [
     ['👜', 'كلماتي', () => go('bag', 'kidBag'), bagN],
     ['🗣', 'قل الجملة', () => go('say', 'kidSay'), 0],
+    ...(kids.length >= 2 ? [['👨‍👩‍👧‍👦', 'تحدّي العائلة', () => go('fam', 'kidFam'), 0]] : []),
     ['🎙', 'صوتي', () => go('rec', 'recShelf'), 0],
     ['🎁', 'هداياي', () => go('rec', 'giftShelf'), newGifts],
     ['📻', 'الإذاعة', () => go('radio'), 0],
@@ -2792,7 +2827,7 @@ function storyRecall(avoid){ const age = K().age; const cands = [];
   q.q = q.q.replace(/^.+?:\s*(?=[^:]*$)/, ''); const first = c.sfr ? c.x.intro : (c.x.retell || '').split(/[.!؟]/)[0];
   return {g, id: c.id, ...q, kind: 'review', html: `<p class="note" style="margin:0 0 6px">${esc(c.sfr ? 'تذكّر مقالة' : 'تذكّر قصة')} «${esc(c.x.title)}»: ${esc(first)}.</p>` + (q.html || '')}; }
 const TRIP_V = 3;
-function buildTrip(){
+function buildTrip(extra){
   const age = K().age; const small = age <= 8; const want = age <= 7 ? 3 : small ? 4 : 5; const qs = [], avoid = new Set();
   const add = c => { if (c && !avoid.has(c.g + '|' + c.id)){ qs.push([c]); avoid.add(c.g + '|' + c.id); } };
   const due = dueList().filter(q => q.g !== 'nt' && q.g !== 'sfr'); due.slice(0, Math.max(2, Math.min(Math.ceil(due.length / 2), small ? 2 : 3))).forEach(q => add({...q, kind: 'review'}));
@@ -2808,6 +2843,7 @@ function buildTrip(){
   const seq = []; let pending = null; const flush = () => { if (pending){ seq.push(pending); pending = null; } };
   qs.forEach(grp => { if (grp.length === 2 && grp[0].kind === 'learn' && !grp[0].story){ seq.push(grp[0]); flush(); pending = grp[1]; } else { seq.push(...grp); flush(); } });
   flush();
+  if (!extra){ if (tripsDone() % 2 === 1 && store.get(`bag:${kid}`, []).length) seq.push(seenCardPick()); seq.push({g: 'tell', id: 'tell', q: tellQuestion()}); }
   return seq.filter(Boolean);
 }
 /* بطاقة التسجيل: كل رحلة للكبار، وكل ثالث رحلة للصغار */
@@ -2823,7 +2859,7 @@ function recCardPick(){
 let TRIP = null;
 function startTrip(extra){
   const key = `trip:${kid}:${today()}`; let t = store.get(key, null);
-  if (!t || extra || t.done || t.v !== TRIP_V){ t = {v: TRIP_V, cards: buildTrip(), i: 0, res: [], done: false, extra: !!extra}; if (!extra) store.set(key, t); }
+  if (!t || extra || t.done || t.v !== TRIP_V){ t = {v: TRIP_V, cards: buildTrip(!!extra), i: 0, res: [], done: false, extra: !!extra}; if (!extra) store.set(key, t); }
   TRIP = {...t, key: extra ? null : key}; go('trip', 'kidTrip');
 }
 function tripSave(){ if (TRIP.key) store.set(TRIP.key, {v: TRIP_V, cards: TRIP.cards, i: TRIP.i, res: TRIP.res, done: TRIP.done}); }
@@ -2835,6 +2871,8 @@ function renderTrip(){
   top.append(dots, x); C.appendChild(top);
   const c = TRIP.cards[TRIP.i]; if (!c) return tripEnd();
   if (c.g === 'rec') return recCard(C, c);
+  if (c.g === 'tell') return tellCard(C, c);
+  if (c.g === 'seen') return seenCard(C, c);
   if (c.kind === 'learn') return learnView(C, c);
   const prompt = c.q || '';
   C.appendChild(talkRow(c.kind === 'review' ? [CL.remember(), prompt] : c.after ? [CL.now(), prompt] : prompt, {say: true}));
@@ -2887,6 +2925,33 @@ async function renderKidSay(){
   next.addEventListener('click', () => { voiceStop(); SAY.i++; renderKidSay(); window.scrollTo({top: 0}); });
 }
 INIT.kidSay = renderKidSay;
+/* تحدّي العائلة: خمسة أسئلة مما أتقنه الإخوة؛ الكبير يقرأ والصغير يجيب أولًا، والنقاط للفريق، ونتيجته تُذاع في إذاعة الواحة */
+let FAM = null;
+const FAM_G = ['hk', 'gzw', 'wh', 'hsq', 'hys', 'uk', 'gzd', 'ajc', 'nt'];
+function famQuestions(){ const qs = [], seen = new Set(); const kk = kid;
+  const masteredIds = []; kids.forEach((_, i) => { kid = i; FAM_G.forEach(g => { (POOL[g] ? POOL[g]() : []).forEach(id => { if (mget(g, id).ok) masteredIds.push([g, id]); }); }); }); kid = kk;
+  const pool = masteredIds.length >= 8 ? masteredIds : FAM_G.filter(g => g !== 'nt' && POOL[g]).flatMap(g => POOL[g]().map(id => [g, id]));
+  shuffle(pool).forEach(([g, id]) => { if (qs.length >= 5 || seen.has(g)) return; let q = null; try { q = GEN[g](id); } catch (e) {} if (q && q.a && q.alts && q.alts.length && !(g === 'nt' && !/^[^:]+:/.test(q.q))){ if (g === 'nt') q.q = q.q; qs.push({g, id, ...q}); seen.add(g); } });
+  return qs; }
+function renderKidFam(){
+  const C = $('kidFam'); C.innerHTML = ''; const top = el('div','row'); top.style.justifyContent = 'space-between'; const x = el('button','tiny','✕ خروج'); x.type = 'button'; x.addEventListener('click', () => { voiceStop(); FAM = null; go('kid'); });
+  if (!FAM){ top.append(el('span','chip','👨‍👩‍👧‍👦 تحدّي العائلة'), x); C.appendChild(top);
+    const sorted = [...kids].map((k, i) => ({...k, i})).sort((a, b) => (b.age || 0) - (a.age || 0)); const reader = sorted[0], first = sorted[sorted.length - 1];
+    C.appendChild(talkRow(['خمسة أسئلة للفريق كله.', `${reader.name} يقرأ السؤال بصوت عالٍ، و${first.name} يجيب أولًا، ثم يساعده الباقون.`]));
+    const card = el('div','kcard'); card.innerHTML = `<p class="kq" style="margin:0">الفريق: ${kids.map(k => esc(k.name)).join('، ')}</p><p class="lrn">إن أصبتم ثلاثة فأكثر، كل واحد يأخذ تمرتين، وتُذاع نتيجتكم في إذاعة الواحة.</p>`; C.appendChild(card);
+    const go_ = el('button','bigplay','▶ ابدأ التحدّي'); go_.type = 'button'; go_.addEventListener('click', () => { FAM = {qs: famQuestions(), i: 0, ok: 0}; renderKidFam(); }); C.appendChild(go_); return; }
+  const dots = el('div','dots'); FAM.qs.forEach((_, i) => { const d = document.createElement('i'); d.className = i < FAM.i ? (FAM.res && FAM.res[i] ? 'ok' : 'bad') : i === FAM.i ? 'now' : ''; dots.appendChild(d); }); top.append(dots, x); C.appendChild(top);
+  const q = FAM.qs[FAM.i];
+  if (!q){ const n = FAM.qs.length; const win = FAM.ok >= 3; store.set(`fam:${today()}`, {score: FAM.ok, n, players: kids.map(k => k.name), date: today()}); const kk = kid; if (win) kids.forEach((_, i) => { kid = i; store.set(`dates:${kid}`, dates() + 2); }); kid = kk;
+    C.appendChild(talkRow(win ? `أصبتم ${FAM.ok} من ${n}! فريقٌ رائع، ولكل واحد تمرتان` : `أصبتم ${FAM.ok} من ${n}. غدًا تعودون أقوى`)); if (win){ cmpHappy(); chime(true); }
+    const h = el('button','bigplay','🏠 واحتي'); h.type = 'button'; h.addEventListener('click', () => { FAM = null; go('kid'); }); C.appendChild(h); const ag = el('button','tiny','تحدٍّ آخر'); ag.type = 'button'; ag.addEventListener('click', () => { FAM = {qs: famQuestions(), i: 0, ok: 0}; renderKidFam(); }); C.appendChild(ag); return; }
+  C.appendChild(talkRow(`السؤال ${FAM.i + 1}: ${q.q}`, {say: false}));
+  const card = el('div','kcard'); if (q.html) card.insertAdjacentHTML('beforeend', `<div class="kq">${q.html}</div>`); const o = el('div','kopts'); const fb = el('p','fb'); card.append(o, fb); C.appendChild(card);
+  const next = el('button','bigplay','التالي ◀'); next.type = 'button'; next.hidden = true; C.appendChild(next);
+  mcq(o, [q.a, ...shuffle(q.alts).slice(0, 3)], q.a, st => { const ok = st === true || st === 'ok'; FAM.res = FAM.res || []; FAM.res[FAM.i] = ok; if (ok) FAM.ok++; chime(ok); if (ok) cmpHappy(); fb.textContent = ok ? 'أحسنتم!' : `الجواب: ${q.a}`; fb.className = 'fb ' + (ok ? 'ok' : 'bad'); next.hidden = false; }, 'm');
+  next.addEventListener('click', () => { voiceStop(); FAM.i++; renderKidFam(); window.scrollTo({top: 0}); });
+}
+INIT.kidFam = renderKidFam;
 function learnView(C, c){
   C.appendChild(talkRow(c.story ? CL.listen() : CL.learn(), {say: false}));
   const card = el('div','kcard learn'); card.innerHTML = `<span class="chip" style="align-self:center">📖 ${esc(c.t || '')}</span>${c.swatch ? `<span style="align-self:center;width:56px;height:56px;border-radius:50%;background:${c.swatch};border:2px solid var(--line)"></span>` : ''}${c.big ? `<p class="kq big" style="font-family:var(--f-q)">${esc(c.big).replace(/ ۞ /g, '<br>').replace(/\n/g, '<br><br>')}</p>` : ''}${c.body.map(b => `<p class="lrn">${esc(b)}</p>`).join('')}${c.words && c.words.length ? `<div class="kwords">${c.words.map(w => `<span>${esc(w)}</span>`).join('')}</div>` : ''}`;
@@ -2896,6 +2961,42 @@ function learnView(C, c){
   sayLater(all, 250); if (!c.story){ const [g, ...rest] = c.id.split('|'); markLearned(g, rest.join('|')); }
   const ok = el('button','bigplay', T('فهمتُ ◀', 'فهمتُ ◀')); ok.type = 'button'; C.appendChild(ok);
   ok.addEventListener('click', () => { voiceStop(); if (TRIP.cards[TRIP.i] !== c) return; if (!c.story) store.set(`dates:${kid}`, dates() + 1); bagAdd(c); TRIP.res.push(null); TRIP.i++; tripSave(); renderTrip(); window.scrollTo({top: 0}); });
+}
+/* «أخبرني»: سؤال مفتوح عن يوم الطفل يجيب عنه بصوته؛ يصل إلى الأب في «سطر اليوم» */
+const TELL_Q = [
+  ['ماذا أكلتَ اليوم؟', 'ماذا أكلتِ اليوم؟'], ['ماذا فعلتَ هذا الصباح؟', 'ماذا فعلتِ هذا الصباح؟'], ['من لعب معك اليوم؟ وماذا لعبتم؟', 'من لعب معكِ اليوم؟ وماذا لعبتنّ؟'],
+  ['ما أجمل شيء رأيته اليوم؟', 'ما أجمل شيء رأيتِه اليوم؟'], ['ماذا تحب أن تأكل غدًا؟', 'ماذا تحبين أن تأكلي غدًا؟'], ['صف غرفتك: ماذا فيها؟', 'صفي غرفتكِ: ماذا فيها؟'],
+  ['ماذا قرأتَ أو حفظتَ اليوم؟', 'ماذا قرأتِ أو حفظتِ اليوم؟'], ['ما الذي أضحكك اليوم؟', 'ما الذي أضحككِ اليوم؟'], ['ماذا ستفعل بعد أن تنتهي من هنا؟', 'ماذا ستفعلين بعد أن تنتهي من هنا؟'],
+  ['أخبرني عن أخيك أو أختك: ماذا يفعل الآن؟', 'أخبريني عن أخيكِ أو أختكِ: ماذا يفعل الآن؟'], ['ما الطقس اليوم؟ حارّ أم بارد؟', 'ما الطقس اليوم؟ حارّ أم بارد؟'], ['ما لونك المفضّل؟ ولماذا؟', 'ما لونكِ المفضّل؟ ولماذا؟'],
+  ['ماذا تريد أن تكون حين تكبر؟', 'ماذا تريدين أن تكوني حين تكبرين؟'], ['أخبرني عن صديقك: ما اسمه وماذا تحبان؟', 'أخبريني عن صديقتكِ: ما اسمها وماذا تحبّان؟'], ['ماذا في حقيبتك المدرسية؟', 'ماذا في حقيبتكِ المدرسية؟'],
+  ['ما آخر شيء اشتريتموه للبيت؟', 'ما آخر شيء اشتريتموه للبيت؟'], ['ماذا تفعل أمك الآن؟', 'ماذا تفعل أمكِ الآن؟'], ['أي سورة تحب أن تقرأ؟ ولماذا؟', 'أي سورة تحبين أن تقرئي؟ ولماذا؟'],
+  ['صف لي الطريق من بيتك إلى المدرسة.', 'صفي لي الطريق من بيتكِ إلى المدرسة.'], ['ما الذي تعلّمته اليوم ولم تكن تعرفه؟', 'ما الذي تعلّمتِه اليوم ولم تكوني تعرفينه؟'],
+];
+function tellQuestion(){ const asked = store.get(`tellAsked:${kid}`, []); const idx = TELL_Q.map((_, i) => i).filter(i => !asked.includes(i)); const i = pick(idx.length ? idx : TELL_Q.map((_, j) => j)); asked.push(i); store.set(`tellAsked:${kid}`, asked.slice(-15)); return T(TELL_Q[i][0], TELL_Q[i][1]); }
+function tellCard(C, c){
+  C.appendChild(talkRow([T('قبل أن نختم، أخبرني بالعربية', 'قبل أن نختم، أخبريني بالعربية'), c.q]));
+  const card = el('div','kcard'); card.innerHTML = `<p class="kq" style="margin:0">${esc(c.q)}</p><p class="lrn">${T('قل جملة أو جملتين بصوتك، وسيسمعها أبوك', 'قولي جملة أو جملتين بصوتكِ، وسيسمعها أبوكِ')}</p>`; const mb = el('div'); card.appendChild(mb); C.appendChild(card);
+  const next = el('button','bigplay','التالي ◀'); next.type = 'button'; next.hidden = true; C.appendChild(next);
+  const skip = el('button','tiny', T('ليس الآن', 'ليس الآن')); skip.type = 'button'; C.appendChild(skip);
+  micWidget(mb, {label: T('اضغط وأخبرني', 'اضغطي وأخبريني'), max: 60000, onSaved: async blob => { if (!document.body.contains(mb)) return;
+    try { await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid, kidName: K().name, kind: 'أخبرني', ref: today(), text: c.q, date: today(), type: blob.type || 'audio/webm', blob, status: 'pending', notes: [], source: 'local'}); } catch (e) { mb.appendChild(el('p','fb bad','تعذّر حفظ التسجيل.')); return; }
+    chime(true); cmpHappy(); say(T('شكرًا! سأحفظها لأبيك', 'شكرًا! سأحفظها لأبيكِ')); if (!next.hidden) return; store.set(`dates:${kid}`, dates() + 2); TRIP.res.push(true); TRIP.i++; tripSave(); next.hidden = false; skip.remove(); }});
+  const adv = () => { voiceStop(); renderTrip(); window.scrollTo({top: 0}); };
+  next.addEventListener('click', adv); skip.addEventListener('click', () => { TRIP.res.push(null); TRIP.i++; tripSave(); adv(); });
+}
+/* «رأيتُها اليوم»: كلمة من حقيبته يربطها ببيته: جملة بصوته، أو صورة من الجهاز */
+function seenCardPick(){ const bag = store.get(`bag:${kid}`, []); const done = store.get(`seenDone:${kid}`, []); const w = bag.find(x => !done.includes(x.w)) || bag[0]; return w ? {g: 'seen', id: 'seen|' + w.w, word: w.w, meaning: w.m} : null; }
+function seenCard(C, c){
+  C.appendChild(talkRow([T('تذكر كلمة', 'تذكرين كلمة') + ` «${c.word}»؟`, T('ابحث في بيتك عن شيء يشبهها أو يذكّرك بها، وقل جملة عنها', 'ابحثي في بيتكِ عن شيء يشبهها أو يذكّركِ بها، وقولي جملة عنها')]));
+  const card = el('div','kcard'); card.innerHTML = `<p class="kq big" style="font-family:var(--f-q);margin:0">${esc(c.word)}</p>${c.meaning ? `<p class="lrn">${esc(c.meaning)}</p>` : ''}`; const mb = el('div'); const ph = el('div'); card.append(mb, ph); C.appendChild(card);
+  const next = el('button','bigplay','التالي ◀'); next.type = 'button'; next.hidden = true; C.appendChild(next);
+  const skip = el('button','tiny', 'ليس الآن'); skip.type = 'button'; C.appendChild(skip);
+  const finish = () => { if (!next.hidden) return; const d = store.get(`seenDone:${kid}`, []); d.push(c.word); store.set(`seenDone:${kid}`, d.slice(-200)); chime(true); cmpHappy(); store.set(`dates:${kid}`, dates() + 2); TRIP.res.push(true); TRIP.i++; tripSave(); next.hidden = false; skip.remove(); };
+  micWidget(mb, {label: T('اضغط وقل الجملة', 'اضغطي وقولي الجملة'), max: 30000, onSaved: async blob => { if (!document.body.contains(mb)) return; try { await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid, kidName: K().name, kind: 'رأيتُها اليوم', ref: c.word, text: c.word, date: today(), type: blob.type || 'audio/webm', blob, status: 'pending', notes: [], source: 'local'}); } catch (e) { mb.appendChild(el('p','fb bad','تعذّر حفظ التسجيل.')); return; } say(T('جميل! سيراها أبوك', 'جميل! سيراها أبوكِ')); finish(); }});
+  const pb = el('button','tiny','📷 ' + T('أو صوّرها', 'أو صوّريها')); pb.type = 'button'; ph.appendChild(pb);
+  pb.addEventListener('click', () => { const f = document.createElement('input'); f.type = 'file'; f.accept = 'image/*'; f.setAttribute('capture', 'environment'); f.onchange = async () => { const file = f.files[0]; if (!file) return; const img = new Image(); const url = URL.createObjectURL(file); img.onload = async () => { const cv = document.createElement('canvas'); const n = 480; const r = Math.min(1, n / Math.max(img.width, img.height)); cv.width = Math.round(img.width * r); cv.height = Math.round(img.height * r); cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); URL.revokeObjectURL(url); cv.toBlob(async blob => { try { await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid, kidName: K().name, kind: 'رأيتُها اليوم', ref: c.word, text: c.word, date: today(), type: 'image/jpeg', blob, status: 'pending', notes: [], source: 'local'}); const im = document.createElement('img'); im.src = URL.createObjectURL(blob); im.style.cssText = 'max-width:60%;border-radius:12px;display:block;margin:6px auto'; ph.appendChild(im); say(T('صورة جميلة! سيراها أبوك', 'صورة جميلة! سيراها أبوكِ')); finish(); } catch (e) { ph.appendChild(el('p','fb bad','تعذّر حفظ الصورة.')); } }, 'image/jpeg', .8); }; img.src = url; }; f.click(); });
+  const adv = () => { voiceStop(); renderTrip(); window.scrollTo({top: 0}); };
+  next.addEventListener('click', adv); skip.addEventListener('click', () => { TRIP.res.push(null); TRIP.i++; tripSave(); adv(); });
 }
 function recCard(C, c){
   const it = c.recItem; C.appendChild(talkRow(CL.recAsk()));
@@ -2913,6 +3014,8 @@ function recCard(C, c){
 function tripLogSave(){ const L = {date: today(), extra: !TRIP.key, learned: [], ok: [], wrong: [], rec: []};
   TRIP.cards.forEach((c, i) => { const r = TRIP.res[i]; if (c.kind === 'learn'){ if (c.story) L.learned.push(`${c.t}: ${c.big}`); else L.learned.push(`${c.big || ''}${c.body && c.body[0] ? ' — ' + c.body[0] : ''}`.slice(0, 90)); }
     else if (c.g === 'rec'){ if (r === true) L.rec.push(`${c.recItem.kind}: ${c.recItem.text.slice(0, 60)}`); }
+    else if (c.g === 'tell'){ if (r === true) L.rec.push(`أخبرني: ${c.q}`); }
+    else if (c.g === 'seen'){ if (r === true) L.rec.push(`رأيتُها اليوم: ${c.word}`); }
     else if (i < TRIP.res.length){ (r ? L.ok : L.wrong).push((c.label || c.q || '').slice(0, 80)); } });
   const log = store.get(`tripLog:${kid}`, []); log.unshift(L); store.set(`tripLog:${kid}`, log.slice(0, 20)); }
 function tripEnd(){
@@ -2981,7 +3084,7 @@ function appBack(){
   if (cur.o === 'kid' || (cur.o === 'home' && !kidMode())) return false;
   if (cur.o === 'home' && LIB){ LIB = false; go('home'); return true; }
   if (cur.o === 'hello'){ if (HELLO.step > 0){ HELLO.step--; renderHello(); return true; } return false; }
-  if (cur.o === 'trip' || cur.o === 'bag' || cur.o === 'say'){ go('kid'); return true; }
+  if (cur.o === 'trip' || cur.o === 'bag' || cur.o === 'say' || cur.o === 'fam'){ FAM = null; go('kid'); return true; }
   if (LIB){ go('home'); return true; }
   go('home'); return true;
 }

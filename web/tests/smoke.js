@@ -17,9 +17,10 @@ const path = require('path');
   const n = await p.evaluate(() => TRIP.cards.length); if (n < 4) fail('رحلة قصيرة: ' + n);
   const blind = await p.evaluate(() => TRIP.cards.filter((c, i) => c.kind !== 'learn' && c.g !== 'rec' && c.kind !== 'review' && !SELF_G.has(c.g) && !TRIP.cards.slice(0, i).some(l => l.kind === 'learn' && (l.id === c.g + '|' + c.id || l.id === c.g + '|' + String(c.id).split('|')[0]))).map(c => c.g));
   if (blind.length) fail('سؤال بلا درس قبله: ' + blind.join('، '));
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 24; i++) {
     const g = await p.evaluate(() => TRIP && TRIP.cards[TRIP.i] ? TRIP.cards[TRIP.i].g : null); if (!g) break;
     if (g === 'learn') { await p.locator('#kidTrip .bigplay').click(); await p.waitForTimeout(150); continue; }
+    if (g === 'tell' || g === 'seen') { await p.locator('#kidTrip .tiny', { hasText: 'ليس الآن' }).click(); await p.waitForTimeout(150); continue; }
     if (g === 'rec') { await p.locator('#kidTrip .tiny', { hasText: 'تخطَّ' }).click(); await p.waitForTimeout(200); continue; }
     if (await p.locator('#ktIn').count()) { const a = await p.evaluate(() => TRIP.cards[TRIP.i].a); await p.fill('#ktIn', a); await p.locator('#kidTrip .btn', { hasText: 'تحقّق' }).click(); }
     else await p.locator('#kidTrip .opt').first().click();
