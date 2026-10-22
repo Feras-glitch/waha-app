@@ -9,7 +9,7 @@ const { chromium } = require('playwright');
   try {
     await p.waitForSelector('[data-act="setupPin"], #whoBtn', { timeout: 20000 });
     if (await p.locator('[data-act="setupPin"]').count()) {
-      await p.click('[data-act="setupPin"]'); await p.fill('#p1', '1234'); await p.fill('#p2', '1234'); await p.click('#setPinForm button[type=submit]');
+      await p.click('[data-act="setupPin"]'); await p.fill('#p1', '1234'); await p.fill('#p2', '1234'); await p.click('#setPinForm button[type=submit]'); await p.check('#rcSaved'); await p.click('#recDone');
       await p.waitForSelector('#kidForm'); await p.fill('#kfName', 'تجربة'); await p.click('[data-act="kfG"][data-v="m"]'); await p.click('#kidForm button[type=submit]');
     }
   } catch (e) { console.log('::warning::الإعداد الأول: ' + String(e).split('\n')[0]); }

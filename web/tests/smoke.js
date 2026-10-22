@@ -17,7 +17,7 @@ const path = require('path');
   // أول تشغيل: لا عائلة بعد، فتفتح «كنوز البيان» لضبط رمز وليّ الأمر وإضافة الطفل الأول
   await p.goto(url); await p.waitForSelector('[data-act="setupPin"]', { timeout: 15000 });
   if (!/\/kunuz\/index\.html/.test(p.url())) fail('أول تشغيل لم يفتح الإعداد: ' + p.url());
-  await p.click('[data-act="setupPin"]'); await p.fill('#p1', '1234'); await p.fill('#p2', '1234'); await p.click('#setPinForm button[type=submit]');
+  await p.click('[data-act="setupPin"]'); await p.fill('#p1', '1234'); await p.fill('#p2', '1234'); await p.click('#setPinForm button[type=submit]'); await p.check('#rcSaved'); await p.click('#recDone');
   await p.waitForSelector('#kidForm'); await p.fill('#kfName', 'هند'); await p.click('[data-act="kfG"][data-v="f"]');
   await p.selectOption('#kfBy', String(new Date().getFullYear() - 10)); await p.click('#kidForm button[type=submit]');
   await p.waitForSelector('#whoBtn', { timeout: 15000 }); await p.waitForTimeout(800);

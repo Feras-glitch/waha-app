@@ -258,7 +258,11 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
       pinUnavailable = false;
       var F = famGet(); if (!F || !F.pin) return false;
       var ok = (await famHash(F.salt || '', String(pin).trim())) === F.pin;
-      if (ok) { PARENT_UNTIL = Date.now() + 15 * 60 * 1000; LAST_PIN = Date.now(); }
+      if (ok) {
+        PARENT_UNTIL = Date.now() + 15 * 60 * 1000; LAST_PIN = Date.now();
+        /* whoever knows the current PIN cancels a pending «forgot PIN» request */
+        var G = famGet(); if (G && G.resetReq) { G.resetReq = null; (G.pinLog = G.pinLog || []).push({ t: Date.now(), k: 'cancel-pin-hasaniya' }); famSet(G); }
+      }
       return ok;
     };
     hasPin = function () { return true; };

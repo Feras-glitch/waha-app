@@ -3231,9 +3231,23 @@ if (typeof pinSet === 'function' && !pinSet() && typeof store.get('pin', null) !
   pinCheck = async function (v) {
     var F = famGet(); if (!F || !F.pin) return false;
     var ok = (await famHash(F.salt || '', String(v).trim())) === F.pin;
-    if (ok) { PARENT_UNTIL = Date.now() + 15 * 60 * 1000; LAST_PIN = Date.now(); }
+    if (ok) { PARENT_UNTIL = Date.now() + 15 * 60 * 1000; LAST_PIN = Date.now(); resetCancelByPin(); }
     return ok;
   };
+  /* a pending «forgot PIN» request (made in the parent corner) is cancelled by anyone who knows the current PIN, and shown to everyone meanwhile */
+  function resetCancelByPin() {
+    var F = famGet(); if (!F || !F.resetReq) return;
+    F.resetReq = null; (F.pinLog = F.pinLog || []).push({ t: Date.now(), k: 'cancel-pin-oasis' }); famSet(F);
+    var b = document.getElementById('kzReset'); if (b) b.remove();
+  }
+  (function resetBanner() {
+    var F = famGet(); if (!F || !F.resetReq) return;
+    var d = function (t) { try { return new Date(t).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' }); } catch (e) { return ''; } };
+    var b = document.createElement('a'); b.id = 'kzReset'; b.href = 'kunuz/index.html#parent'; b.setAttribute('role', 'status');
+    b.style.cssText = 'display:block;margin:8px 12px;padding:10px 14px;border-radius:12px;background:#fde8e4;color:#7a2318;border:1px solid #e9a99c;text-decoration:none;font-family:var(--f-ui);line-height:1.7';
+    b.textContent = '⚠ طُلبت إعادة ضبط رمز وليّ الأمر يوم ' + d(F.resetReq.at) + '، ويمكن تنفيذها بعد ' + d(F.resetReq.due) + '. إن لم تطلبوها فادخلوا ركن وليّ الأمر برمزكم الحالي فيُلغى الطلب.';
+    document.body.insertBefore(b, document.body.firstChild);
+  })();
   try { var pu = +sessionStorage.getItem('kz-parent-until') || 0; sessionStorage.removeItem('kz-parent-until'); if (pu > Date.now()) PARENT_UNTIL = Math.min(pu, Date.now() + 15 * 60 * 1000); } catch (e) {}
   if (typeof pinGate === 'function') { var _gate = pinGate; pinGate = function (then, opts) { if (Date.now() < PARENT_UNTIL) { PARENT_UNTIL = Date.now() + 15 * 60 * 1000; return then(); } return _gate(then, opts); }; }
   function needParent() { return Date.now() < PARENT_UNTIL ? Promise.resolve(true) : new Promise(function (res) { pinGate(function () { res(true); }); }); }

@@ -844,6 +844,12 @@ body.guest .foot,body.guest #kidChip,body.guest #tray{display:none!important}
 .oasis-link:hover{background:color-mix(in srgb,var(--band-ink) 20%,transparent)}
 .oasis-link:focus-visible{outline:2px solid var(--gold-band);outline-offset:2px}
 .oasis-link[hidden]{display:none}
+/* recovery code */
+.rec-code{font:600 clamp(1.5rem,7vw,2.2rem)/1.3 ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;letter-spacing:.08em;text-align:center;margin:18px 0;padding:16px;border:2px dashed color-mix(in srgb,var(--plum) 45%,var(--line));border-radius:var(--r);background:var(--surface);color:var(--ink);user-select:all;word-break:break-all}
+.check-row{display:flex;gap:10px;align-items:center;justify-content:center;margin:14px 0 4px;font-size:1rem}
+.check-row input{width:20px;height:20px}
+.reset-banner{margin-bottom:14px}
+.btn:disabled,.btn[disabled]{opacity:.45;cursor:not-allowed}
 
 /* ================= reading pages: magazine, teacher review, gift card (in-app previews + exported files) ================= */
 .xp{color:var(--ink)}
@@ -2541,20 +2547,113 @@ async function pinSubmit(){
   var inp=document.getElementById('pinIn'), err=document.getElementById('pinErr'); if(!inp) return;
   if(Date.now()<PIN_LOCK){err.textContent='محاولاتٌ كثيرة. انتظروا دقيقةً ثم أعيدوا المحاولة.';return;}
   var h=await hashPin(inp.value.trim(),FAM.salt||'');
-  if(h===FAM.pin){PIN_FAILS=0;parentTouch();var n=AFTER_PIN;AFTER_PIN=null;return n?n():parentHome();}
+  if(h===FAM.pin){PIN_FAILS=0;parentTouch();resetCancelByPin();var n=AFTER_PIN;AFTER_PIN=null;return n?n():parentHome();}
   PIN_FAILS++; inp.value='';
   if(PIN_FAILS>=5){PIN_LOCK=Date.now()+60000;PIN_FAILS=0;err.textContent='محاولاتٌ كثيرة. انتظروا دقيقة.';}
   else err.textContent='الرمز غير صحيح.';
   try{inp.focus();}catch(e){}
 }
-async function pinForgot(){
-  var v=await ask({title:'إعادة ضبط الرمز',c:'rose',ok:'أعيدوا الضبط',danger:1,
-    html:'<p>لا يُحفظ الرمز في أي مكانٍ آخر، فلا يمكن استرجاعه. يمكنكم إنشاء رمزٍ جديد، لكن <strong>كلّ الموافقات السابقة ستُلغى</strong>: تعود الأعمال المعتمدة إلى «بانتظار المراجعة»، وتعود المجلّات غير الصادرة إلى المسوّدة. هكذا لا يستطيع أحدٌ تجاوز موافقتكم بإعادة ضبط الرمز.</p>'+
-      '<p class="muted small">الأعمال والتسجيلات نفسها لا تُحذف. وسيظهر في ركن وليّ الأمر تاريخ إعادة الضبط.</p>'});
-  if(!v) return;
+/* ---------- forgotten PIN: the recovery code, or a request that waits 72 hours ----------
+   No server and no e-mail: the proof is the recovery code shown once when the PIN was made (the parent mails it to himself or writes it down).
+   Without it, a reset is only requested; it can be done after 72 hours, a banner shows it all that time in the oasis and here,
+   and any correct entry of the current PIN (here, in the oasis or in the Hasaniya) cancels it. */
+var RC_ABC='ABCDEFGHJKMNPQRSTUVWXYZ23456789', RESET_WAIT=72*3600*1000, SETPIN_RESET=false, RC_SHOWN=null;
+function rcNorm(s){return String(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'');}
+async function rcCodeNew(){
+  var a=new Uint8Array(12); crypto.getRandomValues(a);
+  var c=[].map.call(a,function(x){return RC_ABC[x%RC_ABC.length];}).join('');
+  var salt=uid('r'); FAM.rec={salt:salt,h:await hashPin(c,salt),at:Date.now()}; saveFam();
+  return c.slice(0,4)+'-'+c.slice(4,8)+'-'+c.slice(8);
+}
+function rcShow(code,next){
+  L=null; RC_SHOWN={code:code,next:next};
+  go('<div class="ax-page narrow" style="--ax:var(--plum)">'+
+    '<header class="page-head center-head"><span class="ch-ico big">'+ICON.lock+'</span><h1 class="h1">رمز الاسترداد</h1>'+
+    '<p class="lead">إن نسيتم رمز وليّ الأمر يومًا فبهذا الرمز وحده تُعيدون ضبطه. يظهر الآن مرةً واحدة، ولا يُحفظ في التطبيق.</p></header>'+
+    '<p class="rec-code" dir="ltr" lang="en" id="recCode">'+esc(code)+'</p>'+
+    '<div class="actions center-actions"><button class="btn" type="button" data-act="rcMail">'+ICON.share+' أرسلوه إلى بريدكم</button>'+
+      '<button class="btn ghost" type="button" data-act="rcCopy">انسخوه</button></div>'+
+    '<aside class="didyou"><p>أرسلوه إلى بريدكم أو اكتبوه على ورقةٍ في مكانٍ لا يصل إليه الأطفال. ومن دونه تبقى إعادة الضبط ممكنة، لكنها تنتظر ٧٢ ساعة وتظهر للجميع.</p></aside>'+
+    '<label class="check-row"><input type="checkbox" id="rcSaved"> حفظتُه خارج هذا الجهاز</label>'+
+    '<div class="actions center-actions"><button class="btn" type="button" data-act="rcDone" id="recDone" disabled>تابعوا</button></div></div>');
+  var c=document.getElementById('rcSaved'), d=document.getElementById('recDone');
+  if(c&&d) c.addEventListener('change',function(){d.disabled=!c.checked;});
+}
+function rcText(){ return 'رمز الاسترداد لتطبيق «واحة اللسان العربي» على جهاز العائلة: '+(RC_SHOWN&&RC_SHOWN.code)+'\nبه وحده يُعاد ضبط رمز وليّ الأمر إن نُسي. لا تُطلعوا عليه الأطفال.'; }
+async function rcMail(){
+  if(!RC_SHOWN) return;
+  if(navigator.share){ try{ await navigator.share({title:'رمز استرداد واحة اللسان العربي',text:rcText()}); return; }catch(e){ if(e&&e.name==='AbortError') return; } }
+  location.href='mailto:?subject='+encodeURIComponent('رمز استرداد واحة اللسان العربي')+'&body='+encodeURIComponent(rcText());
+}
+async function rcCopy(){
+  if(!RC_SHOWN) return;
+  try{ await navigator.clipboard.writeText(RC_SHOWN.code); toast('نُسخ رمز الاسترداد.'); }
+  catch(e){ try{ var r=document.createRange(); r.selectNodeContents(document.getElementById('recCode')); var sl=getSelection(); sl.removeAllRanges(); sl.addRange(r); }catch(e2){} toast('حدّدنا الرمز: انسخوه من الشاشة.'); }
+}
+function rcDone(){ var n=RC_SHOWN&&RC_SHOWN.next; RC_SHOWN=null; if(n) n(); else parentHome(); }
+async function rcRenew(){
+  var ok=await ask({title:'رمز استرداد جديد؟',c:'plum',ok:'أنشئوه',html:'<p>يتوقف الرمز القديم فورًا، ويظهر الجديد مرةً واحدة لتحفظوه.</p>'});
+  if(!ok) return;
+  rcShow(await rcCodeNew(),function(){pBackup();});
+}
+function resetDue(){ return FAM.resetReq&&FAM.resetReq.due||0; }
+function resetBanner(){
+  if(!FAM.resetReq) return '';
+  return '<div class="banner rose reset-banner" role="status">'+ICON.lock+'<div class="bn-t"><strong>طُلبت إعادة ضبط رمز وليّ الأمر يوم '+fmtDate(FAM.resetReq.at)+'</strong>'+
+    '<span>يمكن تنفيذها بعد '+fmtDate(resetDue())+'. إن لم تطلبوها فأدخلوا الرمز الحالي في ركن وليّ الأمر فيُلغى الطلب.</span></div></div>';
+}
+function resetCancelByPin(){
+  if(!FAM.resetReq) return;
+  FAM.resetReq=null; (FAM.pinLog=FAM.pinLog||[]).push({t:Date.now(),k:'cancel-pin'}); saveFam();
+  toast('أُلغي طلب إعادة ضبط الرمز، لأن الرمز الصحيح أُدخل.');
+}
+function pinForgot(){
+  L=null;
+  if(FAM.resetReq) return resetPage();
+  go('<div class="ax-page narrow" style="--ax:var(--rose)"><button class="back" type="button" data-act="parent">'+BACK+' رجوع</button>'+
+    '<header class="page-head center-head"><span class="ch-ico big">'+ICON.lock+'</span><h1 class="h1">نسيتم الرمز؟</h1>'+
+    (FAM.rec?'<p class="lead">أدخلوا <strong>رمز الاسترداد</strong> الذي ظهر لكم عند إنشاء الرمز، وأرسلتموه إلى بريدكم أو كتبتموه.</p></header>'+
+      '<form class="form" id="recForm" autocomplete="off"><label for="rcIn">رمز الاسترداد</label><input id="rcIn" dir="ltr" lang="en" autocomplete="off" autocapitalize="characters" spellcheck="false" required>'+
+      '<p class="form-err" id="rcErr" role="alert"></p><div class="actions"><button class="btn" type="submit">تحقّقوا</button></div></form>'
+     :'<p class="lead">لم يُنشأ لهذا الجهاز رمز استرداد بعد.</p></header>')+
+    '<section><h2 class="h2">'+(FAM.rec?'فقدتم رمز الاسترداد أيضًا؟':'إعادة الضبط بالانتظار')+'</h2>'+
+      '<p>يُسجَّل طلب إعادة الضبط الآن، ويمكن تنفيذه بعد ٧٢ ساعة. طوال هذه المدة تظهر لافتةٌ في الواحة و«كنوز البيان»، وأيّ إدخالٍ صحيح للرمز الحالي يلغي الطلب. وعند ضبط الرمز الجديد تُلغى كلّ الموافقات السابقة.</p>'+
+      '<div class="actions"><button class="btn ghost" type="button" data-act="resetReq">اطلبوا إعادة الضبط</button></div></section></div>');
+  var i=document.getElementById('rcIn'); if(i) try{i.focus();}catch(e){}
+}
+async function rcSubmit(){
+  var inp=document.getElementById('rcIn'), err=document.getElementById('rcErr'); if(!inp||!FAM.rec) return;
+  if(Date.now()<PIN_LOCK){err.textContent='محاولاتٌ كثيرة. انتظروا دقيقةً ثم أعيدوا المحاولة.';return;}
+  var ok=(await hashPin(rcNorm(inp.value),FAM.rec.salt))===FAM.rec.h;
+  if(!ok){ PIN_FAILS++; if(PIN_FAILS>=5){PIN_LOCK=Date.now()+60000;PIN_FAILS=0;} err.textContent='رمز الاسترداد غير صحيح.'; return; }
+  PIN_FAILS=0; FAM.pin=null; FAM.resetReq=null; (FAM.pinLog=FAM.pinLog||[]).push({t:Date.now(),k:'code'}); saveFam();
+  setupPin(true);
+}
+async function resetRequest(){
+  var due=Date.now()+RESET_WAIT;
+  var ok=await ask({title:'طلب إعادة ضبط الرمز',c:'rose',ok:'سجّلوا الطلب',danger:1,
+    html:'<p>يمكن ضبط رمزٍ جديد بعد ٧٢ ساعة، أي بعد '+fmtDate(due)+'. تظهر اللافتة طوال هذه المدة، وأيّ إدخالٍ صحيح للرمز الحالي يلغي الطلب.</p>'+
+      '<p>وعند ضبط الرمز الجديد <strong>تُلغى كلّ الموافقات السابقة</strong>: تعود الأعمال المعتمدة إلى «بانتظار المراجعة»، والمجلّات غير الصادرة إلى المسوّدة. الأعمال والتسجيلات نفسها لا تُحذف.</p>'});
+  if(!ok) return;
+  FAM.resetReq={at:Date.now(),due:due}; (FAM.pinLog=FAM.pinLog||[]).push({t:Date.now(),k:'request'}); saveFam();
+  resetPage();
+}
+function resetPage(){
+  L=null; var due=resetDue(), left=due-Date.now();
+  go('<div class="ax-page narrow" style="--ax:var(--rose)"><button class="back" type="button" data-act="backKid">'+BACK+' رجوع</button>'+
+    '<header class="page-head center-head"><span class="ch-ico big">'+ICON.lock+'</span><h1 class="h1">طلب إعادة ضبط الرمز</h1>'+
+    '<p class="lead">سُجّل الطلب يوم '+fmtDate(FAM.resetReq.at)+'.</p></header>'+
+    (left>0?'<p>يمكن ضبط رمزٍ جديد بعد '+fmtDate(due)+' (بعد نحو '+n2a(Math.ceil(left/3600000))+' ساعة).</p>'
+      :'<div class="actions"><button class="btn danger" type="button" data-act="resetDo">اضبطوا رمزًا جديدًا</button></div>')+
+    '<p class="muted small">إن لم تطلبوا هذا، فأدخلوا الرمز الحالي في ركن وليّ الأمر فيُلغى، أو ألغوه من هنا.</p>'+
+    '<div class="actions"><button class="btn ghost" type="button" data-act="resetCancel">ألغوا الطلب</button></div></div>');
+}
+function resetCancel(){ FAM.resetReq=null; (FAM.pinLog=FAM.pinLog||[]).push({t:Date.now(),k:'cancel'}); saveFam(); toast('أُلغي الطلب، وبقي الرمز كما هو.'); who(); }
+function resetDo(){
+  if(!FAM.resetReq||Date.now()<resetDue()) return resetPage();
   WORKS.forEach(function(w){ if(w.status==='approved'){w.status='sent';w.updated=Date.now();} });
   FAM.mags.forEach(function(m){ if(m.status!=='published') m.status='draft'; });
-  FAM.pin=null; FAM.pinResets.push(Date.now()); saveWorks(); saveFam();
+  FAM.pin=null; FAM.resetReq=null; FAM.pinResets.push(Date.now()); saveWorks(); saveFam();
   setupPin(true);
 }
 
@@ -2584,12 +2683,12 @@ function setupWelcome(){
       '<li><strong>الطفل يصنع، وأنتم تعتمدون:</strong> يرسل الطفل عمله إليكم، فتعتمدونه أو تعيدونه بملاحظة، ثم تقرّرون نشره.</li>'+
       '<li><strong>الصورة الشخصية للطفل</strong>، إن أضفتموها، تبقى هنا ولا تدخل أي ملفٍ يُرسَل.</li></ul></section>'+
     installHTML()+
-    '<aside class="didyou"><span class="eyebrow">رمز وليّ الأمر</span><p>سننشئ الآن رمزًا من الأرقام يحمي ركن وليّ الأمر: الاعتماد والتصدير والإعدادات. هو قفلٌ لطيف يمنع تجاوز موافقتكم، وليس حمايةً أمنية، فالبيانات على الجهاز نفسه.</p></aside>'+
+    '<aside class="didyou"><span class="eyebrow">رمز وليّ الأمر</span><p>سننشئ الآن رمزًا من الأرقام يحمي ركن وليّ الأمر: الاعتماد والتصدير والإعدادات، ثم يظهر لكم <strong>رمز استرداد</strong> ترسلونه إلى بريدكم، فبه وحده يُعاد ضبط الرمز إن نُسي.</p></aside>'+
     '<div class="actions"><button class="btn" type="button" data-act="setupPin">أنشئوا الرمز</button>'+
     '<label class="btn ghost file-btn">عندنا نسخةٌ احتياطية<input type="file" accept=".json,application/json" data-file="restore" hidden></label></div></div>');
 }
 function setupPin(afterReset){
-  L=null;
+  L=null; SETPIN_RESET=!!afterReset;
   go('<div class="ax-page narrow" style="--ax:var(--plum)">'+
     '<header class="page-head center-head"><span class="ch-ico big">'+ICON.lock+'</span><h1 class="h1">'+(afterReset?'رمزٌ جديد':'رمز وليّ الأمر')+'</h1>'+
     '<p class="lead">من أربعة أرقامٍ إلى ستة. اختاروا رمزًا لا يعرفه الأطفال، ولا يُحفظ إلا على هذا الجهاز.</p></header>'+
@@ -2604,8 +2703,10 @@ async function setPinSubmit(){
   if(a!==b){err.textContent='الرمزان غير متطابقين.';return;}
   FAM.salt=uid('s'); FAM.pin=await hashPin(a,FAM.salt); saveFam(); parentTouch();
   try{if(navigator.storage&&navigator.storage.persist) navigator.storage.persist();}catch(e){}
-  if(!FAM.kids.length) return kidForm(null);
-  toast('حُفظ الرمز الجديد.'); parentHome();
+  var cont=function(){ if(!FAM.kids.length) return kidForm(null); toast('حُفظ الرمز الجديد.'); parentHome(); };
+  /* a new family, or a PIN made after a reset, gets a new recovery code (the old one, if any, has been used or is unknown) */
+  if(!FAM.rec||SETPIN_RESET){ SETPIN_RESET=false; return rcShow(await rcCodeNew(),cont); }
+  cont();
 }
 
 /* ---------- kids: picker and form ---------- */
@@ -2614,7 +2715,7 @@ function who(){
   if(!FAM.pin) return setupWelcome();
   if(!FAM.kids.length) return needParent(function(){kidForm(null);});
   go('<div class="ax-page" style="--ax:var(--lapis)">'+
-    '<header class="page-head center-head"><span class="eyebrow">كنوز البيان</span><h1 class="h1">مَن معنا اليوم؟</h1></header>'+
+    '<header class="page-head center-head"><span class="eyebrow">كنوز البيان</span><h1 class="h1">مَن معنا اليوم؟</h1></header>'+resetBanner()+
     '<div class="who">'+FAM.kids.map(function(k){
       var d=kidLoad(k.id), n=LESSONS.filter(function(l){return d.prog[l.id];}).length;
       return '<button class="who-card" type="button" data-act="pickKid" data-id="'+k.id+'" style="--ax:var(--'+(k.c||'lapis')+')">'+avatarHTML(k,'l')+
@@ -2698,7 +2799,7 @@ function home(){
   var d=doneCount(), mine=WORKS.filter(function(w){return w.kid===KID.id;});
   var back=mine.filter(function(w){return w.status==='returned';}), fresh=mine.filter(function(w){return w.status==='approved'&&!w.seen;});
   var wk=weeklyNow(), wkw=wk&&workById(wk.work), wkk=wk&&kidById(wk.kid);
-  var banners='', newC=certSync(KID.id), gs=kidStats(KID.id), gits=gardenItems(gs), gnew=gardenFresh(gs,gits);
+  var banners=resetBanner(), newC=certSync(KID.id), gs=kidStats(KID.id), gits=gardenItems(gs), gnew=gardenFresh(gs,gits);
   var unseenC=CERTS.filter(function(c){var a=gs.d.certs[c.id];return a&&!a.seen;});
   if(wkw&&wkk&&wkw.audio){
     var me=wkk.id===KID.id;
@@ -3174,6 +3275,7 @@ function parentHome(){
     '<header class="page-head"><span class="eyebrow">للوالدين</span><h1 class="h1">ركن وليّ الأمر</h1>'+
     '<p class="lead">من هنا تعتمدون أعمال الأطفال أو تعيدونها بملاحظة، وتُصدرون ما توافقون على مشاركته، وتديرون الملفات.</p></header>'+
     (FAM.pinResets.length?'<p class="tip">'+ICON.shield.replace('<svg','<svg class="ic-s"')+' أُعيد ضبط الرمز آخر مرة في '+fmtDate(FAM.pinResets[FAM.pinResets.length-1])+'، وأُلغيت الموافقات السابقة عندها.</p>':'')+
+    (!FAM.rec?'<button class="banner rose" type="button" data-act="rcNew">'+ICON.lock+'<div class="bn-t"><strong>لا يوجد رمز استرداد بعد</strong><span>أنشئوه وأرسلوه إلى بريدكم؛ فبه وحده يُعاد ضبط الرمز إن نُسي.</span></div></button>':'')+
     (backupDue()?'<button class="banner gold" type="button" data-act="pBackup">'+ICON.shield+'<div class="bn-t"><strong>'+(FAM.lastBackup?'مضى أكثر من شهرٍ على آخر نسخةٍ احتياطية':'لم تحفظوا نسخةً احتياطية بعد')+'</strong><span>أصوات الأطفال وأعمالهم على هذا الجهاز وحده. احفظوا نسخةً مشفّرة في مكانٍ آمن.</span></div></button>':'')+
     (!IDB.db?'<p class="tip warn">هذا المتصفح لا يسمح بحفظ التسجيلات والرسوم بعد إغلاقه (ربما وضع التصفّح الخاص). افتحوا التطبيق في نافذةٍ عادية.</p>':'')+
     '<section><h2 class="h2">بانتظار مراجعتكم'+(pend.length?' · '+n2a(pend.length):'')+'</h2>'+
@@ -3545,7 +3647,9 @@ async function pBackup(){
       '<label class="btn ghost file-btn">استعيدوا نسخة<input type="file" accept=".json,application/json" data-file="restore" hidden></label></div>'+
       (FAM.lastBackup?'<p class="muted small">آخر نسخة: '+fmtDate(FAM.lastBackup)+(FAM.lastBackupEnc?' (مشفّرة)':' (بلا تشفير)')+'</p>':'')+'</section>'+
     waLogHTML()+
-    '<section><h2 class="h2">رمز وليّ الأمر</h2><div class="actions"><button class="btn ghost" type="button" data-act="setupPin">غيّروا الرمز</button></div></section>'+
+    '<section><h2 class="h2">رمز وليّ الأمر</h2><div class="actions"><button class="btn ghost" type="button" data-act="setupPin">غيّروا الرمز</button></div>'+
+      '<p>'+(FAM.rec?'رمز الاسترداد أُنشئ '+fmtDate(FAM.rec.at)+'. به وحده يُعاد ضبط الرمز إن نُسي؛ ومن دونه تنتظر إعادة الضبط ٧٢ ساعة وتظهر للجميع.':'<strong>لا يوجد رمز استرداد بعد.</strong> أنشئوه الآن وأرسلوه إلى بريدكم.')+'</p>'+
+      '<div class="actions"><button class="btn ghost" type="button" data-act="rcNew">'+(FAM.rec?'أنشئوا رمز استرداد جديد':'أنشئوا رمز الاسترداد')+'</button></div></section>'+
     '<section><h2 class="h2">عن الخصوصية</h2><ul class="checks small"><li>لا يتّصل التطبيق بأي خادم، ولا يجمع أي بيانات. الخطوط داخل التطبيق، فلا يتّصل بالإنترنت إلا لروابط التلاوة والمصادر حين تضغطونها.</li>'+
       '<li>كلّ ملفٍّ يخرج من الجهاز يمرّ بتنبيهٍ وموافقةٍ منكم، ويُسجَّل في «سجلّ المشاركة» على العمل نفسه.</li><li>الصورة الشخصية للطفل لا تدخل أي ملفٍ مُرسَل، ويمكنكم إخفاء الاسم عند كل إرسال.</li></ul></section></div>');
 }
@@ -5360,6 +5464,13 @@ var ACT={
   parent:function(){needParent(parentHome);},
   lock:function(){lockParent();},
   pinForgot:function(){pinForgot();},
+  rcMail:function(){rcMail();},
+  rcCopy:function(){rcCopy();},
+  rcDone:function(){rcDone();},
+  rcNew:function(){needParent(function(){rcRenew();});},
+  resetReq:function(){resetRequest();},
+  resetDo:function(){resetDo();},
+  resetCancel:function(){resetCancel();},
   setupPin:function(){ if(FAM.pin) needParent(function(){setupPin(false);}); else setupPin(false); },
   pickKid:function(t,ds){selectKid(ds.id); if(!IN_KUNUZ) return toOasis(); home();},
   kfG:function(t,ds){KF.name=(document.getElementById('kfName')||{}).value||KF.name;KF.g=ds.v;renderKidForm();},
@@ -5479,6 +5590,7 @@ APP.addEventListener('submit',function(e){
   var id=e.target&&e.target.id; if(!id) return; e.preventDefault(); if(GUEST) return;
   if(id==='mjForm') return startMajlis();
   if(id==='pinForm') return pinSubmit();
+  if(id==='recForm') return rcSubmit();
   if(id==='setPinForm') return setPinSubmit();
   if(id==='kidForm') return needParent(function(){kidFormSubmit();});
   if(id==='codeForm') return needParent(function(){codeSubmit();});
