@@ -11,7 +11,7 @@ const path = require('path');
   const fail = m => { console.log('::error::' + m); process.exitCode = 1; };
   const sec = await p.evaluate(() => cur.t); if (sec !== 'kidHello') fail('لم يبدأ بأول لقاء: ' + sec);
   await p.locator('#kidHello .pickc button').first().click(); await p.locator('#kidHello .chip2').first().click(); await p.locator('#kidHello .bigplay').click();
-  await p.locator('#kidHello .sand').click(); await p.waitForTimeout(300); await p.locator('#kidHello .bigplay').click(); await p.waitForTimeout(300);
+  await p.locator('#kidHello .bigplay', { hasText: 'اغرس' }).click(); await p.waitForTimeout(300); await p.locator('#kidHello .bigplay').click(); await p.waitForTimeout(300);
   const n = await p.evaluate(() => TRIP.cards.length); if (n < 4) fail('رحلة قصيرة: ' + n);
   const blind = await p.evaluate(() => TRIP.cards.filter((c, i) => c.kind !== 'learn' && c.g !== 'rec' && c.kind !== 'review' && !SELF_G.has(c.g) && !TRIP.cards.slice(0, i).some(l => l.kind === 'learn' && (l.id === c.g + '|' + c.id || l.id === c.g + '|' + String(c.id).split('|')[0]))).map(c => c.g));
   if (blind.length) fail('سؤال بلا درس قبله: ' + blind.join('، '));
