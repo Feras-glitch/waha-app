@@ -8,6 +8,8 @@ const path = require('path');
   p.on('pageerror', e => errs.push(String(e))); p.on('console', m => { if (m.type() === 'error' && !/play\(\) request|net::ERR/.test(m.text())) errs.push(m.text()); });
   const url = 'file://' + path.resolve(__dirname, '..', 'index.html');
   await p.goto(url); await p.waitForTimeout(800);
+  // أول تشغيل: تظهر نافذة الرقم السري لولي الأمر؛ نضبطه كما يفعل الأب
+  if (!(await p.evaluate(() => $('sheet').hidden))) { await p.fill('#pinIn', '1234'); await p.fill('#pinIn2', '1234'); await p.click('#pinOk'); await p.waitForTimeout(300); await p.evaluate(() => closeSheet()); }
   const fail = m => { console.log('::error::' + m); process.exitCode = 1; };
   const sec = await p.evaluate(() => cur.t); if (sec !== 'kidHello') fail('لم يبدأ بأول لقاء: ' + sec);
   await p.locator('#kidHello .pickc button').first().click(); await p.locator('#kidHello .chip2').first().click(); await p.locator('#kidHello .bigplay').click();
