@@ -1,5 +1,5 @@
 /* واحة اللسان العربي: يعمل دون إنترنت بعد أول فتح (في نسخة الويب). أندرويد وسطح المكتب يقرآن الملفات من الجهاز مباشرة. */
-const CACHE = "waha-v1";
+const CACHE = "waha-v1.5";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./js/android-shim.js", "./fonts/fonts.css",
   "./fonts/Amiri-Regular.woff", "./fonts/Amiri-Bold.woff", "./fonts/Tajawal-Regular.woff", "./fonts/Tajawal-Medium.woff", "./fonts/Tajawal-Bold.woff", "./fonts/Tajawal-ExtraBold.woff", "./fonts/ArefRuqaa-Regular.woff", "./fonts/ArefRuqaa-Bold.woff"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS.map(u => new Request(u, { cache: "reload" })))).then(() => self.skipWaiting())); });

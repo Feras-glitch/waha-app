@@ -191,6 +191,18 @@ public class MainActivity extends Activity {
         if (acc != null) for (String a : acc) {
             if (a != null && (a.startsWith("image/") || a.startsWith("audio/"))) media = true;
         }
+        if (media && params.isCaptureEnabled()) {
+            // الصفحة طلبت التقاطًا (capture) لصوت: نعرض مسجّل الصوت مع قائمة اختيار الملف بديلًا
+            // (الصورة تبقى على منتقي النظام، لأن كاميرا ACTION_IMAGE_CAPTURE لا تعيد عنوان ملف بلا EXTRA_OUTPUT)
+            boolean audio = false;
+            for (String a : acc) if (a != null && a.startsWith("audio/")) audio = true;
+            if (audio) {
+                Intent cap = new Intent(android.provider.MediaStore.Audio.Media.RECORD_SOUND_ACTION);
+                Intent chooser = Intent.createChooser(params.createIntent(), "سجّل أو اختر تسجيلًا");
+                chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[] { cap });
+                return chooser;
+            }
+        }
         if (media) return params.createIntent();
         Intent i = new Intent(Intent.ACTION_GET_CONTENT);
         i.addCategory(Intent.CATEGORY_OPENABLE);
