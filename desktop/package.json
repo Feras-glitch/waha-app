@@ -1,0 +1,24 @@
+{
+  "name": "waha",
+  "productName": "واحة اللسان العربي",
+  "version": "102.0.0",
+  "description": "واحة اللسان العربي: تعلّم العربية من المحفوظ، تطبيق مستقل بلا خادم",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^37.3.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.waha.app",
+    "productName": "واحة اللسان العربي",
+    "files": ["main.js", "package.json", "app/**/*"],
+    "directories": { "output": "dist" },
+    "win": { "target": "portable" },
+    "linux": { "target": "AppImage" }
+  }
+}

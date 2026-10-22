@@ -1,0 +1,151 @@
+# بناء كل نسخ «واحة اللسان العربي» من مصدر واحد (web/) مع كل رفع إلى main:
+#   1) اختبار الدخان (رحلة طفل كاملة في المتصفح) — لا يُبنى شيء إن فشل
+#   2) أندرويد APK موقّع بالمفتاح الثابت (أو نسخة تجريبية إن لم تُضف المفاتيح بعد)
+#   3) ويندوز ولينكس (Electron)، وملفات الويب
+#   4) إصدار في صفحة Releases باسم رقم النسخة، فيه كل الملفات
+# ملاحظة: web/index.html يُبنى خارج المستودع من أجزاء المشروع (tools/build_app.py في مشروع Claude) ثم يُرفع هنا.
+name: Build all
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  ELECTRON_VERSION: 37.3.1
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+      - name: Smoke test (child journey)
+        run: |
+          npm install --no-save --no-package-lock playwright@1.49.1
+          npx playwright install --with-deps chromium
+          export CHROMIUM_PATH="$(node -e "console.log(require('playwright').chromium.executablePath())")"
+          node web/tests/smoke.js
+
+  android:
+    needs: test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Copy web app into Android assets
+        run: |
+          mkdir -p android/app/src/main/assets/www
+          cp -r web/index.html web/sw.js web/manifest.json web/js web/fonts web/hasaniya android/app/src/main/assets/www/
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Prepare Android SDK
+        run: |
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" --install "platforms;android-34" "build-tools;34.0.0" > /dev/null
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.9
+      - name: Restore signing key
+        id: key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.WAHA_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/waha.jks"
+            echo "path=$RUNNER_TEMP/waha.jks" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::لم تُضف أسرار التوقيع؛ ستُبنى نسخة تجريبية. انظر SIGNING-AR.md"
+          fi
+      - name: Build signed release APK
+        if: steps.key.outputs.path != ''
+        working-directory: android
+        env:
+          WAHA_KEYSTORE: ${{ steps.key.outputs.path }}
+          WAHA_KEYSTORE_PASSWORD: ${{ secrets.WAHA_KEYSTORE_PASSWORD }}
+          WAHA_KEY_ALIAS: ${{ secrets.WAHA_KEY_ALIAS }}
+          WAHA_KEY_PASSWORD: ${{ secrets.WAHA_KEY_PASSWORD }}
+        run: |
+          gradle assembleRelease --no-daemon
+          mkdir -p "$GITHUB_WORKSPACE/out" && cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/out/waha.apk"
+      - name: Build debug APK (no signing key yet)
+        if: steps.key.outputs.path == ''
+        working-directory: android
+        run: |
+          gradle assembleDebug --no-daemon
+          mkdir -p "$GITHUB_WORKSPACE/out" && cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/out/waha-debug.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: waha-apk
+          path: out/*.apk
+
+  packages:
+    needs: test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+      - name: Web zip
+        run: |
+          mkdir -p out
+          (cd web && zip -qr ../out/waha-web.zip index.html sw.js manifest.json js fonts hasaniya)
+      - name: Windows and Linux (Electron)
+        run: bash desktop/package.sh "$ELECTRON_VERSION" desk
+      - name: Check that the Linux version opens the app
+        run: |
+          npm install --no-save --no-package-lock playwright@1.49.1
+          sudo apt-get install -y xvfb > /dev/null
+          Xvfb :77 -screen 0 1024x768x24 &
+          sleep 2
+          DISPLAY=:77 desk/waha-linux/Waha --no-sandbox --remote-debugging-port=9333 > /dev/null 2>&1 &
+          node desktop/smoke.js
+      - name: Zip desktop versions
+        run: |
+          (cd desk/waha-windows && zip -qry ../../out/waha-windows.zip .)
+          (cd desk/waha-linux && zip -qry ../../out/waha-linux.zip .)
+          ls -la out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: waha-packages
+          path: out/
+          retention-days: 2
+
+  release:
+    needs: [ android, packages ]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Version
+        id: ver
+        run: echo "v=$(grep -oP 'versionName "\K[^"]+' android/app/build.gradle)" >> "$GITHUB_OUTPUT"
+      - name: Publish all versions to Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="v${{ steps.ver.outputs.v }}"
+          NOTES="واحة اللسان العربي — النسخة ${{ steps.ver.outputs.v }}
+          - أندرويد: waha.apk (أو waha-debug.apk قبل إضافة مفتاح التوقيع)
+          - ويندوز: waha-windows.zip (فك الضغط ثم شغّل Waha.exe)
+          - لينكس: waha-linux.zip (فك الضغط ثم شغّل ./Waha)
+          - ملفات الويب: waha-web.zip
+          آخر تحديث: $(date -u '+%Y-%m-%d %H:%M') UTC"
+          ls -la dist
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --clobber
+            gh release edit "$TAG" --notes "$NOTES" --target "$GITHUB_SHA"
+          else
+            gh release create "$TAG" dist/* --title "واحة اللسان العربي $TAG" --notes "$NOTES" --target "$GITHUB_SHA"
+          fi

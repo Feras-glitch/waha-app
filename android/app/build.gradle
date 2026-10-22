@@ -1,0 +1,48 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.waha.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.waha.app"
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+
+    /* التوقيع: المفتاح يأتي من أسرار GitHub (انظر SIGNING-AR.md في جذر المستودع)،
+       ولا يُحفظ في المستودع أبداً. المفتاح نفسه في كل نسخة، فتُثبَّت كل نسخة فوق السابقة دون فقد البيانات. */
+    def ks = System.getenv("WAHA_KEYSTORE")
+    signingConfigs {
+        if (ks) {
+            release {
+                storeFile file(ks)
+                storePassword System.getenv("WAHA_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("WAHA_KEY_ALIAS")
+                keyPassword System.getenv("WAHA_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (ks) signingConfig signingConfigs.release
+        }
+        // نسخة الاختبار على الهاتف الافتراضي: بالمفتاح نفسه، ليُختبر تثبيت تحديث فوق نسخة سابقة
+        debug {
+            if (ks) signingConfig signingConfigs.release
+        }
+    }
+
+
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

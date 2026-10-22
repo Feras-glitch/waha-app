@@ -1,0 +1,9 @@
+/* الخطوط مضمّنة في التطبيق (يعمل دون إنترنت). رخصة SIL OFL — انظر ملفات OFL-*.txt. مقتطعة للعربية واللاتينية. */
+@font-face{font-family:'Amiri';src:url(Amiri-Regular.woff) format('woff');font-weight:400;font-display:swap}
+@font-face{font-family:'Amiri';src:url(Amiri-Bold.woff) format('woff');font-weight:700;font-display:swap}
+@font-face{font-family:'Tajawal';src:url(Tajawal-Regular.woff) format('woff');font-weight:400;font-display:swap}
+@font-face{font-family:'Tajawal';src:url(Tajawal-Medium.woff) format('woff');font-weight:500;font-display:swap}
+@font-face{font-family:'Tajawal';src:url(Tajawal-Bold.woff) format('woff');font-weight:700;font-display:swap}
+@font-face{font-family:'Tajawal';src:url(Tajawal-ExtraBold.woff) format('woff');font-weight:800;font-display:swap}
+@font-face{font-family:'Aref Ruqaa';src:url(ArefRuqaa-Regular.woff) format('woff');font-weight:400;font-display:swap}
+@font-face{font-family:'Aref Ruqaa';src:url(ArefRuqaa-Bold.woff) format('woff');font-weight:700;font-display:swap}

@@ -1,0 +1,13 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- نخلة على كثيب، داخل المنطقة الآمنة للأيقونة -->
+    <path android:fillColor="#E9C89A" android:pathData="M28,76 Q54,64 80,76 L80,80 L28,80 Z" />
+    <path android:fillColor="#8A6235" android:pathData="M51,74 Q53,56 56,40 L59,40 Q57,56 56,74 Z" />
+    <path android:strokeColor="#9BD9A5" android:strokeWidth="4" android:strokeLineCap="round" android:fillColor="#00000000"
+        android:pathData="M57,40 Q46,34 36,42 M57,40 Q68,34 78,42 M57,40 Q48,28 40,30 M57,40 Q66,28 74,30 M57,40 Q56,30 54,25" />
+    <path android:fillColor="#B5651D" android:pathData="M53,45 m-2.6,0 a2.6,2.6 0 1,0 5.2,0 a2.6,2.6 0 1,0 -5.2,0" />
+    <path android:fillColor="#B5651D" android:pathData="M60,46 m-2.6,0 a2.6,2.6 0 1,0 5.2,0 a2.6,2.6 0 1,0 -5.2,0" />
+</vector>
