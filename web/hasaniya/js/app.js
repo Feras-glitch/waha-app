@@ -1,21 +1,7 @@
 /* الإقلاع */
 let timePausedByHide = false;
-/* الدمج مع «واحة اللسان»: تُفتح الحسنية من واحتي بملف الطفل (waha=1&wk=&name=&gender=&age=)، فيُختار له مستخدم بالاسم نفسه أو يُنشأ، ويظهر زر العودة إلى الواحة */
-function wahaLink() {
-  const p = new URLSearchParams(location.search); if (p.get("waha") !== "1") return;
-  const wk = p.get("wk"), name = (p.get("name") || "").slice(0, 20), gender = p.get("gender") === "girl" ? "girl" : "boy";
-  let u = users.find(x => x.wahaKid === wk) || (name && users.find(x => x.name === name && !x.wahaKid));
-  if (!u) { u = createNewUser(name || "طفلي", gender === "girl" ? "🦋" : "🦁"); u.state = normalizeUserState(u.state); users.push(u); }
-  u.wahaKid = wk; if (name) u.name = name; u.gender = gender;
-  activeUserId = u.id; state = u.state; saveState();
-  try { if (typeof vpPref === "function") vpPref("onboarded", true); } catch (e) {}
-  const back = document.getElementById("backToMapBtn");
-  if (back) { const w = document.createElement("button"); w.className = "icon-btn"; w.type = "button"; w.textContent = "🌴"; w.setAttribute("aria-label", "العودة إلى الواحة"); w.title = "الواحة"; w.onclick = () => { try { saveState(); } catch (e) {} location.href = "../index.html"; }; back.parentNode.insertBefore(w, back); }
-  try { history.replaceState({}, "", location.pathname); } catch (e) {}
-}
 function init() {
   loadAll();
-  try { wahaLink(); } catch (e) { console.warn("waha link", e); }
   initSpeech();
   updateUserChip();
   updatePointsDisplay();
