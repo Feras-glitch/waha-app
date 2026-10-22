@@ -125,13 +125,17 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
-      - name: Publish web/ to gh-pages
+      - name: Prepare site
         run: |
-          git config user.name "waha-bot"; git config user.email "waha-bot@users.noreply.github.com"
-          rm -rf /tmp/site && mkdir -p /tmp/site
-          cp -r web/index.html web/sw.js web/manifest.json web/js web/fonts web/hasaniya /tmp/site/
-          touch /tmp/site/.nojekyll
-          cd /tmp/site && git init -q -b gh-pages && git add -A && git commit -qm "web $(date -u +%Y-%m-%dT%H:%M)" && git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" && git push -qf origin gh-pages
+          rm -rf site && mkdir -p site
+          cp -r web/index.html web/sw.js web/manifest.json web/js web/fonts web/hasaniya site/
+          touch site/.nojekyll
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          publish_branch: gh-pages
+          force_orphan: true
 
   release:
     needs: [ android, packages ]
