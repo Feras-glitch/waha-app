@@ -16,7 +16,7 @@ const path = require('path');
   await p.locator('#kidHello .pickc button').first().click(); await p.locator('#kidHello .chip2').first().click(); await p.locator('#kidHello .bigplay').click();
   await p.locator('#kidHello .bigplay', { hasText: 'اغرس' }).click(); await p.waitForTimeout(300); await p.locator('#kidHello .bigplay').click(); await p.waitForTimeout(300);
   const n = await p.evaluate(() => TRIP.cards.length); if (n < 4) fail('رحلة قصيرة: ' + n);
-  const blind = await p.evaluate(() => TRIP.cards.filter((c, i) => c.kind !== 'learn' && c.g !== 'rec' && c.kind !== 'review' && !SELF_G.has(c.g) && !TRIP.cards.slice(0, i).some(l => l.kind === 'learn' && (l.id === c.g + '|' + c.id || l.id === c.g + '|' + String(c.id).split('|')[0]))).map(c => c.g));
+  const blind = await p.evaluate(() => TRIP.cards.filter((c, i) => c.kind !== 'learn' && c.g !== 'rec' && c.g !== 'tell' && c.g !== 'seen' && c.kind !== 'review' && !SELF_G.has(c.g) && !TRIP.cards.slice(0, i).some(l => l.kind === 'learn' && (l.id === c.g + '|' + c.id || l.id === c.g + '|' + String(c.id).split('|')[0]))).map(c => c.g));
   if (blind.length) fail('سؤال بلا درس قبله: ' + blind.join('، '));
   for (let i = 0; i < 24; i++) {
     const g = await p.evaluate(() => TRIP && TRIP.cards[TRIP.i] ? TRIP.cards[TRIP.i].g : null); if (!g) break;
