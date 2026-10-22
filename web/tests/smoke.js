@@ -3,6 +3,7 @@
 const { chromium } = require('playwright');
 const path = require('path');
 (async () => {
+ try {
   const b = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', '--allow-file-access-from-files'] });
   const c = await b.newContext({ viewport: { width: 390, height: 844 } }); const p = await c.newPage(); const errs = [];
   p.on('pageerror', e => errs.push(String(e))); p.on('console', m => { if (m.type() === 'error' && !/play\(\) request|net::ERR/.test(m.text())) errs.push(m.text()); });
@@ -37,4 +38,5 @@ const path = require('path');
   if (errs.length) fail('أخطاء: ' + errs.join(' | '));
   console.log(JSON.stringify({ cards: n, tripsDone: done, width: w, hasaniya: hs, errors: errs.length }));
   await b.close();
+ } catch (e) { console.log('::error::استثناء: ' + String(e).split('\n').slice(0, 3).join(' | ')); process.exitCode = 1; }
 })();
