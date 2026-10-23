@@ -10,7 +10,7 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
   'showUsersModal', 'openUserEditor', 'deleteUser', 'switchUser', 'exportBackup', 'importBackupFile', 'closePopup', 'appDismiss', 'showMap',
   'printCertificate', 'printTeacherReport', 'printAllCards', 'guideParentNote', 'selectParentNote', 'openHub', 'recAllForUser', 'learnedVerses',
   'completedCount', 'guideStreak', 'openGuideJournal', 'escapeHtml', 'activeUserId', 'pinUnavailable', 'pinLockState', 'pinLockSave', 'appBack',
-  'showNewAchievement', 'offerReview', 'guideBubbleEl'];
+  'showNewAchievement', 'offerReview', 'guideBubbleEl', 'showParentScreen'];
 (function () {
   'use strict';
   var FAMKEY = 'kb-family-v1', HOME = '../index.html', CORNER = '../kunuz/index.html#parent';
@@ -320,6 +320,10 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
     if (typeof offerReview === 'function') { var _offer = offerReview; offerReview = function () {
       if (busy()) { if (!LATER.some(function (f) { return f.offer; })) { var f = function () { _offer(); quietGuide(); }; f.offer = 1; LATER.push(f); } return; }
       _offer(); quietGuide(); }; }
+    /* no mistakes is not mastery when nothing has been learned yet */
+    if (typeof showParentScreen === 'function') { var _ps = showParentScreen; showParentScreen = function () { var r = _ps.apply(this, arguments);
+      try { var pl = document.getElementById('parentMistakesList'), e = pl && pl.querySelector('.empty-state');
+        if (e && !learnedVerses('all').length) e.textContent = isGirl() ? 'لم تبدأ الحفظ بعد.' : 'لم يبدأ الحفظ بعد.'; } catch (x) {} return r; }; }
     var quietGuide = function () { try { var b = guideBubbleEl(); if (b && document.getElementById('reviewOffer')) b.classList.remove('show'); } catch (e) {} };
   } catch (e) {}
   /* Android back on the Hasaniya's map goes to the oasis (the front door), not out of the app */

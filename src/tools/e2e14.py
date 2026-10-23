@@ -81,6 +81,9 @@ async def main():
             document.getElementById('quizPopup').classList.remove('active'); await new Promise(r => setTimeout(r, 900));
             const after = document.getElementById('newAchievementPopup').classList.contains('active'); document.getElementById('newAchievementPopup').classList.remove('active'); return [before, after]; })()""")
         ok(r == [False, True], 'an achievement waits until the quiz in front of it is closed (%s)' % r)
+        em = await p.evaluate("(() => { try { showParentScreen(); } catch (e) { return 'err ' + e.message; } const t = (document.getElementById('parentMistakesList') || {}).textContent || ''; try { appBack(); } catch (e) {} return t; })()")
+        ok('متقن' not in em and 'لم تبدأ الحفظ بعد' in em, 'the parent is not told «متقن للحفظ» before anything was learned (%s)' % em.strip()[:40])
+        await p.goto('about:blank'); await p.goto(HS); await p.wait_for_timeout(1500)
         await p.go_back(); await p.wait_for_timeout(1200)
         ok(p.url.endswith('/index.html') and '/hasaniya/' not in p.url, 'the Hasaniya: back on its map goes to the oasis (%s)' % p.url[-30:])
 
