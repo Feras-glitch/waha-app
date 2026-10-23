@@ -5491,7 +5491,7 @@ async function fromRecs(){
       if(OA_PRIVATE.indexOf(r.kind)>=0||String(r.type||r.blob.type||'').indexOf('audio/')!==0) return;
       var q=OA_QURAN.indexOf(r.kind)>=0, text=String(r.text||'').trim();
       out.push({src:'oasis',id:String(r.id),kid:kid,quran:q,shaykh:r.approvedBy==='المعلم',kind:r.kind,
-        title:q?r.kind+' · '+(r.ref||''):clip(text.split(/\n+/)[0]||r.ref||r.kind,60),who:q?'':String(r.ref||''),text:text,when:r.date||'',t:Date.parse(r.date||'')||0,blob:r.blob});
+        title:q?r.kind+' · '+(r.ref||''):clip(text.split(/\n+/)[0]||r.ref||r.kind,60),who:q||r.kind==='نص حر'?'':String(r.ref||''),text:text,when:r.date||'',t:Date.parse(r.date||'')||0,blob:r.blob});
     });
   }
   try{if(d) d.close();}catch(e){}
@@ -5546,7 +5546,7 @@ async function pFrom(){
         return '<li class="from-row"><div class="from-h"><span class="from-tag">'+(x.src==='oasis'?'الواحة':'الحسنية')+' · '+esc(x.kind)+'</span>'+
           (x.quran&&!x.shaykh?'<span class="state st-mid from-note">القرآن: للإذاعة في البيت، ولا يدخل المجلّات</span>':'')+(x.t?'<span class="muted small">'+fmtDate(x.t)+'</span>':'')+'</div>'+
           '<p class="from-t">'+esc(x.title)+'</p>'+(x.quran&&x.text?'<p class="from-v">'+esc(clip(x.text,160))+'</p>':'')+(x.who&&x.who!==x.title?'<p class="muted small">'+esc(x.who)+'</p>':'')+
-          '<audio controls preload="none" data-from="'+i+'"></audio>'+
+          '<audio controls preload="none" data-from="'+i+'" aria-label="'+escA('تسجيل '+k.name+': '+x.title)+'"></audio>'+
           (w?'<p class="state st-ok">في «إذاعة الباكورة»'+(w.pub&&w.pub.mag?' والمجلّات':'')+'</p>':
             '<div class="actions"><button class="btn ghost" type="button" data-act="fromAdd" data-i="'+i+'">'+ICON.radio.replace('<svg','<svg class="ic-s"')+' '+(x.quran?'أضيفوه إلى الإذاعة':'أضيفوه إلى الإذاعة والمجلّات')+'</button></div>')+'</li>';
       }).join('')+'</ul></section>';

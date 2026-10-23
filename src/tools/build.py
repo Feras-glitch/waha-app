@@ -68,7 +68,7 @@ for p_ in js_parts:
             seen[m_.group(1)] = '%s:%d' % (p_, n_)
 # the recordings the oasis keeps between the child and the parent must stay out of the radio here too
 _pk = re.search(r"const PRIVATE_K = new Set\((\[[^\]]*\])\)", rd('parts/waha/app.js'))
-_op = re.search(r"var OA_PRIVATE=(\[[^\]]*\])", rd('parts/f_waha.js'))
+_op = re.search(r"\bOA_PRIVATE=(\[[^\]]*\])", rd('parts/f_waha.js'))
 assert _pk and _op and sorted(json.loads(_pk.group(1).replace("'", '"'))) == sorted(json.loads(_op.group(1).replace("'", '"'))), \
     'OA_PRIVATE in f_waha.js must list the same kinds as PRIVATE_K in waha/app.js'
 # the Hasaniya verses (from the oasis data), so a recording brought into the radio carries its text

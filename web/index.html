@@ -1974,7 +1974,7 @@ function renderDad(){
       store.keys().forEach(k => { if (new RegExp(`^[A-Za-z]+:${kid}(:|$)`).test(k)) store.del(k); }); ['tri','kq','kqa'].forEach(n => { const a = store.get(n, null); if (Array.isArray(a)) store.set(n, a.filter(x => x.kid !== kid)); });
       resetGames(); renderGrove(); renderPalm(); renderDad(); });
     const pb = B.querySelector('#ddPlace'); if (pb) pb.addEventListener('click', () => { store.set(`placeSkip:${kid}`, false); go('place', 'plCard'); });
-  } else if (ddTab === 'rec'){ B.innerHTML = '<p class="note">استمع، واضغط الكلمة التي أخطأ فيها، واكتب أو سجّل ملاحظة، ثم اعتمد أو اطلب التصحيح. المعتمد يفتح له «سلّة التمر».</p><div id="ddRec" class="queue"></div>'; renderReview(B.querySelector('#ddRec'), false); }
+  } else if (ddTab === 'rec'){ B.innerHTML = '<p class="note">استمع، واضغط الكلمة التي أخطأ فيها، واكتب أو سجّل ملاحظة، ثم اعتمد أو اطلب التصحيح. المعتمد يفتح له «سلّة التمر»، ويدخل «إذاعة الواحة». ولتسمعه العائلة في «إذاعة الباكورة» أو يضعه في مجلّة: «ركن وليّ الأمر» ← «من الواحة والحسنية».</p><div id="ddRec" class="queue"></div>'; renderReview(B.querySelector('#ddRec'), false); }
   else if (ddTab === 'gift'){ renderGiftRequests(B); }
   else if (ddTab === 'amal'){ renderAmalPanel(B); }
   else if (ddTab === 'tri'){ renderTriPanel(B); }
