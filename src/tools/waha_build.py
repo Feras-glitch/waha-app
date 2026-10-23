@@ -196,6 +196,15 @@ def build(verbose=True, icon='', csp=''):
     check_gender(D)
     check_verses(D)
     D['kunuz'] = kunuz_for_trip()
+    # the home-language glosses (Traditional Chinese, pinyin, English), when present: each must name a word of the palms
+    gp = os.path.join(ROOT, 'parts', 'waha', 'glosses.json')
+    if os.path.exists(gp):
+        G = _j.load(open(gp, encoding='utf-8')).get('words', {})
+        known = {k + '|' + f['lemma'] for k, P in D['palms'].items() for f in (P.get('family') or []) + (P.get('unknown') or [])}
+        stray = [k for k in G if k not in known]
+        if stray:
+            raise SystemExit('waha glosses.json: words not in the palms: ' + ', '.join(stray[:10]))
+        D['glosses'] = {k: {'zh': v['zh'], 'py': v['py'], 'en': v['en']} for k, v in G.items()}
     data = _j.dumps(D, ensure_ascii=False, separators=(',', ':'))
     css, bridge, post = rd('parts', 'waha.css'), rd('parts', 'waha_bridge.js'), rd('parts', 'waha_post.js')
     miss = check_markers('page', page) + check_markers('app', app) + check_markers('data', data)

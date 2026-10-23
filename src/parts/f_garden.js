@@ -13,12 +13,13 @@ function kidStats(kidId){
     approved:0,firstWork:null,teacher:0,firstTeacher:null,writings:0,mags:0,editorMag:null,weekly:0,riddles:0};
   LESSONS.forEach(function(l){ s.axN[l.ax]=(s.axN[l.ax]||0)+1; if(P[l.id]){ s.gems++; s.axHave[l.ax]=(s.axHave[l.ax]||0)+1; if(P[l.id].p) s.perfect++; } });
   AXES.forEach(function(a){ s.axDone[a.id]=(s.axHave[a.id]||0)===s.axN[a.id]; });
-  var lastAx={};
+  var lastAx={}, lastFull=null;
   (S.tests||[]).slice().sort(function(a,b){return dateOf(a.d)-dateOf(b.d);}).forEach(function(x){
     /* a chamber's mastery counts the first attempt, or one at least a week after the attempt before it on that chamber:
        retaking the same questions the same afternoon until they pass is not mastery */
     if(x.m==='axis'&&x.ax){ var pv=lastAx[x.ax]; lastAx[x.ax]=x.d; if((!pv||dateOf(x.d)-dateOf(pv)>=7*864e5)&&(!s.best[x.ax]||x.p>s.best[x.ax].p)) s.best[x.ax]={p:x.p,d:x.d}; }
-    if(x.m==='full'&&(!s.fullBest||x.p>s.fullBest.p)) s.fullBest={p:x.p,d:x.d};
+    /* the full test follows the same rule: its first attempt, or one a week after the attempt before it */
+    if(x.m==='full'){ var pf=lastFull; lastFull=x.d; if((!pf||dateOf(x.d)-dateOf(pf)>=7*864e5)&&(!s.fullBest||x.p>s.fullBest.p)) s.fullBest={p:x.p,d:x.d}; }
   });
   s.alive=true;   // the fountain never stops: a garden takes nothing back
   var mine=WORKS.filter(function(w){return w.kid===kidId;});
@@ -38,7 +39,7 @@ var AX_PATRON={lamasat:'في رحاب «لمسات بيانية» للدكتور
   nahw:'في رحاب «دلائل الإعجاز» لعبد القاهر الجرجاني، و«معاني النحو» للدكتور فاضل السامرائي',asrar:'في رحاب «العين» للخليل بن أحمد، و«الخصائص» لابن جني',
   aliya:'في رحاب «اللغة العالية» لعارف حجاوي',taammal:'في رحاب قناة «تأمَّل» لشادي داود',
   asma:'في رحاب «المقصد الأسنى» للغزالي، و«لمسات بيانية» للدكتور فاضل السامرائي'};
-var CERT_K={x:['شهادات الإتقان','تُنال باختبارٍ حقيقي: ثمانون في المئة أو أكثر من المحاولة الأولى.','إتقان'],
+var CERT_K={x:['شهادات الإتقان','تُنال باختبارٍ حقيقي: ثمانون في المئة أو أكثر بأوّل جوابٍ في كلّ سؤال، في أوّل اختبار أو بعد أسبوعٍ من الاختبار الذي قبله.','إتقان'],
   c:['شهادات الإتمام','تُنال بإكمال الدروس وجمع الجواهر.','إتمام'],
   w:['شهادات الإبداع والمواظبة','تُنال بالعمل والصبر، وباعتماد وليّ الأمر والمعلّم.','تقدير']};
 var CERTS=[];
@@ -51,7 +52,7 @@ AXES.forEach(function(a){
 });
 CERTS.push({id:'mx-full',k:'x',c:'gold',t:'شهادة الإتقان الشامل',sub:'الخزائن '+axWord(),patron:'من الخليل بن أحمد إلى الدكتور فاضل السامرائي',
   ok:function(s){var b=s.fullBest;return b&&b.p>=80?{d:b.d,sc:b.p}:null;},
-  body:function(n,aw){return 'تشهد «كنوز البيان» بأنّ ⟨الطالب|الطالبة⟩ '+n+' ⟨اجتاز|اجتازت⟩ الاختبار الشامل في الخزائن '+axWord()+' بدرجة '+n2a(aw.sc)+'٪ من المحاولة الأولى، ⟨فاستحقّ|فاستحقّت⟩ شهادة الإتقان الشامل.';},
+  body:function(n,aw){return 'تشهد «كنوز البيان» بأنّ ⟨الطالب|الطالبة⟩ '+n+' ⟨اجتاز|اجتازت⟩ الاختبار الشامل في الخزائن '+axWord()+' بدرجة '+n2a(aw.sc)+'٪، بأوّل جوابٍ في كلّ سؤال، ⟨فاستحقّ|فاستحقّت⟩ شهادة الإتقان الشامل.';},
   need:function(s){var b=s.fullBest;return '⟨اجتز|اجتازي⟩ «الاختبار الشامل» بثمانين في المئة أو أكثر.'+(b?' أفضل درجةٍ حتى الآن: '+n2a(b.p)+'٪.':'');},
   prog:function(s){var b=s.fullBest;return [b?Math.min(b.p,80):0,80];}});
 AXES.forEach(function(a){

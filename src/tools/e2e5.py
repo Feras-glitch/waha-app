@@ -110,7 +110,7 @@ async def main():
         await p.evaluate("void saveFile('test-hind.txt','⟨اكتب|اكتبي⟩ اسمك', null)")
         await p.wait_for_selector('#kzOk')
         ok(await p.locator('#kzGo[disabled]').count() == 1, 'export waits for consent')
-        await p.check('#kzOk')
+        await p.check('#kzOk'); await p.fill('#kzPin', '1234')
         async with p.expect_download() as dli:
             await p.click('#kzGo')
         dl = await dli.value; fp = os.path.join(DL, 'test.txt'); await dl.save_as(fp)
@@ -126,8 +126,8 @@ async def main():
             await p.fill('#pinIn', '1234'); await p.click('#pinForm button[type=submit]'); await p.wait_for_selector('.ph-top')
         await p.click('[data-act="pBackup"]'); await p.wait_for_selector('[data-act="backupMake"]')
         t = await p.evaluate("document.getElementById('view').innerText")
-        ok('ما خرج من الواحة والحسنية' in t and 'test-hind.txt' in t, 'oasis exports listed in the parent corner')
-        await p.click('[data-act="backupMake"]'); await p.fill('#bk1', 'kunuz-2026'); await p.fill('#bk2', 'kunuz-2026')
+        ok('ما خرج من الجهاز' in t and 'test-hind.txt' in t, 'oasis exports listed in the parent corner')
+        await p.click('[data-act="backupMake"]'); await p.fill('#bk1', 'kunuz-2026'); await p.fill('#bk2', 'kunuz-2026'); await p.fill('#fpIn', '1234')
         async with p.expect_download() as dli:
             await p.click('.modal [data-m="1"]')
         dl = await dli.value; bp = os.path.join(DL, 'backup.json'); await dl.save_as(bp)

@@ -5,7 +5,19 @@
 ICON.palm='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21c.4-4.6.3-8.4-.4-11.6"/><path d="M11.6 9.4C9.6 6.6 6.4 6 4 7.6M11.6 9.4c2-2.9 5.2-3.4 7.6-1.8M11.6 9.4C10.8 6.2 8.6 4.2 6 4.2M11.6 9.4c.9-3 3.2-4.8 5.8-4.6"/><path d="M5 21h14"/></svg>';
 /* the oasis is the front door: a child with a profile lands there; «#kunuz» (or any route) keeps the treasure chambers open */
 var IN_KUNUZ=false;
-function toOasis(){ location.replace(wahaURL({kid:KID&&KID.id})); }
+/* moving to another section: step back over this page's guard entry first, so the page's own entry is the one replaced
+   and Back never finds the section just left (otherwise Back cycles oasis → section → oasis…) */
+function kzLeave(url){
+  window.__kzLeaving = true;
+  var st = null; try { st = history.state; } catch (e) {}
+  if (!window.AndroidBridge && st && st.wahaBack) {
+    var done = false, to = function () { if (done) return; done = true; window.removeEventListener('popstate', to, true); location.replace(url); };
+    window.addEventListener('popstate', to, true);
+    try { history.back(); } catch (e) { to(); }
+    setTimeout(to, 700);
+  } else location.replace(url);
+}
+function toOasis(){ kzLeave(wahaURL({kid:KID&&KID.id})); }
 function wahaURL(o){
   o=o||{}; var q=[];
   if(o.kid) q.push('k='+encodeURIComponent(o.kid));
@@ -15,12 +27,12 @@ function wahaURL(o){
 function wahaGo(o){
   /* the parent already entered the PIN here: the oasis honours it for the rest of the session */
   try{ if(o&&o.dad&&parentOn()) sessionStorage.setItem('kz-parent-until',String(PARENT_UNTIL)); }catch(e){}
-  location.href=wahaURL(o);
+  kzLeave(wahaURL(o));
 }
 /* the Hasaniya's parents' screen, carrying the session opened here */
 function hasaniyaParent(){
   try{ if(parentOn()) sessionStorage.setItem('kz-parent-until',String(PARENT_UNTIL)); }catch(e){}
-  location.href='../hasaniya/index.html?parent=1'+(KID?'&kid='+encodeURIComponent(KID.id):'');
+  kzLeave('../hasaniya/index.html?parent=1'+(KID?'&kid='+encodeURIComponent(KID.id):''));
 }
 function wahaDoor(){
   return '<button class="door wide waha-door" type="button" data-act="waha" style="--ax:var(--olive)"><span class="door-t">🌴 واحة اللسان العربي</span>'+
@@ -68,24 +80,27 @@ async function oasisExport(){
   }
   d.close(); return out;
 }
+/* both imports write the backup's keys first and only then remove what it does not hold; each store is cleared and refilled in one
+   transaction (a failure leaves it as it was). They return how many parts failed, so the restore can say so */
 async function oasisImport(o){
-  if(!o) return;
-  try{ var del=[]; for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i); if(k&&k.indexOf('oasis:')===0) del.push(k);} del.forEach(function(k){localStorage.removeItem(k);}); }catch(e){}
-  Object.keys(o.ls||{}).forEach(function(k){ if(k.indexOf('oasis:')===0){ try{localStorage.setItem(k,o.ls[k]);}catch(e){} } });
-  var d=await oasisDB(true); if(!d) return;
+  if(!o) return 0;
+  var bad=0, keep=o.ls||{};
+  Object.keys(keep).forEach(function(k){ if(k.indexOf('oasis:')===0){ try{localStorage.setItem(k,keep[k]);}catch(e){bad++;} } });
+  if(!bad){ try{ var del=[]; for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i); if(k&&k.indexOf('oasis:')===0&&!(k in keep)) del.push(k);} del.forEach(function(k){localStorage.removeItem(k);}); }catch(e){} }
+  var d=await oasisDB(true); if(!d) return bad+1;
   var stores=['rec','gift','voice'];
   for(var j=0;j<stores.length;j++){
     var st=stores[j], rows=(o.idb&&o.idb[st])||[];
-    await new Promise(function(res){
-      try{ var t=d.transaction(st,'readwrite'), os=t.objectStore(st); os.clear(); rows.forEach(function(r){os.put(unpackVal(r));}); t.oncomplete=res; t.onerror=res; t.onabort=res; }catch(e){res();}
+    bad+=await new Promise(function(res){
+      try{ var t=d.transaction(st,'readwrite'), os=t.objectStore(st); os.clear(); rows.forEach(function(r){os.put(unpackVal(r));}); t.oncomplete=function(){res(0);}; t.onerror=function(){res(1);}; t.onabort=function(){res(1);}; }catch(e){res(1);}
     });
   }
-  d.close();
+  d.close(); return bad;
 }
 function waLogHTML(){
   var L=(FAM.waLog||[]).slice(-12).reverse(); if(!L.length) return '';
-  return '<section><h2 class="h2">ما خرج من الواحة والحسنية</h2><ul class="rev">'+L.map(function(x){var k=x.kid&&kidById(x.kid);
-    return '<li><span class="mark-ok">↗</span> '+fmtDate(x.d)+' · '+(x.app==='hasaniya'?'الحسنية · ':'')+esc(x.name)+(k?' · '+esc(k.name):'')+'</li>';}).join('')+'</ul></section>';
+  return '<section><h2 class="h2">ما خرج من الجهاز</h2><p class="muted small">من الأقسام الثلاثة، الأحدث أولًا.</p><ul class="rev">'+L.map(function(x){var k=x.kid&&kidById(x.kid);
+    return '<li><span class="mark-ok">↗</span> '+fmtDate(x.d)+' · '+(x.app==='hasaniya'?'الحسنية · ':x.app==='kunuz'?'كنوز البيان · ':'الواحة · ')+esc(x.name)+(k?' · '+esc(k.name):'')+'</li>';}).join('')+'</ul></section>';
 }
 
 /* ---------- the Hasaniya (hasaniya/): its children are ours (user id «kz_»+child id); backup and deletion live here.
@@ -108,14 +123,15 @@ async function hasaniyaExport(){
   d.close(); return out;
 }
 async function hasaniyaImport(o){
-  if(!o) return;
-  try{ var del=[]; for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i); if(k&&k.indexOf(HS)===0&&!HS_SKIP.test(k)) del.push(k);} del.forEach(function(k){localStorage.removeItem(k);}); }catch(e){}
-  Object.keys(o.ls||{}).forEach(function(k){ if(k.indexOf(HS)===0&&!HS_SKIP.test(k)){ try{localStorage.setItem(k,o.ls[k]);}catch(e){} } });
-  var d=await hsDB(); if(!d) return;
-  await new Promise(function(res){
-    try{ var t=d.transaction('recs','readwrite'), os=t.objectStore('recs'); os.clear(); (o.recs||[]).forEach(function(r){os.put(unpackVal(r));}); t.oncomplete=res; t.onerror=res; t.onabort=res; }catch(e){res();}
+  if(!o) return 0;
+  var bad=0, keep=o.ls||{};
+  Object.keys(keep).forEach(function(k){ if(k.indexOf(HS)===0&&!HS_SKIP.test(k)){ try{localStorage.setItem(k,keep[k]);}catch(e){bad++;} } });
+  if(!bad){ try{ var del=[]; for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i); if(k&&k.indexOf(HS)===0&&!HS_SKIP.test(k)&&!(k in keep)) del.push(k);} del.forEach(function(k){localStorage.removeItem(k);}); }catch(e){} }
+  var d=await hsDB(); if(!d) return bad+1;
+  bad+=await new Promise(function(res){
+    try{ var t=d.transaction('recs','readwrite'), os=t.objectStore('recs'); os.clear(); (o.recs||[]).forEach(function(r){os.put(unpackVal(r));}); t.oncomplete=function(){res(0);}; t.onerror=function(){res(1);}; t.onabort=function(){res(1);}; }catch(e){res(1);}
   });
-  d.close();
+  d.close(); return bad;
 }
 /* a child deleted in the parent corner: their Hasaniya progress and recordings, the parent's recorded «يا <name>», and their copy in the safety stores */
 async function hasaniyaForget(id,name){
@@ -143,8 +159,14 @@ async function hasaniyaForget(id,name){
 }
 
 /* a child deleted in the parent corner: their oasis progress, words and recordings go too */
-async function oasisForget(id){
+async function oasisForget(id,name){
   var tag='@'+id;
+  /* his name in the family challenge's history, and the oasis's own list of children (rewritten at its next load, but a backup made
+     before that would carry it) */
+  try{ for(var j=0;j<localStorage.length;j++){ var fk=localStorage.key(j); if(!fk||fk.indexOf('oasis:fam:')!==0) continue;
+    var fv=null; try{fv=JSON.parse(localStorage.getItem(fk));}catch(e){}
+    if(fv&&Array.isArray(fv.players)&&name&&fv.players.indexOf(name)>=0){ fv.players=fv.players.filter(function(p){return p!==name;}); localStorage.setItem(fk,JSON.stringify(fv)); } } }catch(e){}
+  try{ var ok=JSON.parse(localStorage.getItem('oasis:kids')||'null'); if(Array.isArray(ok)) localStorage.setItem('oasis:kids',JSON.stringify(ok.filter(function(x){return !x||x.id!==id;}))); }catch(e){}
   try{ var del=[]; for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i); if(k&&k.indexOf('oasis:')===0&&(k.indexOf(':'+tag+':')>0||k.slice(-tag.length-1)===':'+tag)) del.push(k);} del.forEach(function(k){localStorage.removeItem(k);}); }catch(e){}
   ['tri','kq','kqa'].forEach(function(n){ try{ var a=JSON.parse(localStorage.getItem('oasis:'+n)||'null'); if(Array.isArray(a)) localStorage.setItem('oasis:'+n,JSON.stringify(a.filter(function(x){return !x||x.kid!==tag;}))); }catch(e){} });
   var d=await oasisDB(false); if(!d) return;
