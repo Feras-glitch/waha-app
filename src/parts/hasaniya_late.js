@@ -9,7 +9,8 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
   'applyKidMode', 'showToast', 'requirePin', 'cancelPin', 'verifyPin', 'hasPin', 'showPinModal', 'managePin', 'changePin', 'removePin', 'forgotPin',
   'showUsersModal', 'openUserEditor', 'deleteUser', 'switchUser', 'exportBackup', 'importBackupFile', 'closePopup', 'appDismiss', 'showMap',
   'printCertificate', 'printTeacherReport', 'printAllCards', 'guideParentNote', 'selectParentNote', 'openHub', 'recAllForUser', 'learnedVerses',
-  'completedCount', 'guideStreak', 'openGuideJournal', 'escapeHtml', 'activeUserId', 'pinUnavailable', 'pinLockState', 'pinLockSave', 'appBack'];
+  'completedCount', 'guideStreak', 'openGuideJournal', 'escapeHtml', 'activeUserId', 'pinUnavailable', 'pinLockState', 'pinLockSave', 'appBack',
+  'showNewAchievement', 'offerReview', 'guideBubbleEl'];
 (function () {
   'use strict';
   var FAMKEY = 'kb-family-v1', HOME = '../index.html', CORNER = '../kunuz/index.html#parent';
@@ -308,8 +309,28 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
   } catch (e) {}
 
   function toCorner() { location.href = CORNER; }
+  /* one thing at a time on the child's screen: a new achievement, or the offer to recite what came before, waits until the
+     window in front (the station's quiz, «لنكرّر هذه الأبيات»…) is closed, and the offer does not come with a second bubble */
+  try {
+    var LATER = [];
+    var busy = function (except) { return [].some.call(document.querySelectorAll('.modal-overlay.active'), function (m) { return m.id !== except; }); };
+    var flush = function () { if (!LATER.length || busy()) return; var f = LATER.shift(); f(); };
+    new MutationObserver(function () { setTimeout(flush, 350); }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+    if (typeof showNewAchievement === 'function') { var _ach = showNewAchievement; showNewAchievement = function (a) { if (busy('newAchievementPopup')) { LATER.push(function () { _ach(a); }); return; } _ach(a); }; }
+    if (typeof offerReview === 'function') { var _offer = offerReview; offerReview = function () {
+      if (busy()) { if (!LATER.some(function (f) { return f.offer; })) { var f = function () { _offer(); quietGuide(); }; f.offer = 1; LATER.push(f); } return; }
+      _offer(); quietGuide(); }; }
+    var quietGuide = function () { try { var b = guideBubbleEl(); if (b && document.getElementById('reviewOffer')) b.classList.remove('show'); } catch (e) {} };
+  } catch (e) {}
   /* Android back on the Hasaniya's map goes to the oasis (the front door), not out of the app */
-  try { if (typeof appBack === 'function') { var _back = appBack; appBack = function () { if (_back.apply(this, arguments)) return true; try { saveState(); } catch (e) {} location.href = HOME; return true; }; } } catch (e) {}
+  try { if (typeof appBack === 'function') { var _back = appBack; appBack = function () { if (_back.apply(this, arguments)) return true; try { saveState(); } catch (e) {} location.replace(HOME); return true; }; } } catch (e) {}
+  /* the back of a browser, or of the web app installed on Android, steps back inside this section as the Android app's button does:
+     one guard entry in the history catches it; where there is nowhere left to go back to, the browser is let go */
+  (function () { if (window.AndroidBridge || !window.history || !history.pushState) return;
+    function guard() { try { history.pushState({ wahaBack: 1 }, '', location.href); } catch (e) {} }
+    if (!(history.state && history.state.wahaBack)) guard();
+    window.addEventListener('popstate', function () { var done = false; try { done = appBack(); } catch (e) {} if (done) guard(); });
+  })();
   function cornerSheet(title, text) {
     sheet(title, '<p style="line-height:1.9">' + text + '</p>', [{ t: 'افتحوا ركن وليّ الأمر', cls: 'btn-success', on: function () { toCorner(); } }, { t: 'إغلاق' }]);
   }
@@ -432,7 +453,10 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
   window.addEventListener('DOMContentLoaded', function () {
     var st = document.createElement('style'); st.id = 'kzFix';
     st.textContent = '.review-offer{left:12px!important;right:12px!important;transform:none!important;margin-inline:auto;width:auto;max-width:520px}' +
-      '#mainHeader .icon-btn,#kzHome{min-width:44px;min-height:44px}';
+      '#mainHeader .icon-btn,#kzHome{min-width:44px;min-height:44px}' +
+      /* the product's fonts: Tajawal for the interface, Amiri for the poem, as in the oasis and «كنوز البيان» */
+      'body,button,input,select,textarea{font-family:"Tajawal","Amiri",system-ui,sans-serif}' +
+      '.verse-text,.full-verse-box .text,.verse-intro,.intro-verse,.seq-verse,.ask-verse,.word-btn{font-family:"Amiri","Noto Naskh Arabic",serif}';
     document.head.appendChild(st);
   });
   window.addEventListener('DOMContentLoaded', function () {

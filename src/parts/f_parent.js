@@ -308,7 +308,7 @@ async function kidResetProgress(id){
   var k=kidById(id); if(!k) return;
   var ok=await ask({title:'مسح جواهر '+esc(k.name)+' ونتائجه؟',c:'rose',ok:'امسحوها',danger:1,html:'<p>تُمسح الجواهر ونتائج الاختبارات وأيام «جوهرة اليوم». الأعمال والتسجيلات تبقى.</p>'});
   if(!ok) return;
-  var d=kidLoad(id); d.prog={}; d.st=freshST(); d.certs={}; d.gseen=[]; d.rm={}; lsSet(kidKey(id),d);
+  var d=kidLoad(id); d.prog={}; d.st=freshST(); d.certs={}; d.gseen=[]; d.gkeep=[]; d.rm={}; lsSet(kidKey(id),d);
   if(KID&&KID.id===id){KD=d;prog=d.prog;ST=d.st;}
   toast('مُسحت النتائج.'); progressFor(id,true);
 }

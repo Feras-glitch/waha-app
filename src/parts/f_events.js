@@ -188,6 +188,14 @@ window.appBack=function(){
   return false;
 };
 
+/* the back of a browser, or of the web app installed on Android, steps back inside this section as the Android app's button does:
+   one guard entry in the history catches it; where there is nowhere left to go back to, the browser is let go */
+(function(){ if(window.AndroidBridge||!window.history||!history.pushState) return;
+  function guard(){ try{ history.pushState({wahaBack:1},'',location.href); }catch(e){} }
+  if(!(history.state&&history.state.wahaBack)) guard();
+  window.addEventListener('popstate',function(){ var done=false; try{ done=window.appBack(); }catch(e){} if(done) guard(); });
+})();
+
 /* ---------- start ---------- */
 (async function start(){
   await idbOpen();

@@ -31,6 +31,7 @@ function renderTray(){
 }
 function go(html){
   stopSpeak(); recAbort(); radioStop(); closeModal(); presentClose(); if(DR.dirty) drawSave();
+  if(typeof brandAsApp==='function'&&typeof FAM!=='undefined'&&FAM) brandAsApp(!FAM.pin||!FAM.kids.length);
   view.innerHTML=G(html);
   hydrate(view);
   renderKidChip();

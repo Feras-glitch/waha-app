@@ -9,7 +9,7 @@ function cnt(n,f){return n===1?f[0]:n===2?f[1]:(n<=10?n2a(n)+' '+f[2]:n2a(n)+' '
 
 function kidStats(kidId){
   var d=kidData(kidId), P=d.prog, S=d.st, t=today();
-  var s={d:d,gems:0,perfect:0,axN:{},axHave:{},axDone:{},best:{},fullBest:null,weeks:(S.daily&&S.daily.wk)||0,alive:false,
+  var s={kid:kidId,d:d,gems:0,perfect:0,axN:{},axHave:{},axDone:{},best:{},fullBest:null,weeks:(S.daily&&S.daily.wk)||0,alive:false,
     approved:0,firstWork:null,teacher:0,firstTeacher:null,writings:0,mags:0,editorMag:null,weekly:0,riddles:0};
   LESSONS.forEach(function(l){ s.axN[l.ax]=(s.axN[l.ax]||0)+1; if(P[l.id]){ s.gems++; s.axHave[l.ax]=(s.axHave[l.ax]||0)+1; if(P[l.id].p) s.perfect++; } });
   AXES.forEach(function(a){ s.axDone[a.id]=(s.axHave[a.id]||0)===s.axN[a.id]; });
@@ -133,7 +133,10 @@ function gardenItems(s){
   var rmN=Object.keys(s.d.rm||{}).length; [10,20,30].forEach(function(n,i){ if(rmN>=n) it.push('r'+(i+1)); });
   if(s.weekly) it.push('n');
   if(certs['mx-full']) it.push('pk');
-  return it;
+  /* what was earned stays: a work returned or a reading removed later does not take its butterfly or its nightingale back */
+  var keep=Array.isArray(s.d.gkeep)?s.d.gkeep:[], add=it.filter(function(x){return keep.indexOf(x)<0;});
+  if(add.length&&s.kid){ s.d.gkeep=keep.concat(add); try{ saveKidData(s.kid,s.d); }catch(e){} }
+  return keep.concat(add);
 }
 var GWORD={f:['وردةٌ','وردتان','ورود','وردة'],t:['شجرةٌ','شجرتان','أشجار','شجرة'],x:['شجرةٌ مثمرة','شجرتان مثمرتان','أشجارٍ مثمرة','شجرةً مثمرة'],
   b:['طائرٌ','طائران','طيور','طائرًا'],u:['فراشةٌ','فراشتان','فراشات','فراشةً'],l:['فانوسٌ','فانوسان','فوانيس','فانوسًا'],

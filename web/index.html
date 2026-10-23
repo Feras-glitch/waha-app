@@ -1097,7 +1097,7 @@ function kidEditSheet(i){
     img.onload = () => { const c = document.createElement('canvas'); const n = 96; c.width = c.height = n; const m = Math.min(img.width, img.height); c.getContext('2d').drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, n, n); k.photo = c.toDataURL('image/jpeg', .8); URL.revokeObjectURL(url); store.set('kids', kids); $('keFb').textContent = 'أُضيفت الصورة.'; $('keFb').className = 'fb ok'; renderWho(); }; img.src = url; });
   s.querySelector('#keSave').addEventListener('click', () => { k.name = $('keName').value.trim() || k.name; k.age = Math.max(4, Math.min(16, +$('keAge').value || 8)); k.gender = $('keG').value; store.set('kids', kids); renderWho(); renderHome(); kidsSheet(); });
   const pd = s.querySelector('#kePhotoDel'); if (pd) pd.addEventListener('click', () => { delete k.photo; store.set('kids', kids); kidEditSheet(i); });
-  const dl = s.querySelector('#keDel'); if (dl) dl.addEventListener('click', () => { if (!dl.dataset.c){ dl.dataset.c = '1'; dl.textContent = 'متأكد؟ اضغط مرة أخرى'; return; } pinGate(() => { kids.splice(i, 1); store.set('kids', kids); shiftKidKeys(i); if (kid > i) kid--; if (kid >= kids.length) kid = 0; store.set('kid', kid); onKid(); }); });
+  const dl = s.querySelector('#keDel'); if (dl) dl.addEventListener('click', () => { if (!dl.dataset.c){ dl.dataset.c = '1'; dl.textContent = 'متأكدون؟ اضغطوا مرة أخرى'; return; } pinGate(() => { kids.splice(i, 1); store.set('kids', kids); shiftKidKeys(i); if (kid > i) kid--; if (kid >= kids.length) kid = 0; store.set('kid', kid); onKid(); }); });
 }
 let TEACHER = false;
 /* الرقم السري: يُحفظ مجزَّأً (SHA-256 مع ملح) لا نصًا؛ ويُطلب ضبطه من ولي الأمر في أول تشغيل. ليس حماية قوية من طفل يعرف أدوات المتصفح، لكنه يمنع القراءة المباشرة. */
@@ -1107,12 +1107,12 @@ async function pinCheck(v){ const p = store.get('pin', null); if (!p) return fal
 async function pinSave(v){ const salt = Math.random().toString(36).slice(2, 10); store.set('pin', {s: salt, h: await pinHash(v, salt)}); }
 function pinGate(then, opts){
   const has = pinSet() || typeof store.get('pin', null) === 'string'; const s = $('sheet'); const setup = !has;
-  s.innerHTML = `<div class="top"><h2 style="font-family:var(--f-ui);font-size:1.3rem">${setup ? 'ولي الأمر: اختر رقمًا سريًّا (4 أرقام أو أكثر)' : 'رقم ولي الأمر'}</h2><button class="x" aria-label="إغلاق">✕</button></div><input class="f t" id="pinIn" type="password" inputmode="numeric" maxlength="8" placeholder="••••">${setup ? '<input class="f t" id="pinIn2" type="password" inputmode="numeric" maxlength="8" placeholder="أعد الرقم">' : ''}<div class="btns"><button class="btn" type="button" id="pinOk">${setup ? 'احفظ' : 'دخول'}</button></div><p class="fb" id="pinFb"></p><p class="note">${setup ? 'هذا الرقم يفتح لوحة ولي الأمر وإضافة الأطفال وحذفهم. احفظه؛ لا يمكن استرجاعه، ويُعاد ضبطه بمسح بيانات التطبيق.' : 'الرقم الذي اختاره ولي الأمر في أول تشغيل.'}</p>`;
+  s.innerHTML = `<div class="top"><h2 style="font-family:var(--f-ui);font-size:1.3rem">${setup ? 'وليّ الأمر: اختاروا رمزًا (4 أرقام أو أكثر)' : 'رمز وليّ الأمر'}</h2><button class="x" aria-label="إغلاق">✕</button></div><input class="f t" id="pinIn" type="password" inputmode="numeric" maxlength="8" placeholder="••••">${setup ? '<input class="f t" id="pinIn2" type="password" inputmode="numeric" maxlength="8" placeholder="أعيدوا الرمز">' : ''}<div class="btns"><button class="btn" type="button" id="pinOk">${setup ? 'احفظوه' : 'دخول'}</button></div><p class="fb" id="pinFb"></p><p class="note">${setup ? 'هذا الرمز يفتح لوحة وليّ الأمر وإضافة الأطفال وحذفهم. احفظوه؛ لا يمكن استرجاعه، ويُعاد ضبطه بمسح بيانات التطبيق.' : 'رمز وليّ الأمر نفسه في الواحة و«كنوز البيان» والحسنية.'}</p>`;
   showSheet(); s.querySelector('.x').addEventListener('click', closeSheet); const inp = $('pinIn'); inp.focus();
   const bad = t => { $('pinFb').textContent = t; $('pinFb').className = 'fb bad'; };
   const ok = async () => { const v = inp.value.trim(); if (v.length < 4) return bad('أربعة أرقام على الأقل.');
-    if (setup){ const v2 = ($('pinIn2').value || '').trim(); if (v2 !== v) return bad('الرقمان غير متطابقين.'); await pinSave(v); closeSheet(); then(); return; }
-    if (await pinCheck(v)){ closeSheet(); then(); } else bad('الرقم غير صحيح.'); };
+    if (setup){ const v2 = ($('pinIn2').value || '').trim(); if (v2 !== v) return bad('الرمزان غير متطابقين.'); await pinSave(v); closeSheet(); then(); return; }
+    if (await pinCheck(v)){ closeSheet(); then(); } else bad('الرمز غير صحيح.'); };
   $('pinOk').addEventListener('click', ok); s.querySelectorAll('input').forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') ok(); }));
 }
 $('whoBtn').addEventListener('click', e => { e.stopPropagation(); kidsSheet(); });
@@ -2063,54 +2063,54 @@ function renderDad(){
      <div class="tablewrap"><table class="dash"><tr><th>اللعبة</th><th>متقن</th><th>جرّب</th><th>يتعثر</th></tr>${rows || '<tr><td colspan="4">لم يلعب بعد.</td></tr>'}</table></div>
      <p class="lbl">الأصعب عليه (أخطأ مرتين فأكثر)</p>${hard.length ? `<ul style="margin:0;padding-right:1.2em">${hard.map(x => `<li>${esc(describe(x.g, x.id))} <span class="ref">(${x.m.wrong} أخطاء)</span></li>`).join('')}</ul>` : '<p class="note">لا شيء بعد.</p>'}
      <details><summary class="note" style="cursor:pointer">إعادة ضبط تقدّم ${esc(K().name)} كله</summary><div class="btns" style="justify-content:flex-start"><button class="btn warm sm" type="button" id="ddReset">امسح تقدّم هذا الطفل</button></div></details>`;
-    B.querySelector('#ddReset').addEventListener('click', e => { const b = e.target; if (!b.dataset.c){ b.dataset.c = '1'; b.textContent = 'متأكد؟ اضغط مرة أخرى'; return; }
+    B.querySelector('#ddReset').addEventListener('click', e => { const b = e.target; if (!b.dataset.c){ b.dataset.c = '1'; b.textContent = 'متأكدون؟ اضغطوا مرة أخرى'; return; }
       store.keys().forEach(k => { if (new RegExp(`^[A-Za-z]+:${kid}(:|$)`).test(k)) store.del(k); }); ['tri','kq','kqa'].forEach(n => { const a = store.get(n, null); if (Array.isArray(a)) store.set(n, a.filter(x => x.kid !== kid)); });
       resetGames(); renderGrove(); renderPalm(); renderDad(); });
     const pb = B.querySelector('#ddPlace'); if (pb) pb.addEventListener('click', () => { store.set(`placeSkip:${kid}`, false); go('place', 'plCard'); });
-  } else if (ddTab === 'rec'){ B.innerHTML = '<p class="note">استمع، واضغط الكلمة التي أخطأ فيها، واكتب أو سجّل ملاحظة، ثم اعتمد أو اطلب التصحيح. المعتمد يفتح له «سلّة التمر»، ويدخل «إذاعة الواحة». ولتسمعه العائلة في «إذاعة الباكورة» أو يضعه في مجلّة: «ركن وليّ الأمر» ← «من الواحة والحسنية».</p><div id="ddRec" class="queue"></div>'; renderReview(B.querySelector('#ddRec'), false); }
+  } else if (ddTab === 'rec'){ B.innerHTML = '<p class="note">استمعوا، واضغطوا الكلمة التي أخطأ فيها، واكتبوا أو سجّلوا ملاحظة، ثم اعتمِدوا أو اطلبوا التصحيح. المعتمد يفتح له «سلّة التمر»، ويدخل «إذاعة الواحة». ولتسمعه العائلة في «إذاعة الباكورة» أو يضعه في مجلّة: «ركن وليّ الأمر» ← «من الواحة والحسنية».</p><div id="ddRec" class="queue"></div>'; renderReview(B.querySelector('#ddRec'), false); }
   else if (ddTab === 'gift'){ renderGiftRequests(B); }
   else if (ddTab === 'amal'){ renderAmalPanel(B); }
   else if (ddTab === 'tri'){ renderTriPanel(B); }
   else if (ddTab === 'week'){ renderWeekPanel(B); }
   else if (ddTab === 'voice'){ renderVoiceStudio(B); }
-  else if (ddTab === 'kidset'){ const c = cmpGet(); B.innerHTML = `<p class="note">واجهة ${esc(K().name)} البسيطة: شاشة بزر «رحلة اليوم»، ورفيق يتكلم. «كل الواحات» تظهر لمن عمره 9 فأكثر، ويمكنك فتحها للأصغر.</p>
+  else if (ddTab === 'kidset'){ const c = cmpGet(); B.innerHTML = `<p class="note">واجهة ${esc(K().name)} البسيطة: شاشة بزر «رحلة اليوم»، ورفيق يتكلم. «كل الواحات» تظهر لمن عمره 9 فأكثر، ويمكنكم فتحها للأصغر.</p>
      <label class="row" style="gap:8px"><input type="checkbox" id="ksMode" ${kidMode() ? 'checked' : ''}> الواجهة البسيطة للطفل</label>
      <label class="row" style="gap:8px"><input type="checkbox" id="ksLib" ${store.get(`libOpen:${kid}`, false) ? 'checked' : ''}> أظهر «كل الواحات» و«كنوز البيان» حتى لو كان صغيرًا</label>
-     <label class="row" style="gap:8px"><input type="checkbox" id="ksMute" ${store.get('mute', false) ? 'checked' : ''}> اكتم صوت القارئ الآلي (تبقى تسجيلاتك)</label>
+     <label class="row" style="gap:8px"><input type="checkbox" id="ksMute" ${store.get('mute', false) ? 'checked' : ''}> اكتموا صوت القارئ الآلي (تبقى تسجيلاتكم)</label>
      <label class="row" style="gap:8px"><input type="checkbox" id="ksAi" ${store.get('aiAllowed', false) ? 'checked' : ''}> اسمح بمساعد الواحة (يرسل نص الطفل وعمره إلى النموذج للتصحيح؛ في صفحة Claude فقط)</label>
      <p class="lbl">محفوظ ${esc(K().name)}</p><p class="note" style="margin:2px 0 4px">ضعوا علامةً على ما ${K().gender === 'f' ? 'تحفظه' : 'يحفظه'} من المصحف، فتأتي الكلمات والآيات والتصريف في رحلته منه وحده. إن لم تختاروا شيئًا فالمحفوظ كله.</p>
      <div class="chips" id="ksMemo">${(DATA.quran && DATA.quran.units || []).map(u => `<label class="chip2" style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" value="${esc(u.id)}" ${store.get(`memo:${kid}`, null) && store.get(`memo:${kid}`, []).includes(u.id) ? 'checked' : ''}> ${esc(u.name)}</label>`).join('')}</div>
-     <p class="note">الرفيق: ${c ? esc(c.name) + ' (' + esc((CMPS[c.kind] || {}).name || '') + ')' : 'لم يُختر بعد'} <button class="btn ghost sm" type="button" id="ksReset">أعد أول لقاء</button></p>
+     <p class="note">الرفيق: ${c ? esc(c.name) + ' (' + esc((CMPS[c.kind] || {}).name || '') + ')' : 'لم يُختر بعد'} <button class="btn ghost sm" type="button" id="ksReset">أعيدوا أول لقاء</button></p>
      <p class="lbl">نسخة احتياطية من تقدّم الأطفال كلهم</p><p class="note">تشمل الإتقان والمراحل والرحلات والزينة والإعدادات (لا التسجيلات الصوتية؛ لها تصديرها في تبويب التسجيلات). خذها قبل تغيير الجهاز أو حذف التطبيق.</p>
-     <div class="btns" style="justify-content:flex-start"><button class="btn sm" type="button" id="ksBackup">صدّر نسخة احتياطية</button><label class="btn ghost sm" style="cursor:pointer">استورد نسخة <input type="file" id="ksRestore" accept=".json,application/json" hidden></label></div><p class="fb" id="ksFb"></p>`;
+     <div class="btns" style="justify-content:flex-start"><button class="btn sm" type="button" id="ksBackup">صدّروا نسخة احتياطية</button><label class="btn ghost sm" style="cursor:pointer">استوردوا نسخة <input type="file" id="ksRestore" accept=".json,application/json" hidden></label></div><p class="fb" id="ksFb"></p>`;
     B.querySelector('#ksMode').addEventListener('change', e => store.set(`kidMode:${kid}`, e.target.checked));
     B.querySelector('#ksLib').addEventListener('change', e => store.set(`libOpen:${kid}`, e.target.checked));
     B.querySelector('#ksMemo').addEventListener('change', () => { const v = [...B.querySelectorAll('#ksMemo input:checked')].map(x => x.value); store.set(`memo:${kid}`, v.length ? v : null); });
     B.querySelector('#ksMute').addEventListener('change', e => store.set('mute', e.target.checked));
     B.querySelector('#ksAi').addEventListener('change', e => { store.set('aiAllowed', e.target.checked); document.querySelectorAll('.aiBtn').forEach(b => b.hidden = !(SAMPLE && e.target.checked)); });
     B.querySelector('#ksBackup').addEventListener('click', () => { const out = {app: 'waha', v: 1, date: today(), data: {}}; store.keys().forEach(k => { if (!/^(trip|greeted|dailyPick|amalPick):/.test(k)) out.data[k] = store.get(k, null); }); saveFile(`waha-backup-${today()}.json`, JSON.stringify(out), $('ksFb')); });
-    B.querySelector('#ksRestore').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; try { const o = JSON.parse(await f.text()); if (!o || o.app !== 'waha' || !o.data) throw new Error('bad'); const n = Object.keys(o.data).length; if (!confirm(`استيراد ${n} مفتاحًا من نسخة ${o.date || ''}؟ سيحلّ محل ما على هذا الجهاز.`)) return; Object.keys(o.data).forEach(k => store.set(k, o.data[k])); $('ksFb').textContent = 'استُوردت النسخة. أعد تحميل الصفحة.'; $('ksFb').className = 'fb ok'; setTimeout(() => location.reload(), 1200); } catch (err) { $('ksFb').textContent = 'الملف ليس نسخة احتياطية من الواحة.'; $('ksFb').className = 'fb bad'; } });
+    B.querySelector('#ksRestore').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; try { const o = JSON.parse(await f.text()); if (!o || o.app !== 'waha' || !o.data) throw new Error('bad'); const n = Object.keys(o.data).length; if (!confirm(`استيراد ${n} مفتاحًا من نسخة ${o.date || ''}؟ سيحلّ محل ما على هذا الجهاز.`)) return; Object.keys(o.data).forEach(k => store.set(k, o.data[k])); $('ksFb').textContent = 'استُوردت النسخة. أعيدوا تحميل الصفحة.'; $('ksFb').className = 'fb ok'; setTimeout(() => location.reload(), 1200); } catch (err) { $('ksFb').textContent = 'الملف ليس نسخة احتياطية من الواحة.'; $('ksFb').className = 'fb bad'; } });
     B.querySelector('#ksReset').addEventListener('click', () => { store.del ? store.del(`cmp:${kid}`) : store.set(`cmp:${kid}`, null); store.set(`planted:${kid}`, false); renderDad(); }); }
   else if (ddTab === 'write'){
-    const queue = store.get(`queue:${kid}`, []); B.innerHTML = '<p class="note">رسائله وأخباره، وتقييم مساعد الواحة إن وُجد. راجع معه خطأً واحدًا.</p><div class="queue" id="ddQ"></div>'; const Q = B.querySelector('#ddQ'); if (!queue.length) Q.innerHTML = '<p class="note">لم يرسل شيئًا بعد.</p>';
+    const queue = store.get(`queue:${kid}`, []); B.innerHTML = '<p class="note">رسائله وأخباره، وتقييم مساعد الواحة إن وُجد. راجعوا معه خطأً واحدًا.</p><div class="queue" id="ddQ"></div>'; const Q = B.querySelector('#ddQ'); if (!queue.length) Q.innerHTML = '<p class="note">لم يرسل شيئًا بعد.</p>';
     queue.forEach(q => { const d = el('div','qi', `<div class="row" style="justify-content:space-between"><span><span class="chip">${esc(q.kind)}</span> ${esc(q.title || '')} <span class="ref">${esc(q.date)}</span></span>${q.reviewed ? '<span class="badge ok">راجعتُه</span>' : ''}</div><p class="tx">${esc(q.text)}</p>`);
       if (q.ai) d.appendChild(aiCard(q.ai)); if (!q.reviewed){ const b = el('button','btn ghost sm','راجعتُه'); b.type='button'; b.style.alignSelf='flex-start'; b.addEventListener('click', () => { q.reviewed = true; store.set(`queue:${kid}`, queue); renderDad(); }); d.appendChild(b); } Q.appendChild(d); });
   } else if (ddTab === 'kq'){
     const pend = store.get('kq', []); const appr = store.get('kqa', []); B.innerHTML = `<p class="note">أسئلة ألّفها الأبناء. ما تجيزه يظهر لإخوتهم في «أسئلة الإخوة»، ويفتح لصاحبه الطائرة الورقية بعد ثلاثة.</p><div class="queue" id="ddK"></div>${appr.length ? `<p class="lbl">المجازة (${appr.length})</p><ul style="margin:0;padding-right:1.2em">${appr.map(q => `<li>${esc((kids[q.kid] || {}).name || '')}: ${esc(q.q)} ← ${esc(q.a)}</li>`).join('')}</ul>` : ''}`;
-    const Kq = B.querySelector('#ddK'); if (!pend.length) Kq.innerHTML = '<p class="note">لا أسئلة بانتظارك.</p>';
+    const Kq = B.querySelector('#ddK'); if (!pend.length) Kq.innerHTML = '<p class="note">لا أسئلة بانتظاركم.</p>';
     pend.forEach(q => { const d = el('div','qi', `<p style="margin:0"><b>${esc((kids[q.kid] || {}).name || '')}</b>: ${esc(q.q)}</p><p class="note">✓ ${esc(q.a)} · ✗ ${esc(q.wrong.join('، '))}${q.src ? ' · المصدر: ' + esc(q.src) : ''}</p>`);
       const row = el('div','btns'); row.style.justifyContent = 'flex-start'; const ok = el('button','btn sm','أجِز'); ok.type='button'; const no = el('button','btn ghost sm','احذف'); no.type='button';
       ok.addEventListener('click', () => { store.set('kq', pend.filter(x => x.id !== q.id)); store.set('kqa', [...appr, q]); renderDad(); checkStages(); }); no.addEventListener('click', () => { store.set('kq', pend.filter(x => x.id !== q.id)); renderDad(); });
       row.append(ok, no); d.appendChild(row); Kq.appendChild(d); });
   }
 }
-/* «سطر اليوم»: لكل طفل سطر واحد — رحلة اليوم، وما أخطأ فيه، وآخر ما قاله بصوته — ورسالة منك إليه بصوتك أو بكلمة */
+/* «سطر اليوم»: لكل طفل سطر واحد — رحلة اليوم، وما أخطأ فيه، وآخر ما قاله بصوته — ورسالة منكم إليه بصوتكم أو بكلمة */
 async function renderTodayLine(B){
-  B.innerHTML = '<p class="note">كل الأطفال في شاشة واحدة. اسمع ما قالوه اليوم، وأرسل لكل واحد كلمة أو صوتك: يسمعها من رفيقه عند فتح واحته.</p>';
+  B.innerHTML = '<p class="note">كل الأطفال في شاشة واحدة. اسمعوا ما قالوه اليوم، وأرسلوا لكل واحد كلمة أو صوتكم: يسمعها من رفيقه عند فتح واحته.</p>';
   const all = await recAll(); const td = today();
-  /* ما ينتظر اعتمادك في القسمين: تسجيلات الواحة، وأعمال الاستوديو في «كنوز البيان» */
+  /* ما ينتظر اعتمادكم في القسمين: تسجيلات الواحة، وأعمال الاستوديو في «كنوز البيان» */
   { const recP = all.filter(r => r.status === 'pending' && r.source !== 'import' && r.kid >= 0 && !PRIVATE_K.has(r.kind)).length;   /* what the child told you (أخبرني، كلمة…) is heard below, not approved */ let works = 0; try { works = (JSON.parse(localStorage.getItem('kb-works-v1') || '[]') || []).filter(w => w && w.status === 'sent').length; } catch (e) {}
-    if (recP || works){ const w = el('div','qi'); w.innerHTML = `<p class="lbl" style="margin:0 0 6px">بانتظار اعتمادك</p>`; const r = el('div','row'); r.style.cssText = 'gap:8px;flex-wrap:wrap';
+    if (recP || works){ const w = el('div','qi'); w.innerHTML = `<p class="lbl" style="margin:0 0 6px">بانتظار اعتمادكم</p>`; const r = el('div','row'); r.style.cssText = 'gap:8px;flex-wrap:wrap';
       if (recP){ const b1 = el('button','btn ghost sm', `🎙 ${recP} ${recP === 1 ? 'تسجيل' : recP === 2 ? 'تسجيلان' : 'تسجيلات'} في الواحة`); b1.type = 'button'; b1.addEventListener('click', () => { ddTab = 'rec'; renderDad(); }); r.appendChild(b1); }
       if (works){ const b2 = el('a','btn ghost sm', `💎 ${works === 1 ? 'عملٌ واحد' : works === 2 ? 'عملان' : works + ' أعمال'} في «كنوز البيان»`); b2.href = 'kunuz/index.html#parent'; r.appendChild(b2); }
       w.appendChild(r); B.appendChild(w); } }
@@ -2121,9 +2121,9 @@ async function renderTodayLine(B){
       ${doneToday ? `<p class="note" style="margin:4px 0">${k.gender === 'f' ? 'تعلّمت' : 'تعلّم'}: ${bag.length ? bag.map(esc).join('، ') : (log.learned.length ? log.learned.length + ' دروس' : '—')} · ${k.gender === 'f' ? 'أصابت' : 'أصاب'} ${log.ok.length} · ${wrong.length ? `<span style="color:var(--date)">${k.gender === 'f' ? 'أخطأت' : 'أخطأ'} في: ${wrong.map(esc).join(' · ')}</span>` : 'بلا أخطاء'}</p>` : ''}`;
     { const sl = secLine(i, 0, k); if (sl){ const p2 = el('p','note'); p2.style.margin = '2px 0 4px'; p2.textContent = sl; d.appendChild(p2); } }
     recs.slice(0, 3).forEach(r => { const row = el('div','row'); row.style.alignItems = 'center'; row.innerHTML = `<span class="chip">${esc(r.kind)}</span> <span class="note">${esc(r.text).slice(0, 70)}</span>`; const m = mediaEl(r); if (m.tagName === 'AUDIO'){ m.style.width = '160px'; } row.appendChild(m); d.appendChild(row); });
-    const mrow = el('div','row'); mrow.style.cssText = 'align-items:center;flex-wrap:wrap;gap:6px'; const tx = el('input','f'); tx.placeholder = k.gender === 'f' ? 'كلمة لها (تُقرأ بصوت الرفيق)' : 'كلمة له (تُقرأ بصوت الرفيق)'; tx.style.cssText = 'flex:1 1 100%;min-width:100%'; const sendT = el('button','btn ghost sm','أرسل الكلمة'); sendT.type = 'button'; const mic = el('button','btn sm','🎙 سجّل رسالة بصوتك'); mic.type = 'button'; const mb = el('div'); const fb = el('p','fb');
+    const mrow = el('div','row'); mrow.style.cssText = 'align-items:center;flex-wrap:wrap;gap:6px'; const tx = el('input','f'); tx.placeholder = k.gender === 'f' ? 'كلمة لها (تُقرأ بصوت الرفيق)' : 'كلمة له (تُقرأ بصوت الرفيق)'; tx.style.cssText = 'flex:1 1 100%;min-width:100%'; const sendT = el('button','btn ghost sm','أرسلوا الكلمة'); sendT.type = 'button'; const mic = el('button','btn sm','🎙 سجّلوا رسالة بصوتكم'); mic.type = 'button'; const mb = el('div'); const fb = el('p','fb');
     sendT.addEventListener('click', async () => { const t = tx.value.trim(); if (!t) return; await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid: -1, to: i, kind: 'من أبي', ref: td, text: t, date: td, type: '', blob: null, status: 'approved', notes: [], source: 'local', heard: false}); tx.value = ''; fb.textContent = `أُرسلت إلى ${k.name}؛ ${k.gender === 'f' ? 'تسمعها عند فتح واحتها' : 'يسمعها عند فتح واحته'}.`; fb.className = 'fb ok'; });
-    mic.addEventListener('click', () => { if (mb.childElementCount){ mb.innerHTML = ''; return; } micWidget(mb, {label: 'اضغط وسجّل رسالتك', max: 60000, onSaved: async blob => { await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid: -1, to: i, kind: 'من أبي', ref: td, text: tx.value.trim(), date: td, type: blob.type || 'audio/webm', blob, status: 'approved', notes: [], source: 'local', heard: false}); fb.textContent = `أُرسلت رسالتك الصوتية إلى ${k.name}.`; fb.className = 'fb ok'; }}); });
+    mic.addEventListener('click', () => { if (mb.childElementCount){ mb.innerHTML = ''; return; } micWidget(mb, {label: 'اضغطوا وسجّلوا رسالتكم', max: 60000, onSaved: async blob => { await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid: -1, to: i, kind: 'من أبي', ref: td, text: tx.value.trim(), date: td, type: blob.type || 'audio/webm', blob, status: 'approved', notes: [], source: 'local', heard: false}); fb.textContent = `أُرسلت رسالتكم الصوتية إلى ${k.name}.`; fb.className = 'fb ok'; }}); });
     mrow.append(tx, sendT, mic); d.append(mrow, mb, fb); B.appendChild(d);
   });
 }
@@ -2419,10 +2419,10 @@ INIT.giftShelf = renderGifts;
 /* لوحة ولي الأمر: طلبات الإهداء خارج البيت */
 async function renderGiftRequests(box){
   const q = store.get(`giftReq:${kid}`, []); const recs = await recAll(); const gifts = await dbAll('gift');
-  box.innerHTML = `<p class="note">الهدية خارج البيت تخرج من هنا فقط، باسم الطفل الأول، والصورة معطّلة إلا إن فعّلتَها للهدية. أرسل الملف إلى ولي أمر الصديق ليستورده وهو على ملف ابنه.</p>`;
+  box.innerHTML = `<p class="note">الهدية خارج البيت تخرج من هنا فقط، باسم الطفل الأول، والصورة معطّلة إلا إن فعّلتموها للهدية. أرسلوا الملف إلى وليّ أمر الصديق ليستورده وهو على ملف ابنه.</p>`;
   if (!q.length) box.appendChild(el('p','note','لا طلبات إهداء.'));
   for (const req of q){ const r = recs.find(x => x.id === req.recId); if (!r) continue; const d = el('div','qi', `<p style="margin:0"><span class="chip">${esc(r.kind)}</span> ${esc(r.ref)} · ${esc(req.date)}${giftable(r) ? '' : ' <span class="badge wait">لم يعد معتمدًا للإهداء</span>'}</p><p class="tx" style="font-size:1.1rem">${esc(r.text)}</p><label class="note"><input type="checkbox" id="gp${r.id}"> أرفق صورة ${esc(K().name)} في هذه الهدية</label>`);
-    const row = el('div','btns'); row.style.justifyContent = 'flex-start'; const ex = el('button','btn sm','صدّر الهدية'); ex.type='button'; ex.disabled = !giftable(r); const rm = el('button','btn ghost sm','ارفض'); rm.type='button'; const fb = el('p','fb');
+    const row = el('div','btns'); row.style.justifyContent = 'flex-start'; const ex = el('button','btn sm','صدّروا الهدية'); ex.type='button'; ex.disabled = !giftable(r); const rm = el('button','btn ghost sm','ارفض'); rm.type='button'; const fb = el('p','fb');
     ex.addEventListener('click', async () => { const chain = await giftChain(r); const withPhoto = d.querySelector('#gp' + r.id).checked; const id = 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
       const pkg = JSON.stringify({v:1, type:'gift', items:[{id, fromName: K().name, fromPhoto: withPhoto ? (K().photo || null) : null, chain, kind: r.kind, ref: r.ref, text: r.text, type: r.type, b64: await b64(r.blob), date: today()}]});
       await saveFile(`hadiya-${K().name}-${today()}.json`, pkg, fb); if (fb.className.includes('ok')){ await dbPut('gift', {id, from: kid, fromName: K().name, to: -1, toName: 'صديق', recId: r.id, kind: r.kind, ref: r.ref, text: r.text, type: r.type, blob: r.blob, date: today(), chain, status:'sent', source:'local'}); bump(`giftsSent:${kid}`); store.set(`giftReq:${kid}`, q.filter(x => x.recId !== r.id)); checkStages(); renderGiftRequests(box); } });
@@ -2463,8 +2463,8 @@ function renderAmalDaily(){
 }
 function renderAmalPanel(box){
   const log = store.get(`amalLog:${kid}`, []); const pend = log.filter(x => !x.confirmed);
-  box.innerHTML = `<p class="note">ما قال الطفل إنه فعله. أكّده إن صحّ، فيُحسب له في «الحديقة». الأعمال مسودة مربوطة بأحاديث القسم.</p>`;
-  if (!pend.length) box.appendChild(el('p','note','لا شيء بانتظارك.'));
+  box.innerHTML = `<p class="note">ما قال الطفل إنه فعله. أكّدوه إن صحّ، وتحدّثوا معه فيه؛ هو بينكم، لا يُحسب نقاطًا ولا مشهدًا. الأعمال مسودة مربوطة بأحاديث القسم.</p>`;
+  if (!pend.length) box.appendChild(el('p','note','لا شيء بانتظاركم.'));
   pend.forEach(x => { const a = AMAL.find(y => y.id === x.id); const d = el('div','qi', `<p style="margin:0">${esc(x.date)} · ${esc(a ? a.deed : x.id)}</p>`); const row = el('div','btns'); row.style.justifyContent = 'flex-start';
     const ok = el('button','btn sm','أكّد'); ok.type='button'; ok.addEventListener('click', () => { x.confirmed = true; store.set(`amalLog:${kid}`, log); bump(`amalDone:${kid}`); checkStages(); renderAmalPanel(box); });
     const no = el('button','btn ghost sm','احذف'); no.type='button'; no.addEventListener('click', () => { store.set(`amalLog:${kid}`, log.filter(y => y !== x)); renderAmalPanel(box); });
@@ -2615,7 +2615,7 @@ RESETS.push(() => { trCur = null; });
 /* لوحة ولي الأمر */
 function renderTriPanel(box){
   const list = triAll(); const pend = list.filter(t => t.status === 'pending'), ok = list.filter(t => t.status === 'ok');
-  box.innerHTML = `<p class="note">الطفل يكتب معنى الكلمة بالصينية والإنجليزية في بطاقة النخلة؛ صحّح إن شئت ثم أجِز، فتظهر لإخوته في «بثلاث لغات».</p>` + (pend.length ? pend.map(t => `<div class="qi" data-id="${t.id}"><div class="row" style="justify-content:space-between"><span>${avatarHtml(kids[t.kid] || {name:t.by || '?'}, 28)} <b>${esc((kids[t.kid] || {}).name || t.by || '')}</b> · <b>${esc(t.lemma)}</b> <span class="ref">${esc((ALL[t.k] || {}).root || '')} · ${esc(t.date)}</span></span></div><div class="row" style="gap:6px;flex-wrap:wrap"><input class="f" lang="zh" value="${esc(t.zh || '')}" placeholder="中文" style="flex:1;min-width:100px" data-f="zh"><input class="f" lang="en" dir="ltr" value="${esc(t.en || '')}" placeholder="English" style="flex:1;min-width:100px" data-f="en"></div><div class="btns" style="justify-content:flex-start"><button class="btn sm" type="button" data-a="ok">أجِز</button><button class="btn ghost sm" type="button" data-a="del">احذف</button></div></div>`).join('') : '<p class="note">لا كلمات بانتظارك.</p>')
+  box.innerHTML = `<p class="note">الطفل يكتب معنى الكلمة بالصينية والإنجليزية في بطاقة النخلة؛ صحّح إن شئت ثم أجِز، فتظهر لإخوته في «بثلاث لغات».</p>` + (pend.length ? pend.map(t => `<div class="qi" data-id="${t.id}"><div class="row" style="justify-content:space-between"><span>${avatarHtml(kids[t.kid] || {name:t.by || '?'}, 28)} <b>${esc((kids[t.kid] || {}).name || t.by || '')}</b> · <b>${esc(t.lemma)}</b> <span class="ref">${esc((ALL[t.k] || {}).root || '')} · ${esc(t.date)}</span></span></div><div class="row" style="gap:6px;flex-wrap:wrap"><input class="f" lang="zh" value="${esc(t.zh || '')}" placeholder="中文" style="flex:1;min-width:100px" data-f="zh"><input class="f" lang="en" dir="ltr" value="${esc(t.en || '')}" placeholder="English" style="flex:1;min-width:100px" data-f="en"></div><div class="btns" style="justify-content:flex-start"><button class="btn sm" type="button" data-a="ok">أجِز</button><button class="btn ghost sm" type="button" data-a="del">احذف</button></div></div>`).join('') : '<p class="note">لا كلمات بانتظاركم.</p>')
     + (ok.length ? `<p class="lbl">المجازة (${ok.length})</p>` + ok.map(t => `<p style="margin:0" data-id="${t.id}">✓ <b>${esc(t.lemma)}</b>: ${esc([t.zh, t.en].filter(Boolean).join(' · '))} <span class="ref">${esc((kids[t.kid] || {}).name || t.by || '')}</span> <button class="btn ghost sm" type="button" data-a="del">احذف</button></p>`).join('') : '');
   if (box.dataset.triBound) return; box.dataset.triBound = '1';
   box.addEventListener('click', e => { const b = e.target.closest('button[data-a]'); if (!b) return; const row = b.closest('[data-id]'); const id = row.dataset.id; const list = triAll(); const t = list.find(x => x.id === id); if (!t) return;
@@ -3493,12 +3493,12 @@ SOLO_BOX.seed = [330, 200, 60];
 /* ---------------- استوديو صوت الرفيق (لولي الأمر) ---------------- */
 async function renderVoiceStudio(box){
   const lines = clVariants(); const have = new Set((await voiceAll()).map(v => v.id));
-  box.innerHTML = `<p class="note">سجّل جمل الرفيق بصوتك؛ ما سجّلتَه يسمعه الأطفال بصوتك، وما لم تسجّله يقرؤه الجهاز آليًّا. التسجيل لكل جملة بصيغتها (للولد والبنت). سجّلتَ ${lines.filter(l => have.has(lineKey(l))).length} من ${lines.length}.</p><div class="queue" id="vsList"></div>`;
+  box.innerHTML = `<p class="note">سجّلوا جمل الرفيق بصوتكم؛ ما سجّلتموه يسمعه الأطفال بصوتكم، وما لم تسجّلوه يقرؤه الجهاز آليًّا. التسجيل لكل جملة بصيغتها (للولد والبنت). سجّلتم ${lines.filter(l => have.has(lineKey(l))).length} من ${lines.length}.</p><div class="queue" id="vsList"></div>`;
   const L = box.querySelector('#vsList');
-  lines.forEach(l => { const id = lineKey(l); const d = el('div','qi'); d.innerHTML = `<div class="row" style="justify-content:space-between"><span style="font-weight:700">${esc(l)}</span>${have.has(id) ? '<span class="badge ok">بصوتك</span>' : '<span class="badge wait">آلي</span>'}</div>`;
+  lines.forEach(l => { const id = lineKey(l); const d = el('div','qi'); d.innerHTML = `<div class="row" style="justify-content:space-between"><span style="font-weight:700">${esc(l)}</span>${have.has(id) ? '<span class="badge ok">بصوتكم</span>' : '<span class="badge wait">آلي</span>'}</div>`;
     const row = el('div','btns'); row.style.justifyContent = 'flex-start';
-    const hb = el('button','btn ghost sm','▶ اسمع'); hb.type = 'button'; hb.addEventListener('click', () => say(l)); row.appendChild(hb);
-    const rb = el('button','btn sm', have.has(id) ? '🎙 أعد التسجيل' : '🎙 سجّل'); rb.type = 'button'; rb.addEventListener('click', () => { rb.remove(); const m = el('div'); d.appendChild(m); micWidget(m, {label: 'اضغط وقل الجملة', onSaved: async blob => { await voicePut({id, text: l, blob, type: blob.type, date: today()}); renderVoiceStudio(box); }}); }); row.appendChild(rb);
+    const hb = el('button','btn ghost sm','▶ اسمعوا'); hb.type = 'button'; hb.addEventListener('click', () => say(l)); row.appendChild(hb);
+    const rb = el('button','btn sm', have.has(id) ? '🎙 أعيدوا التسجيل' : '🎙 سجّلوا'); rb.type = 'button'; rb.addEventListener('click', () => { rb.remove(); const m = el('div'); d.appendChild(m); micWidget(m, {label: 'اضغطوا وقولوا الجملة', onSaved: async blob => { await voicePut({id, text: l, blob, type: blob.type, date: today()}); renderVoiceStudio(box); }}); }); row.appendChild(rb);
     if (have.has(id)){ const db = el('button','btn ghost sm','🗑'); db.type = 'button'; db.addEventListener('click', async () => { await voiceDel(id); renderVoiceStudio(box); }); row.appendChild(db); }
     d.appendChild(row); L.appendChild(d); });
 }
@@ -3582,6 +3582,13 @@ function appBack(){
 try { pruneStore(); } catch (e) {}
 renderWho(); renderGrove(); renderPalm(); renderHome();
 const loc = store.get('loc', {o:'home'}); go(['dad','trip','hello'].includes(loc.o) ? 'home' : loc.o, loc.t);
+/* the back of a browser, or of the web app installed on Android, steps back inside this section as the Android app's button does:
+   one guard entry in the history catches it; where there is nowhere left to go back to, the browser is let go */
+(function(){ if (window.AndroidBridge || !window.history || !history.pushState) return;
+  const guard = () => { try { history.pushState({wahaBack: 1}, '', location.href); } catch (e) {} };
+  if (!(history.state && history.state.wahaBack)) guard();
+  window.addEventListener('popstate', () => { let done = false; try { done = appBack(); } catch (e) {} if (done) guard(); });
+})();
 /* أول تشغيل: ولي الأمر يضبط رقمه السري ثم أسماء الأطفال وأعمارهم (يتكرر الطلب حتى يُضبط) */
 if (typeof pinSet === 'function' && !pinSet() && typeof store.get('pin', null) !== 'string') setTimeout(() => pinGate(() => kidsSheet()), 500);
 

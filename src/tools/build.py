@@ -120,6 +120,8 @@ hp = os.path.join(DIST, 'hasaniya', 'index.html')
 h = open(hp, encoding='utf-8').read()
 for old, new in (('<link rel="manifest" href="manifest.json">', '<link rel="manifest" href="../manifest.json">'),
                  ('<script src="js/android-shim.js"></script>', '<script src="js/waha-early.js"></script>\n<script src="js/android-shim.js"></script>'),
+                 # the product's own fonts (bundled, offline), so the three sections read alike
+                 ('<link rel="manifest" href="../manifest.json">', '<link rel="manifest" href="../manifest.json">\n<link rel="stylesheet" href="../fonts/fonts.css">'),
                  ('<script src="js/app.js"></script>', '<script src="js/app.js"></script>\n<script src="js/waha-late.js"></script>')):
     if h.count(old) != 1:
         raise SystemExit('hasaniya/index.html changed upstream; adapter hook not found: ' + old)

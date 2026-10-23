@@ -423,6 +423,10 @@ function installHTML(){
 async function doInstall(){ if(!INSTALL_EVT) return; INSTALL_EVT.prompt(); try{await INSTALL_EVT.userChoice;}catch(e){} INSTALL_EVT=null; var b=document.getElementById('installBtn'); if(b) b.hidden=true; }
 
 /* ---------- first run ---------- */
+/* the family's first screen belongs to the whole app, not to this section: the header says «واحة اللسان العربي» until setup is done */
+function brandAsApp(on){ var n=document.querySelector('#homeBtn .b-name'), b=document.querySelector('#homeBtn .b-sub'); if(!n||!b) return;
+  if(on){ if(!n.dataset.kz){ n.dataset.kz=n.textContent; b.dataset.kz=b.textContent; } n.textContent='واحة اللسان العربي'; b.textContent='تطبيق العائلة: الواحة، و«كنوز البيان»، والمنظومة الحسنية'; }
+  else if(n.dataset.kz){ n.textContent=n.dataset.kz; b.textContent=b.dataset.kz; } }
 function setupWelcome(){
   L=null;
   go('<div class="ax-page" style="--ax:var(--lapis)">'+
