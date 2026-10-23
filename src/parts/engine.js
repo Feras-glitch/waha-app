@@ -43,6 +43,8 @@ function go(html){
 /* the recitation of a verse: in the app, from the recitation pack it carries (../audio, the teaching voice of al-Husary), so
    nothing is fetched from a website; a file that leaves the app (magazine, card) links to quran.com instead.
    The Android app opens no website, so there a verse the pack lacks has no listening link at all. */
+/* the Android app and the desktop app open no website (the parents' decision): their links are shown as names only */
+var NO_WEB=!!window.AndroidBridge||location.protocol==='file:';
 function vAud(v){var A=window.WAHA_AUDIO,r=A&&A.h&&A.h[v.s],b=v.a2||v.a,x; if(!r) return false;
   for(x=v.a;x<=b;x++){ if(!r.some(function(p){return x>=p[0]&&x<=p[1];})) return false; } return true;}
 function verse(v,o){
@@ -50,7 +52,7 @@ function verse(v,o){
   return '<figure class="verse"><blockquote><span class="orn">﴿</span> '+fmt(v.t)+' <span class="orn">﴾</span></blockquote>'+
     '<figcaption><span>'+(v.p?'من ':'')+'سورة '+v.n+' · '+(v.a2?((v.a2-v.a===1?'الآيتان ':'الآيات ')+n2a(v.a)+'–'+n2a(v.a2)):'الآية '+n2a(v.a))+'</span>'+
     (v.nolink?'':(!out&&vAud(v)?'<button class="vplay" type="button" data-act="vplay" data-s="'+v.s+'" data-a="'+v.a+'" data-b="'+(v.a2||v.a)+'">▶ ⟨استمع|استمعي⟩ للتلاوة</button>':
-      (out||!window.AndroidBridge?link:'')))+'</figcaption></figure>';
+      (out||!NO_WEB?link:'')))+'</figcaption></figure>';
 }
 var VP={a:null,b:null,h:'',q:[],i:0,s:0};
 function p3(n){return ('00'+n).slice(-3);}
@@ -263,11 +265,11 @@ function shelf(){
   go('<div class="ax-page" style="--ax:var(--teal)">'+
     '<button class="back" type="button" data-home>'+BACK+' الخزائن</button>'+
     '<header class="page-head"><h1 class="h1">رفّ الكنوز</h1>'+
-      '<p class="lead">للوالدين: مصادر تُكمل هذه الخزانة. الروابط تفتح خارج التطبيق، ويحسُن أن تشاهدوها أولًا، ثم تختاروا لأطفالكم ما يناسب أعمارهم.</p></header>'+
+      '<p class="lead">للوالدين: مصادر تُكمل هذه الخزانة. '+(NO_WEB?'هذه النسخة لا تفتح المواقع، فابحثوا عن هذه الأسماء في متصفّحكم، وشاهدوها أولًا، ثم اختاروا لأطفالكم ما يناسب أعمارهم.':'الروابط تفتح خارج التطبيق، ويحسُن أن تشاهدوها أولًا، ثم تختاروا لأطفالكم ما يناسب أعمارهم.')+'</p></header>'+
     '<ul class="shelf">'+SHELF.map(function(r){
       return '<li class="res" style="--ax:var(--'+r.c+')"><div class="res-top"><span class="res-name">'+r.name+'</span><span class="res-kind">'+r.kind+'</span></div>'+
         '<p>'+r.d+'</p>'+(r.note?'<p class="res-note">'+r.note+'</p>':'')+
-        (r.links.length?'<div class="res-links">'+r.links.map(function(k){return '<a href="'+k[1]+'" target="_blank" rel="noopener">'+k[0]+' ↗</a>';}).join('')+'</div>':'')+
+        (r.links.length?'<div class="res-links">'+r.links.map(function(k){return NO_WEB?'<span>'+k[0]+'</span>':'<a href="'+k[1]+'" target="_blank" rel="noopener">'+k[0]+' ↗</a>';}).join('')+'</div>':'')+
       '</li>';
     }).join('')+'</ul></div>');
 }

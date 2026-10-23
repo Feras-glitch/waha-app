@@ -62,6 +62,8 @@ async def main():
         none = await p.evaluate("Array.from({length:8},()=>buildTrip(false).map(c=>c.g))")
         ok(all('kz' not in t and 'hsq' not in t for t in none), 'nothing studied in the chambers or the Hasaniya: no question from them')
         await p.evaluate(STUDY, ids); await oasis(p, 'هند'); await ready_kid(p)
+        ok(await p.evaluate("POOL.hsq().length + POOL.kz().length") == 0, 'what was studied today is asked from tomorrow (a recall, not a copy)')
+        await p.evaluate("(() => { studied(); const k = 'studiedDay:' + kid; const f = store.get(k, {}); Object.keys(f).forEach(x => f[x] -= 1); store.set(k, f); STUDIED[kid] = null; })()")
         hs = await p.evaluate("POOL.hsq()")
         ok(hs and all(x.startswith('s1v') or x.startswith('s2v4|') for x in hs), 'the Hasaniya questions come from the completed station and the answered verse (%s)' % hs[:4])
         ok(await p.evaluate("POOL.kz().every(x => ['sadd', 'rih'].includes(x.split('|')[0]))"), 'the chamber questions come from lessons whose gem was earned')
@@ -71,11 +73,12 @@ async def main():
         ok(both == ['hsq', 'kz'], 'the two take turns by day (%s)' % both)
         voc = await p.evaluate("Array.from({length:10},()=>buildTrip(false).filter(c=>VOCAB_G.includes(c.g)).length)")
         ok(min(voc) >= 2, 'two new words from the memorised part in every trip (%s)' % voc)
-        ok(all(t.index('learn:kz') < t.index('kz') for t in trips if 'learn:kz' in t), 'a new chamber question comes after its lesson')
+        ok(not any('learn:kz' in t and t.index('learn:kz') < t.index('kz') for t in trips), 'a chamber question is asked first; its lesson comes only after a wrong answer')
         kzq = await p.evaluate("(()=>{ for (let i = 0; i < 40; i++){ const c = buildTrip(false).find(c=>c.g==='kz'); if (c) return {html:c.html,why:c.why,q:c.q}; } return null; })()")
         ok(kzq and '💎' in kzq['html'] and kzq['why'], 'chamber question carries its lesson title and its «why»')
         ok(await p.locator('.ktile', has_text='كنوز البيان').count() == 1, 'chambers tile for a ten-year-old')
         await oasis(p, 'يوسف'); await ready_kid(p)
+        await p.evaluate("(() => { studied(); const k = 'studiedDay:' + kid; const f = store.get(k, {}); Object.keys(f).forEach(x => f[x] -= 1); store.set(k, f); STUDIED[kid] = null; })()")
         small = await p.evaluate("(() => { const n0 = dayN; const out = []; for (const d of [0, 1]){ dayN = t => t == null ? n0() + d : n0(t); out.push(Array.from({length:6},()=>buildTrip(false).map(c=>c.g))); } dayN = n0; return out; })()")
         ok(all('kz' not in t for day in small for t in day), 'a six-year-old: no chambers')
         ok(sorted([all(t.count('hsq') == 1 for t in day) for day in small]) == [False, True] and all(t.count('hsq') == 0 for day in small for t in day if t.count('hsq') != 1), 'a six-year-old: one Hasaniya question every other day')
@@ -132,7 +135,7 @@ async def main():
         # ---- monthly measure: what stays of what was learned two weeks ago or more; no feedback, no comparison praise
         await p.evaluate("store.set(`tripsDone:${kid}`, 1); store.set(`trip:${kid}:${today()}`, {v:TRIP_V,cards:[],i:0,res:[],done:true}); LIB=false; go('kid')"); await p.wait_for_timeout(500)
         ok(await p.locator('#msGo').count() == 0, 'nothing learned two weeks ago yet: no measure')
-        await p.evaluate("""(() => { const d = dayN() - 20; ['uk', 'hk', 'hys', 'drv', 'wh'].forEach(g => (POOL[g]() || []).slice(0, 4).forEach(id => { store.set(MK(g, id), {n: 2, ok: 1, streak: 1, wrong: 1, f: d, t: Date.now() - 20 * 864e5}); const s = seen(g); s.push(id); store.set(`seen:${kid}:${g}`, s); }));
+        await p.evaluate("""(() => { const d = dayN() - 20; ['uk', 'rl', 'drv', 'fill', 'dct'].forEach(g => (POOL[g]() || []).slice(0, 4).forEach(id => { store.set(MK(g, id), {n: 2, ok: 1, streak: 1, wrong: 1, f: d, t: Date.now() - 20 * 864e5}); const s = seen(g); s.push(id); store.set(`seen:${kid}:${g}`, s); }));
             (POOL.uk() || []).slice(4, 8).forEach(id => { store.set(MK('uk', id), {n: 1, ok: 1, streak: 1, wrong: 0, f: dayN() - 3, t: Date.now()}); const s = seen('uk'); s.push(id); store.set(`seen:${kid}:uk`, s); }); go('kid'); })()""")
         await p.wait_for_timeout(500)
         ok(await p.locator('#msGo').count() == 1, "the measure appears once the day's trip is done and two weeks have passed on what was learned")
