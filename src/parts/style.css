@@ -147,6 +147,8 @@ h1:focus,h2:focus{outline:none}
 .orn{color:var(--ax);font-size:1.05em}
 .verse figcaption{display:flex;flex-wrap:wrap;justify-content:center;gap:2px 14px;font-size:.88rem;color:var(--ink-2);margin-top:4px}
 .verse figcaption a{color:var(--ax);text-underline-offset:4px}
+.vplay{font:inherit;font-size:.9rem;color:var(--ax);background:none;border:1.5px solid currentColor;border-radius:999px;padding:6px 14px;min-height:40px;cursor:pointer}
+.vplay.on{background:var(--ax);color:#fff;border-color:var(--ax)}
 
 .secret{display:flex;flex-direction:column;gap:14px}
 .secret>p{margin:0;max-width:64ch}
@@ -348,6 +350,8 @@ details.adult p{margin:.5rem 0 0;font-size:.95rem;color:var(--ink-2);max-width:6
 /* ---------- footer ---------- */
 .foot{padding-block:22px 30px;border-top:1px solid var(--line);color:var(--ink-2);font-size:.92rem;display:flex;flex-direction:column;gap:10px}
 .foot p{margin:0;max-width:72ch}
+.foot-more summary{cursor:pointer;min-height:44px;display:flex;align-items:center;color:var(--ink);font-family:var(--font-display)}
+.foot-more p{margin:0 0 8px}
 .foot strong{color:var(--ink);font-family:var(--font-display);font-weight:500}
 .reset{all:unset;cursor:pointer;align-self:flex-start;font-size:.88rem;color:var(--rose);text-decoration:underline;text-underline-offset:4px}
 .reset:focus-visible{outline:2px solid var(--rose);outline-offset:2px}
@@ -362,3 +366,10 @@ details.adult p{margin:.5rem 0 0;font-size:.95rem;color:var(--ink-2);max-width:6
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation:none!important;transition:none!important}
 }
+/* folded sections of the child's home (2.10): a summary line that opens them */
+details.fold{border-top:1px solid var(--line);padding-top:8px}
+details.fold>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;min-height:48px}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary::before{content:'◂';color:var(--ink-2);transition:transform .15s}
+details.fold[open]>summary::before{transform:rotate(-90deg)}
+details.fold>summary .h2{margin:0}

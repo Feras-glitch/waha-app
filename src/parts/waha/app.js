@@ -120,7 +120,7 @@ function kidEditSheet(i){
     img.onload = () => { const c = document.createElement('canvas'); const n = 96; c.width = c.height = n; const m = Math.min(img.width, img.height); c.getContext('2d').drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, n, n); k.photo = c.toDataURL('image/jpeg', .8); URL.revokeObjectURL(url); store.set('kids', kids); $('keFb').textContent = 'أُضيفت الصورة.'; $('keFb').className = 'fb ok'; renderWho(); }; img.src = url; });
   s.querySelector('#keSave').addEventListener('click', () => { k.name = $('keName').value.trim() || k.name; k.age = Math.max(4, Math.min(16, +$('keAge').value || 8)); k.gender = $('keG').value; store.set('kids', kids); renderWho(); renderHome(); kidsSheet(); });
   const pd = s.querySelector('#kePhotoDel'); if (pd) pd.addEventListener('click', () => { delete k.photo; store.set('kids', kids); kidEditSheet(i); });
-  const dl = s.querySelector('#keDel'); if (dl) dl.addEventListener('click', () => { if (!dl.dataset.c){ dl.dataset.c = '1'; dl.textContent = 'متأكد؟ اضغط مرة أخرى'; return; } pinGate(() => { kids.splice(i, 1); store.set('kids', kids); shiftKidKeys(i); if (kid > i) kid--; if (kid >= kids.length) kid = 0; store.set('kid', kid); onKid(); }); });
+  const dl = s.querySelector('#keDel'); if (dl) dl.addEventListener('click', () => { if (!dl.dataset.c){ dl.dataset.c = '1'; dl.textContent = 'متأكدون؟ اضغطوا مرة أخرى'; return; } pinGate(() => { kids.splice(i, 1); store.set('kids', kids); shiftKidKeys(i); if (kid > i) kid--; if (kid >= kids.length) kid = 0; store.set('kid', kid); onKid(); }); });
 }
 let TEACHER = false;
 /* الرقم السري: يُحفظ مجزَّأً (SHA-256 مع ملح) لا نصًا؛ ويُطلب ضبطه من ولي الأمر في أول تشغيل. ليس حماية قوية من طفل يعرف أدوات المتصفح، لكنه يمنع القراءة المباشرة. */
@@ -130,39 +130,43 @@ async function pinCheck(v){ const p = store.get('pin', null); if (!p) return fal
 async function pinSave(v){ const salt = Math.random().toString(36).slice(2, 10); store.set('pin', {s: salt, h: await pinHash(v, salt)}); }
 function pinGate(then, opts){
   const has = pinSet() || typeof store.get('pin', null) === 'string'; const s = $('sheet'); const setup = !has;
-  s.innerHTML = `<div class="top"><h2 style="font-family:var(--f-ui);font-size:1.3rem">${setup ? 'ولي الأمر: اختر رقمًا سريًّا (4 أرقام أو أكثر)' : 'رقم ولي الأمر'}</h2><button class="x" aria-label="إغلاق">✕</button></div><input class="f t" id="pinIn" type="password" inputmode="numeric" maxlength="8" placeholder="••••">${setup ? '<input class="f t" id="pinIn2" type="password" inputmode="numeric" maxlength="8" placeholder="أعد الرقم">' : ''}<div class="btns"><button class="btn" type="button" id="pinOk">${setup ? 'احفظ' : 'دخول'}</button></div><p class="fb" id="pinFb"></p><p class="note">${setup ? 'هذا الرقم يفتح لوحة ولي الأمر وإضافة الأطفال وحذفهم. احفظه؛ لا يمكن استرجاعه، ويُعاد ضبطه بمسح بيانات التطبيق.' : 'الرقم الذي اختاره ولي الأمر في أول تشغيل.'}</p>`;
+  s.innerHTML = `<div class="top"><h2 style="font-family:var(--f-ui);font-size:1.3rem">${setup ? 'وليّ الأمر: اختاروا رمزًا (4 أرقام أو أكثر)' : 'رمز وليّ الأمر'}</h2><button class="x" aria-label="إغلاق">✕</button></div><input class="f t" id="pinIn" aria-label="رمز وليّ الأمر" type="password" inputmode="numeric" maxlength="8" placeholder="••••">${setup ? '<input class="f t" id="pinIn2" type="password" inputmode="numeric" maxlength="8" placeholder="أعيدوا الرمز">' : ''}<div class="btns"><button class="btn" type="button" id="pinOk">${setup ? 'احفظوه' : 'دخول'}</button></div><p class="fb" id="pinFb"></p><p class="note">${setup ? 'هذا الرمز يفتح لوحة وليّ الأمر وإضافة الأطفال وحذفهم. احفظوه؛ لا يمكن استرجاعه، ويُعاد ضبطه بمسح بيانات التطبيق.' : 'رمز وليّ الأمر نفسه في الواحة و«كنوز البيان» والحسنية.'}</p>`;
   showSheet(); s.querySelector('.x').addEventListener('click', closeSheet); const inp = $('pinIn'); inp.focus();
   const bad = t => { $('pinFb').textContent = t; $('pinFb').className = 'fb bad'; };
   const ok = async () => { const v = inp.value.trim(); if (v.length < 4) return bad('أربعة أرقام على الأقل.');
-    if (setup){ const v2 = ($('pinIn2').value || '').trim(); if (v2 !== v) return bad('الرقمان غير متطابقين.'); await pinSave(v); closeSheet(); then(); return; }
-    if (await pinCheck(v)){ closeSheet(); then(); } else bad('الرقم غير صحيح.'); };
+    if (setup){ const v2 = ($('pinIn2').value || '').trim(); if (v2 !== v) return bad('الرمزان غير متطابقين.'); await pinSave(v); closeSheet(); then(); return; }
+    if (await pinCheck(v)){ closeSheet(); then(); } else bad('الرمز غير صحيح.'); };
   $('pinOk').addEventListener('click', ok); s.querySelectorAll('input').forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') ok(); }));
 }
 $('whoBtn').addEventListener('click', e => { e.stopPropagation(); kidsSheet(); });
 
-/* ---- mastery: an item is mastered after two correct answers in a row; wrong items come back more often ---- */
+/* ---- mastery, made honest (2.6): the step of an item rises at most once a day, so «متقن» (step 2) means right on two
+   different days. Every step has its next date: step 1 tomorrow, step 2 after 3 days, then 7, 21, 45. A wrong answer drops
+   it one step (not to nothing) and brings it back tomorrow; in a trip it is asked again a few cards later. ---- */
 const MK = (g, id) => `m:${kid}:${g}:${id}`;
 function mget(g, id){ return store.get(MK(g, id), {n:0, ok:0, streak:0, wrong:0}); }
 function seen(g){ return store.get(`seen:${kid}:${g}`, []); }
 function mastered(g, id){ return mget(g, id).streak >= 2; }
-/* spaced review: a mastered item comes due after 1, 3, 7, 21 then 45 days; a wrong answer resets it */
+/* spaced review: an item at step n comes due INTERVALS[n-1] days after it was last answered right */
 const DAY_MS = 86400000, INTERVALS = [1, 3, 7, 21, 45];
 function dayN(t){ const d = t == null ? new Date() : new Date(t); return Math.round(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / DAY_MS); }
-function dueOf(m){ if (m.streak < 2) return null; if (m.due != null) return m.due; return dayN(m.t || Date.now()) + INTERVALS[Math.min(m.streak - 2, INTERVALS.length - 1)]; }
+function dueOf(m){ if (m.due != null) return m.due; if (m.streak < 2) return null; return dayN(m.t || Date.now()) + INTERVALS[Math.min(m.streak - 1, INTERVALS.length - 1)]; }
 function isDueM(m){ const d = dueOf(m); return d != null && d <= dayN(); }
 function isDue(g, id){ return isDueM(mget(g, id)); }
+/* returns true when the answer moved the item up a step (a spaced success): only those earn a date in the trip */
 function award(g, id, ok){
-  const m = mget(g, id); m.n++;
-  /* a mastered item moves to the next interval only when it was due, or on another day: answering it five times in one
-     afternoon must not send it 45 days away */
-  if (ok === true){ m.ok++; const step = m.streak < 2 || isDueM(m) || m.lc !== dayN();
-    if (step){ m.streak++; if (m.streak >= 2){ m.due = dayN() + INTERVALS[Math.min(m.streak - 2, INTERVALS.length - 1)]; if (m.streak === 2 && !m.mt) m.mt = Date.now(); } }
+  const m = mget(g, id); m.n++; let stepped = false; if (m.f == null) m.f = dayN();
+  if (ok === true){ m.ok++;
+    /* one step a day: answering an item five times in one afternoon is not knowing it; and a right answer on the day of a wrong one
+       (the correction was just shown) counts as an answer, not a step: the item still comes back tomorrow */
+    if (m.lw === dayN()){ m.due = dayN() + 1; }
+    else if (m.lc !== dayN()){ m.streak++; stepped = true; m.due = dayN() + INTERVALS[Math.min(m.streak - 1, INTERVALS.length - 1)]; if (m.streak === 2 && !m.mt) m.mt = Date.now(); }
     m.lc = dayN(); }
-  else if (ok === false){ m.wrong++; m.streak = 0; m.due = null; }
+  else if (ok === false){ m.wrong++; m.streak = Math.max(0, m.streak - 1); m.due = dayN() + 1; m.lw = dayN(); }
   m.t = Date.now(); store.set(MK(g, id), m);
   const s = seen(g); if (!s.includes(id)){ s.push(id); store.set(`seen:${kid}:${g}`, s); }
   const dk = `day:${kid}:${today()}`; const d = store.get(dk, {}); d[g] = (d[g] || 0) + 1; store.set(dk, d);
-  refreshScores(); checkStages();
+  refreshScores(); checkStages(); return stepped;
 }
 function gstats(g){ const s = seen(g); return {seen: s.length, mastered: s.filter(id => mastered(g, id)).length, wrong: s.filter(id => mget(g, id).wrong > 0 && !mastered(g, id)).length}; }
 function pickW(g, items, idOf, lastId){
@@ -180,15 +184,35 @@ function refreshScores(){
 /* ---- shared widgets ---- */
 /* the options of a question: the answer and up to n wrong ones, distinct once diacritics and punctuation are ignored
    («الحمد لله.» and «الحمدُ لله.» are one option), and none that is the answer itself in another spelling */
+/* the uk distractors: the item's own, and the right meanings of other uk words, those nearest the answer in length first */
+let UK_M = null;
+function ukAlts(u, a){
+  if (!UK_M){ UK_M = []; Object.keys(ALL).forEach(k => (ALL[k].unknown || []).forEach(x => { const m = x.options && x.options[x.answer]; if (m) UK_M.push(m); })); }
+  const own = u.options.filter((o, i) => i !== u.answer), L = a.length, key = x => N1(x, true);
+  const pool = [...new Set([...own, ...UK_M])].filter(x => key(x) !== key(a));
+  return pool.sort((x, y) => Math.abs(x.length - L) - Math.abs(y.length - L)).slice(0, 4);
+}
 function optsOf(a, alts, n){ const key = x => N1(RES(x), true), seen = new Set([key(a)]), out = [];
   for (const x of shuffle([...(alts || [])])){ const k = key(x); if (!k || seen.has(k)) continue; seen.add(k); out.push(x); if (out.length >= n) break; }
   return [a, ...out]; }
-function mcq(box, options, correct, onDone, cls){
+const FREE_KINDS = new Set(['نص حر', 'أخبرني', 'رأيتُها اليوم']);
+function mcq(box, options, correct, onDone, cls, quiet){
   box.innerHTML = '';
   /* an option may carry ⟨m|f⟩ markers that the page resolves on screen, so the right one is found by its own text, not by what shows */
+  /* eight and under: the first touch on an option says it and lights it, a second touch on the same option chooses it */
+  const small = tier() === 'small' && options.length > 1;
   shuffle(options.slice()).forEach(o => { const b = el('button', 'opt' + (cls ? ' ' + cls : '')); b.type = 'button'; b.textContent = o; b.__o = o;
-    b.addEventListener('click', () => { const ok = o === correct; for (const x of box.children){ x.disabled = true; if (x.__o === correct) x.dataset.s = 'ok'; } if (!ok) b.dataset.s = 'bad'; onDone(ok); });
+    b.addEventListener('click', () => {
+      if (small && b.dataset.s !== 'arm'){ for (const x of box.children) if (x.dataset.s === 'arm') delete x.dataset.s; b.dataset.s = 'arm'; say(b.textContent); return; }
+      voiceStop(); const ok = o === correct; for (const x of box.children){ x.disabled = true; if (x.__o === correct && !quiet) x.dataset.s = 'ok'; } if (quiet) b.dataset.s = 'pick'; else if (!ok) b.dataset.s = 'bad'; let sb = box.nextElementSibling; while (sb && (sb.classList.contains('optsay') || sb.classList.contains('optip'))){ const nx = sb.nextElementSibling; sb.remove(); sb = nx; } onDone(ok); });
     box.appendChild(b); });
+  /* a child who does not read yet (eight and under) can hear the options before choosing */
+  { let old = box.nextElementSibling; while (old && (old.classList.contains('optsay') || old.classList.contains('optip'))){ const nx = old.nextElementSibling; old.remove(); old = nx; } }
+  if (small){ const sb = el('button', 'tiny optsay', '🔊 ' + T('اسمع الخيارات', 'اسمعي الخيارات')); sb.type = 'button';
+    /* each option lights while it is said, so the child knows which button holds which word */
+    sb.addEventListener('click', () => { const bs = [...box.children]; say(bs.map(x => x.textContent), {onPart: i => bs.forEach((x, j) => x.classList.toggle('saying', j === i))}); });
+    box.insertAdjacentElement('afterend', sb);
+    const tip = el('p', 'muted optip', T('المس الخيار لتسمعه، ثم المسه مرةً أخرى لتختاره.', 'المسي الخيار لتسمعيه، ثم المسيه مرةً أخرى لتختاريه.')); sb.insertAdjacentElement('afterend', tip); }
 }
 function feedback(id, st, good, bad, near){ const e = typeof id === 'string' ? $(id) : id; e.textContent = st === 'ok' || st === true ? good : (st === 'near' ? near : bad); e.className = 'fb ' + (st === true || st === 'ok' ? 'ok' : st === 'near' ? 'near' : 'bad'); }
 const ALPHA = 'ابتثجحخدذرزسشصضطظعغفقكلمنهويءةىأإآؤئ';
@@ -219,7 +243,7 @@ function blankHtml(v, short){ const t = short ? snip(v.text, v.word, 8) : v.text
 
 /* ---- the growing oasis: 22 stages, each unlocks one thing in the child's scene ---- */
 const STAGES = [
- {id:'S01', el:'sprout',  name:'البذرة',        desc:'فتح 6 ثمرات في النخيل',                  o:'roots',  t:'oasis',   fn: () => ROOTS.reduce((a, k) => a + store.get(`opened:${kid}:${k}`, []).length, 0), need:6},
+ {id:'S01', el:'sprout',  name:'البذرة',        desc:'6 كلمات في ⟨حقيبتك|حقيبتكِ⟩ أو ثمرات ⟨تفتحها|تفتحينها⟩ في النخيل',  o:'roots',  t:'oasis',   fn: () => store.get(`bag:${kid}`, []).length + ROOTS.reduce((a, k) => a + store.get(`opened:${kid}:${k}`, []).length, 0), need:6},
  {id:'S02', el:'palm1',   name:'النخلة الأولى', desc:'إتقان 5 أسئلة في «الوزن المناسب»',          o:'roots',  t:'roles',   g:'rl',  need:5},
  {id:'S03', el:'spring',  name:'النبع',         desc:'إتقان 5 ألغاز في «من أنا؟»',               o:'alghaz', t:'gzWho',   g:'gzw', need:5},
  {id:'S04', el:'grass',   name:'العشب',         desc:'إتقان 6 أشياء في «الألوان»',                o:'hayat',  t:'hyColors',g:'hyc', need:6},
@@ -246,7 +270,7 @@ const STAGES = [
  {id:'S27', el:'kite',    name:'الطائرة الورقية', desc:'3 أسئلة من تأليفك أجازها ولي الأمر',         o:'workshop', t:'wsAsk', fn: () => store.get('kqa', []).filter(q => q.kid === kid).length, need:3},
  {id:'S28', el:'lantern', name:'الفانوس',       desc:'إهداء تسجيلٍ معتمد لأخٍ أو صديق',           o:'rec',    t:'giftShelf', fn: () => store.get(`giftsSent:${kid}`, 0), need:1},
  {id:'S29', el:'tree',    name:'شجرة العلم',     desc:'3 هدايا أتمّها من ⟨أهديتَها|أهديتِها⟩ إليهم',            o:'rec',    t:'giftShelf', fn: () => store.get(`giftsMastered:${kid}`, 0), need:3},
- {id:'S30', el:'garden',  name:'الحديقة',        desc:'5 أعمال من «⟨اعمل|اعملي⟩ به» أكّدها ولي الأمر',       o:'home',   t:'home',      fn: () => store.get(`amalDone:${kid}`, 0), need:5},
+ {id:'S30', el:'garden',  name:'الحديقة',        desc:'20 كلمة ⟨عرفتَها|عرفتِها⟩ (صحيحة في يومين مختلفين)',       o:'bag',   t:'kidBag',      fn: () => bagCounts().known, need:20},   /* a good deed stays between the child and the father, it is not paid in scenery */
  {id:'S32', el:'market',  name:'السوق',          desc:'10 كلمات ⟨كتبتَها|كتبتِها⟩ بالصينية والإنجليزية وأجازها ولي الأمر', o:'roots', t:'palm', fn: () => triApproved(kid).length, need:10},
  {id:'S33', el:'juzstars', name:'نجمة المصحف',   desc:'جزء كامل في مصحفك بصوتك، كل صفحاته اعتمدها الشيخ', o:'rec', t:'mushaf', fn: () => store.get(`mushafUnits:${kid}`, 0), need:1},
  {id:'S34', el:'halqa',   name:'حلقة التتابع',   desc:'سورة كاملة بأصوات الإخوة في «التتابع»',          o:'rec', t:'relay',  fn: () => store.get(`relayDone:${kid}`, []).length, need:1},
@@ -271,12 +295,15 @@ function checkStages(){
   for (const s of STAGES){ if (stageDone(s) || stageLocked(s)) continue; if (stageCur(s) >= stageNeed(s)){ store.set(`stage:${kid}:${s.id}`, Date.now()); celeQueue.push(s); changed = true; } }
   if (changed){ renderHome(); showCele(); }
 }
+/* a new element of the oasis is celebrated where the child is at home: never in the middle of a trip (it waits for the trip's end)
+   and never over the parents' board. The title is said aloud, and needs no adjective (so «فانوس» and «نخلة» are both right) */
+function celeHere(){ try { return !!(cur && (cur.o === 'kid' && !(TRIP && !TRIP.done) || cur.o === 'trip' && TRIP && TRIP.done)); } catch (e) { return false; } }
 function showCele(){
-  if (!celeQueue.length || !$('cele').hidden) return; const s = celeQueue.shift();
-  const c = $('cele'); c.innerHTML = `<div class="cc"><svg viewBox="0 0 200 200" aria-hidden="true">${SCENE_SOLO(s.el)}</svg><h2>${esc(STAGE_NAMES_EL[s.el])} جديدة في واحة ${esc(K().name)}!</h2><p>${esc(s.name)}: ${esc(s.desc)}</p><div class="btns"><button class="btn" id="ceHome">⟨انظر|انظري⟩ واحتي</button><button class="btn ghost" id="ceOn">⟨تابع|تابعي⟩ اللعب</button></div></div>`;
-  c.hidden = false; $('ceHome').focus();
-  $('ceHome').addEventListener('click', () => { c.hidden = true; go('home'); showCele(); });
-  $('ceOn').addEventListener('click', () => { c.hidden = true; showCele(); });
+  if (!celeQueue.length || !$('cele').hidden || !celeHere()) return; const s = celeQueue.shift();
+  const title = `في واحة ${K().name} الآن: ${STAGE_NAMES_EL[s.el]}!`, small = tier() === 'small';
+  const c = $('cele'); c.innerHTML = `<div class="cc"><svg viewBox="0 0 200 200" aria-hidden="true">${SCENE_SOLO(s.el)}</svg><h2>${esc(title)}</h2><p>${esc(s.name)}: ${esc(s.desc)}</p><div class="btns"><button class="btn" id="ceOn">${small ? '⟨انظر|انظري⟩ واحتي' : '⟨تابع|تابعي⟩'}</button></div></div>`;
+  c.hidden = false; $('ceOn').focus(); sayLater(title, 200);
+  $('ceOn').addEventListener('click', () => { voiceStop(); c.hidden = true; showCele(); });
 }
 function renderStageStrip(e){
   const g = e.dataset.g; const s = stageFor(g); if (!s){ e.hidden = true; return; } e.hidden = false;
@@ -378,7 +405,7 @@ const OASES = [
  {id:'hadith', name:'الحديث والآثار', bl:'قول النبي ﷺ، ووصف الصحابة له، وأقوال الصحابة: لا تختلط', games:['wh'], tabs:[['hadith','الحديث والآثار']]},
  {id:'workshop', name:'ورشة الكتابة', bl:'إملاء بالذاكرة، وتصريف الأفعال كما وردت في محفوظك', games:['dct','cnj','tri','kq'], tabs:[['wsDict','إملاء بالذاكرة'],['wsConj','⟨صرّف|صرّفي⟩ الفعل'],['wsTri','بثلاث لغات'],['wsSib','أسئلة الإخوة'],['wsAsk','⟨اكتب|اكتبي⟩ سؤالًا']]},
  {id:'matn', name:'المتون', bl:'⟨سمّع|سمّعي⟩ التحفة والجزرية والحسنية ونظم الآجرومية بيتًا بيتًا، والآجرومية نثرًا', games:['mtn','ajd','ajc','irb'], tabs:[['mtRecite','⟨سمّع|سمّعي⟩'],['mtRead','⟨اقرأ|اقرئي⟩ المتن'],['mtAjr','الآجرومية']]},
- {id:'rec', name:'رفّ التسجيلات', bl:'⟨سجّل|سجّلي⟩ بصوتك، ويراجع ولي الأمر أو المعلم، ⟨وأهدِ|وأهدي⟩ المعتمدَ لإخوتك', games:['gift'], tabs:[['recShelf','تسجيلاتي'],['mushaf','مصحفي'],['relay','التتابع'],['giftShelf','هداياي']]},
+ {id:'rec', name:'رفّ التسجيلات', bl:'⟨سجّل|سجّلي⟩ بصوتك، ويراجع ولي الأمر أو المعلم، ⟨وأهدِ|وأهدي⟩ المعتمدَ لإخوتك', games:['gift'], tabs:[['recShelf','تسجيلاتي'],...(window.WAHA_AUDIO ? [['tilawa','التلاوة']] : []),['mushaf','مصحفي'],['relay','التتابع'],['giftShelf','هداياي']]},
  {id:'radio', name:'إذاعة الواحة', bl:'برنامج اليوم بأصوات الإخوة: قرآن وحديث وحكمة وشعر وخبر وسؤال', games:[], tabs:[['radio','برنامج اليوم']]},
  {id:'test', name:'اختبار القافلة', bl:'عشرة أسئلة بلا تلميح مما ⟨أتقنتَه|أتقنتِه⟩. النجاح يفتح البحيرة ثم القارب ثم القافلة', games:[], tabs:[['test','اختبار القافلة']], hide:true},
  {id:'kid', name:'واحتي', bl:'', games:[], tabs:[['kidHome','واحتي']], hide:true},
@@ -390,14 +417,27 @@ const OASES = [
  {id:'msr', name:'قياس الشهر', bl:'', games:[], tabs:[['kidMs','قياس الشهر']], hide:true},
  {id:'review', name:'مراجعة اليوم', bl:'', games:[], tabs:[['rvCard','مراجعة اليوم']], hide:true},
  {id:'place', name:'تحديد المستوى', bl:'', games:[], tabs:[['plCard','تحديد المستوى']], hide:true},
- {id:'dad', name:'لوحة ولي الأمر', bl:'', games:[], tabs:[['dad','لوحة الأب']], hide:true},
+ {id:'dad', name:'لوحة الواحة', bl:'', games:[], tabs:[['dad','لوحة الأب']], hide:true},
 ];
 const SECTIONS = ['home', ...OASES.flatMap(o => o.tabs.map(t => t[0]))];
 const INIT = {};
 let cur = {o:'home', t:'home'};
 function oasisProgress(o){ const games = o.games; if (!games.length) return null; let m = 0, s = 0; games.forEach(g => { const st = gstats(g); m += st.mastered; s += st.seen; }); return {m, s}; }
 /* «كنوز البيان» (الخزائن السبع) و«لمسات رمضان» صفحةٌ أخرى من التطبيق نفسه */
-function kunuzGo(h){ try { voiceStop(); } catch (e) {} location.href = 'kunuz/index.html#' + h; }
+/* the three sections replace each other in the history (Back never cycles between them) */
+/* moving to another section: step back over this page's guard entry first, so the page's own entry is the one replaced
+   and Back never finds the section just left (otherwise Back cycles oasis → section → oasis…) */
+function kzLeave(url){
+  window.__kzLeaving = true;
+  var st = null; try { st = history.state; } catch (e) {}
+  if (!window.AndroidBridge && st && st.wahaBack) {
+    var done = false, to = function () { if (done) return; done = true; window.removeEventListener('popstate', to, true); location.replace(url); };
+    window.addEventListener('popstate', to, true);
+    try { history.back(); } catch (e) { to(); }
+    setTimeout(to, 700);
+  } else location.replace(url);
+}
+function kunuzGo(h){ try { voiceStop(); } catch (e) {} kzLeave('kunuz/index.html#' + h); }
 function kunuzGems(){ try { const k = K(); const d = JSON.parse(localStorage.getItem('kb-kid-' + k.id) || 'null'); return d && d.prog ? Object.keys(d.prog).length : 0; } catch (e) { return 0; } }
 function ramadanNow(){ try { let m = 0, dd = 0; new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', {day:'numeric', month:'numeric'}).formatToParts(new Date()).forEach(p => { if (p.type === 'month') m = +p.value; if (p.type === 'day') dd = +p.value; }); return m === 9 || (m === 8 && dd >= 20); } catch (e) { return false; } }
 const ICON_KUNUZ = '<svg viewBox="0 0 64 64"><rect x="15" y="15" width="34" height="34" rx="2" fill="#E0AE3A" stroke="#946709" stroke-width="2"/><rect x="15" y="15" width="34" height="34" rx="2" fill="#E0AE3A" stroke="#946709" stroke-width="2" transform="rotate(45 32 32)"/><circle cx="32" cy="32" r="7" fill="var(--paper)"/></svg>';
@@ -415,7 +455,7 @@ function renderHome(){
   if (n){ const cur_ = Math.min(stageCur(n), stageNeed(n)), need = stageNeed(n);
     nx.innerHTML = `<span class="ic"><svg viewBox="0 0 200 200" aria-hidden="true">${SCENE_SOLO(n.el)}</svg></span><p class="t">الخطوة التالية: ${esc(n.name)}</p><p class="d">${esc(n.desc)}${n.test ? '' : ` — يفتح لك ${esc(STAGE_NAMES_EL[n.el])}`}</p><div class="bar2"><span class="track"><i style="width:${Math.round(100*cur_/need)}%"></i></span><span class="n">${cur_}/${need}</span></div><button class="btn go" type="button" id="nextGo">⟨اذهب|اذهبي⟩</button>`;
     $('nextGo').addEventListener('click', () => go(n.o, n.t)); nx.hidden = false; }
-  else { nx.innerHTML = `<span class="ic"><svg viewBox="0 0 200 200" aria-hidden="true">${SCENE_SOLO('caravan')}</svg></span><p class="t">اكتملت واحتك!</p><p class="d">كل المراحل مفتوحة. ⟨تابع|تابعي⟩ اللعب ⟨لتُتقن|لتُتقني⟩ أكثر، أو ⟨اطلب|اطلبي⟩ من أبيك واحةً جديدة.</p>`; }
+  else { nx.innerHTML = `<span class="ic"><svg viewBox="0 0 200 200" aria-hidden="true">${SCENE_SOLO('caravan')}</svg></span><p class="t">اكتملت واحتك!</p><p class="d">كل المراحل مفتوحة. ⟨تابع|تابعي⟩ اللعب ⟨لتُتقن|لتُتقني⟩ أكثر، أو ⟨اطلب|اطلبي⟩ من ⟨أهلك|أهلكِ⟩ واحةً جديدة.</p>`; }
   const box = $('otiles'); box.innerHTML = ''; kunuzTiles(box);
   OASES.filter(o => !o.hide || o.id === 'test').forEach(o => { const p = oasisProgress(o); const tst = o.id === 'test'; const tn = STAGES.filter(s => s.test); const passed = tn.filter(stageDone).length; const ready = tn.find(s => !stageDone(s) && !stageLocked(s));
     const b = el('button','otile', `<span class="g" aria-hidden="true">${ICON[o.id]}</span><span class="nm">${o.name}</span><span class="bl">${tst ? (ready ? `جاهز: الاختبار ${ready.test} (⟨نجحتَ|نجحتِ⟩ في ${passed})` : passed === tn.length ? '⟨نجحتَ|نجحتِ⟩ في الاختبارات الثلاثة' : `يُفتح بعد ${tn.find(s => !stageDone(s)).after} مراحل (⟨أنجزتَ|أنجزتِ⟩ ${stagesDoneCount()})`) : (p && p.s ? `⟨أتقنتَ|أتقنتِ⟩ ${p.m} · ⟨جرّبتَ|جرّبتِ⟩ ${p.s}` : o.bl)}</span>`); b.type = 'button';
@@ -426,7 +466,7 @@ function renderHome(){
     if (!done && !locked){ r.style.cursor = 'pointer'; r.addEventListener('click', () => go(s.o, s.t)); } J.appendChild(r); });
 }
 function go(o, t){
-  closeSheet(); if (typeof voiceStop === 'function') voiceStop();
+  closeSheet(); if (typeof voiceStop === 'function') voiceStop(); setTimeout(urlSweep, 0);
   if ((o === 'home' || !o) && typeof kidMode === 'function' && kidMode() && !LIB) o = 'kid';
   const O = OASES.find(x => x.id === o);
   if (!O){ cur = {o:'home', t:'home'}; }
@@ -438,6 +478,7 @@ function go(o, t){
   $('seedBox').hidden = !(O && O.id === 'roots' && cur.t !== 'oasis');
   store.set('loc', cur);
   if (cur.t === 'home'){ checkStages(); renderHome(); }
+  if (cur.o === 'kid') setTimeout(showCele, 400);
   if (INIT[cur.t]) INIT[cur.t]();
   refreshScores();
   window.scrollTo({top:0});
@@ -449,7 +490,9 @@ function onKid(){ TEACHER = false; renderWho(); bankPref = null; resetGames(); r
 let SHEET_T = 0;
 function showSheet(){ $('sheet').hidden = false; SHEET_T = performance.now(); }
 /* closing the sheet (✕, Esc, a tap outside) also ends a recording started in it: the microphone does not stay on, and the sound is not filed under the next text */
-function closeSheet(){ const s = $('sheet'); s.hidden = true; try { if (VX.rec && VX.rec.owner && s.contains(VX.rec.owner)) micAbort(); } catch (e) {} }
+function closeSheet(){ const s = $('sheet'); const was = !s.hidden; s.hidden = true; if (was && typeof TL !== 'undefined' && TL && TL.box && s.contains(TL.box)){ tlStop(); TL.box = null; } try { if (VX.rec && VX.rec.owner && s.contains(VX.rec.owner)) micAbort(); } catch (e) {}
+  /* the shelf behind the sheet shows what was just recorded */
+  if (was && typeof cur !== 'undefined' && cur.t === 'recShelf' && typeof renderShelf === 'function') renderShelf(); }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
 document.addEventListener('click', e => { const s = $('sheet'); if (!s.hidden && performance.now() - SHEET_T > 250 && !s.contains(e.target)) closeSheet(); });
 
@@ -993,8 +1036,11 @@ const GEN = {
   rl: id => { const [k, q] = id.split('|'); const P = ALL[k]; const r = P && P.roles.find(x => x.q === q); if (!r) return null; return {q:`${P.root}: ${r.q}`, a:r.a, alts:r.opts.filter(o => o !== r.a), type:true, label:`الوزن: ${r.q} (${P.root})`}; },
   drv: id => { const [k, l] = id.split('|'); const P = ALL[k]; const f = P && P.family.find(x => x.lemma === l); if (!f) return null; return {q:`من جذر ${P.root} على وزن ${dvPattern(f)}: ما الكلمة؟`, a:f.lemma, alts:P.family.filter(x => x !== f).map(x => x.lemma), type:true, label:`⟨اشتقّ|اشتقّي⟩: ${f.lemma}`}; },
   fill: id => { const [k, sa, w] = id.split('|'); const P = ALL[k]; let hit = null; P && P.family.forEach(f => f.verses.forEach(v => { if (`${v.s}:${v.a}` === sa && strip(v.word) === w) hit = {f, v}; })); if (!hit) return null;
-    return {html: blankHtml(hit.v, true), a:hit.v.word, alts:P.family.filter(x => x !== hit.f).slice(0, 5).map(x => x.verses[0].word), type:true, label:`الكلمة الناقصة: ${hit.v.word} (${hit.v.name} ${hit.v.s}:${hit.v.a})`}; },
-  uk: id => { const [k, l] = id.split('|'); const P = ALL[k]; const u = P && P.unknown.find(x => x.lemma === l); if (!u) return null; const v = u.verse; return {q:`ما معنى «${v ? v.word : u.lemma}» في الآية؟`, html: v ? `<p class="q s">﴿${esc(snip(v.text, v.word, 8)).replace(esc(v.word), `<mark>${esc(v.word)}</mark>`)}﴾</p><p class="ref" style="margin:0">${v.name} ${v.s}:${v.a}</p>` : '', a:u.options[u.answer], alts:u.options.filter((o, i) => i !== u.answer), label:`المجهولة: ${u.lemma}`}; },
+    return {q: '⟨أكمل|أكملي⟩ الكلمة الناقصة في الآية', qv: {s: hit.v.s, a: hit.v.a, b: hit.v.a}, html: blankHtml(hit.v, true), a:hit.v.word, alts:P.family.filter(x => x !== hit.f).slice(0, 5).map(x => x.verses[0].word), type:true, label:`الكلمة الناقصة: ${hit.v.word} (${hit.v.name} ${hit.v.s}:${hit.v.a})`}; },
+  uk: id => { const [k, l] = id.split('|'); const P = ALL[k]; const u = P && P.unknown.find(x => x.lemma === l); if (!u) return null; const v = u.verse; const a = u.options[u.answer];
+    return {q:`ما معنى «${v ? v.word : u.lemma}» في الآية؟`, qs: v ? 'ما معنى الكلمة الملوّنة في الآية؟' : null, qv: v ? {s: v.s, a: v.a, b: v.a} : null,
+      html: v ? `<p class="q s">﴿${esc(snip(v.text, v.word, 8)).replace(esc(v.word), `<mark>${esc(v.word)}</mark>`)}﴾</p><p class="ref" style="margin:0">${v.name} ${v.s}:${v.a} · ${T('كلمة من جذرٍ تعرفه', 'كلمة من جذرٍ تعرفينه')}</p>` : '',
+      a, alts: ukAlts(u, a), label:`كلمة من جذرٍ معروف: ${u.lemma}`}; },
   gzw: id => { const x = GZ.quran.find(q => q.id === id); if (!x) return null; return {q:`من أنا؟ ${x.clues.slice(0, 2).join(' ')}`, a:strip(x.answer), alts:x.options.slice(1).map(strip), type:true, label:`من أنا؟ ${x.answer}`}; },
   gzd: id => { const [g, w] = id.split('|'); const G = GZ.dots.find(x => x.id === g); const t = G && G.words.find(x => x.word === w); if (!t) return null; const alts = G.words.filter(x => x !== t).map(x => x.word); let guard = 0; while (alts.length < 3 && guard++ < 40){ const w = pick(GZ.dots).words[0].word; if (w !== t.word && !alts.includes(w)) alts.push(w); } return {q:`رسمها «${G.rasm}»، ومعناها: ${t.meaning}. ما الكلمة؟`, a:t.word, alts, type:true, label:`النقاط: ${t.word}`}; },
   gzf: id => { const x = GF.find(q => q.id === id); if (!x) return null; return {q:x.q, a:x.answer, alts:x.options.slice(1), type: x.kind === 'لغز', label:`لغز: ${x.answer}`}; },
@@ -1021,7 +1067,7 @@ const GEN = {
   tri: id => { const x = triApproved().find(t => t.id === id); if (!x) return null; return {q:`ما الكلمة العربية التي معناها: ${[x.zh, x.en].filter(Boolean).join(' / ')}؟`, a:x.lemma, alts:triAlts(x), type:true, label:`بثلاث لغات: ${x.lemma}`}; },
 };
 function describe(g, id){ try { const q = GEN[g] && GEN[g](id); return q ? q.label : `${g}: ${id}`; } catch (e) { return `${g}: ${id}`; } }
-const GNAME = {kz:'كنوز البيان', hsq:'المنظومة الحسنية', rl:'الوزن المناسب', drv:'⟨اشتقّ|اشتقّي⟩ الكلمة', uk:'الكلمة المجهولة', fill:'الكلمة الناقصة', rc:'تلاوة', gzw:'من أنا؟', gzd:'نقطة تغيّر المعنى', gzr:'جذرٌ يختبئ', gzf:'ألغاز وأحاجي', sha:'⟨أكمل|أكملي⟩ البيت', shl:'آخر كلمة', shp:'من الشاعر؟', pml:'تسميع شوقي', nt:'أسئلة الحكايات', nto:'⟨رتّب|رتّبي⟩ الأحداث', hys:'ماذا ⟨تقول|تقولين⟩؟', hyo:'⟨رتّب|رتّبي⟩ الجملة', hyc:'الألوان', sfr:'صحٌّ أم خطأ', sfo:'⟨رتّب|رتّبي⟩ الفقرات', hk:'متى ⟨تقولها|تقولينها⟩؟', wh:'من القائل؟', dct:'إملاء بالذاكرة', cnj:'⟨صرّف|صرّفي⟩ الفعل', mtn:'تسميع المتون', kq:'أسئلة الإخوة', gift:'الهدايا', tri:'بثلاث لغات', ajd:'ما المصطلح؟ (الآجرومية)', ajc:'كم عددها؟ (الآجرومية)', irb:'⟨أعرب|أعربي⟩ (التحفة السنية)'};
+const GNAME = {kz:'كنوز البيان', hsq:'المنظومة الحسنية', rl:'الوزن المناسب', drv:'⟨اشتقّ|اشتقّي⟩ الكلمة', uk:'كلمة من جذرٍ ⟨تعرفه|تعرفينه⟩', fill:'الكلمة الناقصة', rc:'تلاوة', gzw:'من أنا؟', gzd:'نقطة تغيّر المعنى', gzr:'جذرٌ يختبئ', gzf:'ألغاز وأحاجي', sha:'⟨أكمل|أكملي⟩ البيت', shl:'آخر كلمة', shp:'من الشاعر؟', pml:'تسميع شوقي', nt:'أسئلة الحكايات', nto:'⟨رتّب|رتّبي⟩ الأحداث', hys:'ماذا ⟨تقول|تقولين⟩؟', hyo:'⟨رتّب|رتّبي⟩ الجملة', hyc:'الألوان', sfr:'صحٌّ أم خطأ', sfo:'⟨رتّب|رتّبي⟩ الفقرات', hk:'متى ⟨تقولها|تقولينها⟩؟', wh:'من القائل؟', dct:'إملاء بالذاكرة', cnj:'⟨صرّف|صرّفي⟩ الفعل', mtn:'تسميع المتون', kq:'أسئلة الإخوة', gift:'الهدايا', tri:'بثلاث لغات', ajd:'ما المصطلح؟ (الآجرومية)', ajc:'كم عددها؟ (الآجرومية)', irb:'⟨أعرب|أعربي⟩ (التحفة السنية)'};
 function testPool(){ const pool = []; for (const g of Object.keys(GEN)) for (const id of seen(g)) if (mastered(g, id)) { const q = GEN[g](id); if (q && q.a) pool.push({g, id, ...q}); } return pool; }
 let TS = null;
 function testStage(){ return STAGES.filter(s => s.test).find(s => !stageDone(s) && !stageLocked(s)) || null; }
@@ -1052,89 +1098,248 @@ function renderTestEnd(){
 INIT.test = renderTest;
 RESETS.push(() => { TS = null; });
 
+/* ================= قراءة الربع: دقيقة قراءة كل ثلاثة أشهر (الفكرة ٩) =================
+   The child reads this quarter's new passage aloud for one minute, then last quarter's passage again for one minute: growth is
+   read on the same passage, so the passage's difficulty leaves the comparison. The parents mark the words; three questions follow,
+   asked aloud with the passage hidden. The passages wait for the sheikh: until src/parts/waha/pending/orf.json is approved the
+   build carries none, and the tab says so. The recordings stay between the child and the parents (PRIVATE_K). */
+const ORF_DAYS = 90, ORF_KIND = 'قراءة الربع';
+const orfN = x => AR_NUM(String(x).replace('.', '٫'));   /* 2.5 → ٢٫٥ */
+const ORF_LV = {1: 'الأول (٦–٧ سنوات)', 2: 'الثاني (٨–٩ سنوات)', 3: 'الثالث (١٠–١٢ سنة)'};
+let ORF = null;   /* the sitting in progress: {kid, steps: [{id, reread}], i, res: [], placing, comp, w: the reading on screen} */
+const orfData = () => (DATA.orf && Array.isArray(DATA.orf.passages) && DATA.orf.passages.length) ? DATA.orf : null;
+const orfHist = () => store.get(`orf:${kid}`, []);
+const orfP = id => (orfData() ? orfData().passages : []).find(p => p.id === id) || null;
+const orfGuess = age => age <= 7 ? 1 : age <= 9 ? 2 : 3;
+const orfLvl = () => store.get(`orfLvl:${kid}`, null) || orfGuess(K().age);
+const orfWords = p => p.text.split(/\s+/).filter(Boolean);
+/* this sitting: the level's next new passage, and last sitting's new passage read again */
+function orfPlan(){
+  const h = orfHist(), lvl = orfLvl(), n = h.filter(s => s.lvl === lvl).length;
+  const steps = [{id: `L${lvl}-Q${(n % 4) + 1}`, reread: false}];
+  const last = h[h.length - 1]; if (last && last.neu && orfP(last.neu.id)) steps.push({id: last.neu.id, reread: true});
+  return {kid, lvl, steps: steps.filter(s => orfP(s.id)), i: 0, res: [], placing: !h.length, comp: null, w: null};
+}
+function orfScore(w){
+  const words = w.n, last = w.last == null ? words - 1 : w.last, read = last + 1;
+  const err = w.err.filter(i => i <= last).length, ok = Math.max(0, read - err), secs = Math.max(1, Math.min(60, w.secs || 60));
+  return {read, err, ok, secs, wcpm: secs >= 60 ? ok : Math.round(ok * 60 / secs), acc: Math.round(100 * ok / Math.max(1, read))};
+}
+function renderOrf(B){
+  const D = orfData(); const fm = fem(), V = (m, f) => fm ? f : m, nm = esc(K().name);
+  if (!D){
+    B.innerHTML = `<div class="kcard" style="padding:14px"><p class="lbl" style="margin:0">📖 قراءة الربع</p>
+      <p style="margin:6px 0">قِطَع القراءة الاثنتا عشرة تنتظر مراجعة الشيخ، ثم تُفعَّل هنا.</p>
+      <p class="note" style="margin:0">طريقتها: كل ثلاثة أشهر ${V('يقرأ', 'تقرأ')} ${nm} قطعةً جديدة دقيقةً واحدة بصوتٍ عالٍ، ثم ${V('يعيد', 'تعيد')} قطعة الربع الماضي دقيقةً أخرى، فترون نموّه على القطعة نفسها، ثم ثلاثة أسئلة شفهية. التسجيل يبقى بينكم وبين ${V('ابنكم', 'ابنتكم')}.</p></div>`;
+    return;
+  }
+  if (ORF && ORF.kid === kid) return ORF.i < ORF.steps.length ? orfReadView(B) : orfQView(B);
+  ORF = null;
+  const h = orfHist(), lvl = orfLvl(), last = h[h.length - 1];
+  const since = last ? dayN() - dayN(last.t) : null, dueIn = last ? ORF_DAYS - since : 0;
+  const pair = [...h].reverse().find(s => s.again);
+  let growth = '';
+  if (pair){ const a = pair.again, b0 = h.find(s => s.neu && s.neu.id === a.id && s.t < pair.t), p = orfP(a.id);
+    if (b0 && p){ const d = Math.round((pair.t - b0.t) / 864e5), diff = a.wcpm - b0.neu.wcpm;
+      growth = `<p style="margin:6px 0;font-weight:700">${V('قرأ', 'قرأت')} قطعة «${esc(p.title)}» مرةً ثانية بعد ${AR_NUM(d)} يومًا: ${AR_NUM(b0.neu.wcpm)} ← ${AR_NUM(a.wcpm)} كلمةً صحيحة في الدقيقة، بدقة ${AR_NUM(a.acc)}٪${b0.comp != null ? `، وفهم ${orfN(b0.comp)} من ٣` : ''}.</p>
+        <p class="note" style="margin:0">${Math.abs(diff) < 8 ? 'الفرق أصغر من ٨ كلمات، والدقيقة الواحدة تخطئ بنحو ذلك، فلا يُعدّ تغيّرًا بعد.' : diff > 0 ? 'الدقيقة الواحدة تخطئ بنحو ٨ كلمات، والفرق أكبر من ذلك: نموٌّ حقيقي.' : 'نقص أكثر من ٨ كلمات: ربما كان يومًا متعبًا؛ أعيدوا القطعة بعد أيام قبل أن تحكموا.'}</p>
+        <div class="row" style="gap:8px;margin-top:6px" id="orfAB"></div>`; } }
+  const lastHard = last && last.neu && last.neu.acc < 90 ? `<p class="fb bad" style="margin:6px 0">القطعة الأخيرة ما زالت صعبة (دقّة ${AR_NUM(last.neu.acc)}٪)؛ نبقى في هذا المستوى، وهذا حكمٌ على القطعة لا على ${nm}.</p>` : '';
+  /* one row a reading: the new passage, and under it the passage read again */
+  const rows = h.slice().reverse().map(s => { const p = s.neu && orfP(s.neu.id), q = s.again && orfP(s.again.id);
+    return `<tr><td>${esc(s.date)}</td><td>${p ? esc(p.title) : '—'}</td><td>${s.neu ? AR_NUM(s.neu.wcpm) : '—'}</td><td>${s.neu ? AR_NUM(s.neu.acc) + '٪' : '—'}</td><td>${s.comp != null ? orfN(s.comp) + ' من ٣' : '—'}</td></tr>` +
+      (q ? `<tr><td></td><td>↺ ${esc(q.title)}</td><td>${AR_NUM(s.again.wcpm)}</td><td>${AR_NUM(s.again.acc)}٪</td><td></td></tr>` : ''); }).join('');
+  B.innerHTML = `<div class="kcard" style="padding:14px">
+     <p class="lbl" style="margin:0">📖 قراءة الربع — ${nm}</p>
+     <p class="note" style="margin:6px 0">كل ثلاثة أشهر: قطعةٌ جديدة دقيقةً واحدة، ثم قطعة الربع الماضي دقيقةً أخرى، ثم ثلاثة أسئلة والقطعة مخفيّة. لا مقارنة بإخوته ولا بغيره: ${V('يُقارَن بنفسه', 'تُقارَن بنفسها')} على القطعة نفسها.</p>
+     ${growth}${lastHard}
+     <p style="margin:8px 0 4px">${!last ? 'لم تبدأ بعد. القراءة الأولى تحدّد المستوى.' : dueIn > 0 ? `القراءة القادمة بعد ${AR_NUM(dueIn)} يومًا.` : 'حان وقت قراءة هذا الربع.'}</p>
+     <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><button class="btn sm" type="button" id="orfGo">${last ? 'ابدؤوا قراءة هذا الربع' : 'ابدؤوا القراءة الأولى'}</button>
+       <label class="note">المستوى: <select id="orfLvl">${[1, 2, 3].map(l => `<option value="${l}" ${l === lvl ? 'selected' : ''}>${ORF_LV[l]}</option>`).join('')}</select></label></div>
+     ${h.length ? `<div class="tablewrap" style="margin-top:10px"><table class="dash"><tr><th>التاريخ</th><th>القطعة</th><th>في الدقيقة</th><th>الدقّة</th><th>الفهم</th></tr>${rows}</table></div><p class="note" style="margin:4px 0 0">«في الدقيقة»: الكلمات الصحيحة في دقيقة. والسطر الذي أوّله ↺ قطعة الربع الماضي حين أُعيدت.</p>` : ''}
+   </div>`;
+  B.querySelector('#orfGo').addEventListener('click', () => { ORF = orfPlan(); if (!ORF.steps.length){ ORF = null; return; } renderDad(); });
+  B.querySelector('#orfLvl').addEventListener('change', e => { store.set(`orfLvl:${kid}`, +e.target.value); renderDad(); });
+  /* «قبل» و«بعد» للطفل نفسه: يسمع تسجيليه، بلا أرقام */
+  const ab = B.querySelector('#orfAB');
+  if (ab && pair){ const b0 = h.find(s => s.neu && s.neu.id === pair.again.id && s.t < pair.t);
+    recAll().then(all => { [[b0 && b0.neu.rec, 'قبل'], [pair.again.rec, 'بعد']].forEach(([id, l]) => { const r = id && all.find(x => x.id === id); if (!r || !ab.isConnected) return;
+      const w = el('div', 'row'); w.style.cssText = 'gap:6px;align-items:center'; w.append(el('span', 'chip', `🎧 ${l}`), audioEl(r.blob)); ab.appendChild(w); }); });
+  }
+}
+function orfReadView(B){
+  const st = ORF.steps[ORF.i], p = orfP(st.id), words = orfWords(p), fm = fem(), V = (m, f) => fm ? f : m;
+  if (!ORF.w || ORF.w.id !== st.id) ORF.w = {id: st.id, n: words.length, err: [], last: null, secs: 0, t0: 0, rec: null, mode: 'err', blob: null};
+  const w = ORF.w; const S = (D => D && D.procedure && D.procedure.scoring)(orfData()) || {};
+  B.innerHTML = `<div class="kcard" style="padding:14px">
+     <div class="row" style="justify-content:space-between"><p class="lbl" style="margin:0">📖 ${st.reread ? 'إعادة قطعة الربع الماضي' : ORF.placing && ORF.i > 0 ? 'قطعةٌ من مستوى آخر لتحديد المستوى' : 'القطعة الجديدة'}: «${esc(p.title)}»</p><button class="btn ghost sm" type="button" id="orfStop">إلغاء</button></div>
+     <p class="note" style="margin:6px 0">${V('يقرأ', 'تقرأ')} ${esc(K().name)} بصوتٍ عالٍ بلا مساعدة. ابدؤوا الوقت مع أول كلمة، والمسوا كل كلمة ${V('أخطأ', 'أخطأت')} فيها أثناء القراءة أو بعدها من التسجيل. إن ${V('توقّف', 'توقّفت')} أكثر من ٣ ثوانٍ قولوا الكلمة، وهي خطأ.</p>
+     <details class="qi"><summary class="note" style="cursor:pointer">ما الخطأ وما ليس خطأً؟</summary><p class="note" style="margin:4px 0"><b>خطأ:</b> ${(S.errors || []).map(esc).join(' ')}</p><p class="note" style="margin:4px 0"><b>ليس خطأً:</b> ${(S.not_errors || []).map(esc).join(' ')}</p></details>
+     <p class="orf-text" id="orfText" dir="rtl">${words.map((x, i) => `<span class="otok${w.err.includes(i) ? ' err' : ''}${w.last === i ? ' last' : ''}" data-i="${i}">${esc(x)}</span>`).join(' ')}</p>
+     <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center" id="orfCtl"></div>
+     <div id="orfRec"></div><p class="lbl" id="orfSum" style="margin:6px 0 0"></p>
+   </div>`;
+  const ctl = B.querySelector('#orfCtl'), sum = B.querySelector('#orfSum'), txt = B.querySelector('#orfText');
+  const fmt = s => `${AR_NUM(Math.floor(s / 60))}:${AR_NUM(String(Math.floor(s % 60)).padStart(2, '0'))}`;
+  const showSum = () => { if (w.t0 && !w.secs){ sum.textContent = ''; return; } if (!w.secs) return; const r = orfScore(w);
+    sum.textContent = `${V('قرأ', 'قرأت')} ${AR_NUM(r.read)} كلمة في ${AR_NUM(r.secs)} ثانية، ${V('وأخطأ', 'وأخطأت')} في ${AR_NUM(r.err)}: ${AR_NUM(r.wcpm)} كلمة صحيحة في الدقيقة، بدقّة ${AR_NUM(r.acc)}٪.`; };
+  const paint = () => txt.querySelectorAll('.otok').forEach(s => { const i = +s.dataset.i; s.classList.toggle('err', w.err.includes(i)); s.classList.toggle('last', w.last === i); s.classList.toggle('after', w.last != null && i > w.last); });
+  txt.addEventListener('click', e => { const s = e.target.closest('.otok'); if (!s) return; const i = +s.dataset.i;
+    if (w.mode === 'last'){ w.last = i; w.mode = 'err'; } else { const k = w.err.indexOf(i); if (k >= 0) w.err.splice(k, 1); else w.err.push(i); }
+    paint(); drawCtl(); showSum(); });
+  const finish = async (early) => { if (!w.t0 || w.secs) return; w.secs = Math.min(60, Math.round((Date.now() - w.t0) / 1000)) || 1; clearInterval(w.tick);
+    if (early) w.last = words.length - 1; else w.mode = 'last';
+    if (w.recOn){ w.recOn = false; try { const blob = await micStop(); if (blob && blob.size) w.blob = blob; } catch (e) {} }
+    if (ORF && ORF.w === w && B.isConnected) drawCtl(), paint(), showSum(), drawRec(); };
+  const drawRec = () => { const R = B.querySelector('#orfRec'); R.innerHTML = ''; if (w.blob){ const a = audioEl(w.blob); a.dataset.keep = '1'; R.appendChild(a); } };
+  const drawCtl = () => { ctl.innerHTML = '';
+    if (!w.t0){ const go = el('button', 'btn', '▶ ابدؤوا الوقت مع أول كلمة'); go.type = 'button'; ctl.appendChild(go);
+      go.addEventListener('click', async () => { w.t0 = Date.now(); drawCtl();
+        if (MIC_OK){ try { await micStart(); w.recOn = true; } catch (e) { w.recOn = false; } }
+        w.tick = setInterval(() => { if (!ORF || ORF.w !== w || !B.isConnected){ clearInterval(w.tick); if (w.recOn){ w.recOn = false; micAbort(); } return; }
+          const s = (Date.now() - w.t0) / 1000; const t = ctl.querySelector('.otime'); if (t) t.textContent = `⏱ ${fmt(Math.min(60, s))}`; if (s >= 60) finish(false); }, 250); });
+      return; }
+    if (!w.secs){ const t = el('span', 'chip otime', '⏱ ٠:٠٠'); const end = el('button', 'btn ghost sm', `${V('أنهى', 'أنهت')} القطعة قبل الدقيقة`); end.type = 'button'; end.addEventListener('click', () => finish(true)); ctl.append(t, end); return; }
+    const m1 = el('button', 'chip2', '✗ كلمة خطأ'), m2 = el('button', 'chip2', `⌖ آخر كلمة ${V('قرأها', 'قرأتها')}`); [m1, m2].forEach(b => b.type = 'button');
+    m1.setAttribute('aria-pressed', String(w.mode === 'err')); m2.setAttribute('aria-pressed', String(w.mode === 'last'));
+    m1.addEventListener('click', () => { w.mode = 'err'; drawCtl(); }); m2.addEventListener('click', () => { w.mode = 'last'; drawCtl(); });
+    const save = el('button', 'btn sm', 'احفظوا وتابعوا'); save.type = 'button'; save.disabled = w.last == null;
+    if (w.last == null) ctl.append(el('span', 'note', `انتهت الدقيقة: المسوا آخر كلمة ${V('قرأها', 'قرأتها')}.`));
+    ctl.append(m1, m2, save);
+    save.addEventListener('click', async () => { save.disabled = true; const r = {id: st.id, reread: st.reread, ...orfScore(w)};
+      if (w.blob){ const rid = 'orf' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        try { await recPut({id: rid, kid, kidName: K().name, kind: ORF_KIND, ref: p.title, text: p.text, date: today(), type: w.blob.type || 'audio/webm', blob: w.blob, status: 'approved', notes: [], source: 'local'}); r.rec = rid; } catch (e) {} }
+      ORF.res.push(r); ORF.w = null;
+      /* the first sitting places the child: 90–97% accuracy is the level; above it the next level's first passage, below it the one before */
+      if (ORF.placing && !st.reread){ const L = +st.id[1]; const tried = ORF.res.filter(x => !x.reread).map(x => +x.id[1]);
+        const nx = r.acc > 97 && L < 3 ? L + 1 : r.acc < 90 && L > 1 ? L - 1 : null;
+        if (nx && !tried.includes(nx) && orfP(`L${nx}-Q1`)) ORF.steps.splice(ORF.i + 1, 0, {id: `L${nx}-Q1`, reread: false}); }
+      ORF.i++; renderDad(); });
+  };
+  drawCtl(); paint(); showSum(); drawRec();
+  B.querySelector('#orfStop').addEventListener('click', () => { if (w.recOn){ w.recOn = false; micAbort(); } clearInterval(w.tick); ORF = null; renderDad(); });
+}
+/* the new passage of the sitting: in the first sitting, the level read at 90–97% (or the nearest) */
+function orfNew(){ const n = ORF.res.filter(r => !r.reread); if (!n.length) return null; if (!ORF.placing) return n[0];
+  return n.slice().sort((a, b) => { const d = x => x.acc >= 90 && x.acc <= 97 ? 0 : Math.min(Math.abs(x.acc - 90), Math.abs(x.acc - 97)); return d(a) - d(b) || +a.id[1] - +b.id[1]; })[0]; }
+function orfQView(B){
+  const nu = orfNew(), p = nu && orfP(nu.id); const fm = fem(), V = (m, f) => fm ? f : m;
+  if (!p){ ORF = null; return renderDad(); }
+  ORF.comp = ORF.comp || p.questions.map(() => null);
+  B.innerHTML = `<div class="kcard" style="padding:14px">
+     <p class="lbl" style="margin:0">📖 ثلاثة أسئلة عن «${esc(p.title)}»</p>
+     <p class="note" style="margin:6px 0">أخفوا القطعة، واسألوا ${esc(K().name)} شفهيًّا بالترتيب. الجواب بالعربية أو الصينية أو الإنجليزية مقبول، فالمقصود الفهم. أعطوا نقطةً أو نصف نقطة أو لا شيء بحسب الجواب المكتوب.</p>
+     ${p.questions.map((q, i) => `<div class="qi" style="margin:8px 0"><p style="margin:0"><b>${AR_NUM(i + 1)}.</b> ${esc(q.q)} <span class="ref">(${esc(q.kind)})</span></p><p class="note" style="margin:2px 0">الجواب: ${esc(q.a)}</p>
+       <div class="chips" data-q="${i}">${[[1, '✓ نقطة'], [0.5, '½ نصف نقطة'], [0, 'لا شيء']].map(([v, l]) => `<button class="chip2" type="button" data-v="${v}" aria-pressed="${ORF.comp[i] === v}">${l}</button>`).join('')}</div></div>`).join('')}
+     <div class="btns" style="justify-content:flex-start"><button class="btn sm" type="button" id="orfSave" ${ORF.comp.some(v => v == null) ? 'disabled' : ''}>احفظوا قراءة هذا الربع</button><button class="btn ghost sm" type="button" id="orfStop">إلغاء</button></div></div>`;
+  B.querySelectorAll('[data-q]').forEach(row => row.addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; ORF.comp[+row.dataset.q] = +b.dataset.v; orfQView(B); }));
+  B.querySelector('#orfStop').addEventListener('click', () => { ORF = null; renderDad(); });
+  B.querySelector('#orfSave').addEventListener('click', () => {
+    const again = ORF.res.find(r => r.reread) || null, comp = ORF.comp.reduce((a, b) => a + b, 0);
+    const h = orfHist(); h.push({date: today(), t: Date.now(), lvl: +nu.id[1], neu: nu, again, comp, tries: ORF.res.filter(r => !r.reread && r !== nu)}); store.set(`orf:${kid}`, h);
+    if (ORF.placing) store.set(`orfLvl:${kid}`, +nu.id[1]);
+    ORF = null; renderDad(); });
+}
+RESETS.push(() => { if (ORF && ORF.w && ORF.w.recOn) micAbort(); ORF = null; });
+
 /* ================= لوحة الأب ================= */
 let ddTab = 'today';
 function renderDad(){
   const C = $('ddCard');
   if (TEACHER){ C.innerHTML = `<div class="row" style="justify-content:space-between"><p class="lbl" style="margin:0">ملف المعلم</p><button class="back" type="button" id="ddHome">→ الواحات</button></div><p class="note">استورد ملف الطالب الذي أرسله ولي الأمر، واستمع، واضغط الكلمات الخاطئة، واكتب أو سجّل ملاحظتك، ثم اعتمد أو اطلب التصحيح، وصدّر الملف لولي الأمر.</p><div id="ddRec" class="queue"></div>`;
     C.querySelector('#ddHome').addEventListener('click', () => { TEACHER = false; go('home'); }); renderReview($('ddRec'), true); return; }
-  const tabs = [['today','سطر اليوم'],['progress','التقدّم'],['rec','التسجيلات'],['gift','الهدايا'],['amal','اعمل به'],['voice','صوت الرفيق'],['kidset','واجهة الطفل'],['tri','ثلاث لغات'],['week','تقرير الجمعة'],['write','الكتابات'],['kq','أسئلة الأبناء']];
-  C.innerHTML = `<div class="row" style="justify-content:space-between"><p class="lbl" style="margin:0">لوحة ولي الأمر — ${avatarHtml(K(), 28)} ${esc(K().name)} (${K().age} سنوات)</p><button class="back" type="button" id="ddHome">→ واحتي</button></div>
+  const tabs = [['today','سطر اليوم'],['progress','التقدّم'],['rec','التسجيلات'],['gift','الهدايا'],['amal','اعمل به'],['voice','صوت الرفيق'],['kidset','واجهة الطفل'],['tri','ثلاث لغات'],['week','تقرير الجمعة'],['write','الكتابات'],['kq','أسئلة الأبناء'],['orf','قراءة الربع']];
+  C.innerHTML = `<div class="row" style="justify-content:space-between"><p class="lbl" style="margin:0">لوحة الواحة — ${avatarHtml(K(), 28)} ${esc(K().name)} (${ageWords(K().age)})</p><button class="back" type="button" id="ddHome">→ واحتي</button></div>
+   ${kids.length > 1 ? `<div class="chips" id="ddKids" role="group" aria-label="الأطفال">${kids.map((k, i) => `<button class="chip2" type="button" data-i="${i}" aria-pressed="${i === kid}">${avatarHtml(k, 24)} ${esc(k.name)}</button>`).join('')}</div>` : ''}
+   <div class="row" id="ddHub" style="gap:6px;flex-wrap:wrap;margin:2px 0 6px"><button class="btn ghost sm" type="button" data-hub="corner">💎 ركن وليّ الأمر</button><button class="btn ghost sm" type="button" data-hub="hasaniya">🐪 لوحة الحسنية</button></div>
    <div class="chips" id="ddTabs">${tabs.map(([k, l]) => `<button class="chip2" type="button" data-k="${k}" aria-pressed="${k === ddTab}">${l}</button>`).join('')}</div><div id="ddBody" style="display:flex;flex-direction:column;gap:10px"></div>`;
   C.querySelector('#ddHome').addEventListener('click', () => { LIB = false; go('home'); });
+  { const dk = C.querySelector('#ddKids'); if (dk) dk.addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (!b || +b.dataset.i === kid) return; kid = +b.dataset.i; store.set('kid', kid); bankPref = null; resetGames(); go('dad'); }); }
+  C.querySelector('#ddHub').addEventListener('click', e => { const b = e.target.closest('[data-hub]'); const H = window.KZ_PARENT_HUB; if (b && H) H[b.dataset.hub](); });
+  if (!window.KZ_PARENT_HUB) C.querySelector('#ddHub').hidden = true;
   C.querySelector('#ddTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; ddTab = b.dataset.k; renderDad(); });
   const B = C.querySelector('#ddBody');
-  if (ddTab === 'today'){ renderTodayLine(B); }
+  if (ddTab === 'today'){ renderTodayLine(B).then(() => { if (window.AndroidBridge ? (typeof AndroidBridge.ttsOk === 'function' && !AndroidBridge.ttsOk()) : (!('speechSynthesis' in window) || !pickVoice())) B.insertAdjacentHTML('afterbegin', '<p class="fb bad">لا يوجد صوتٌ عربي في هذا الجهاز، فلن تُسمع الأسئلة ولا 🔊. ثبّتوا صوتًا عربيًّا من إعدادات «تحويل النص إلى كلام» في الجهاز، أو سجّلوا جمل الرفيق في «صوت الرفيق».</p>'); }); }
   else if (ddTab === 'progress'){
     const queue = store.get(`queue:${kid}`, []); const hist = store.get(`tests:${kid}`, []);
     const rows = Object.keys(GNAME).map(g => { const s = gstats(g); return s.seen ? `<tr><td>${GNAME[g]}</td><td>${s.mastered}</td><td>${s.seen}</td><td>${s.wrong}</td></tr>` : ''; }).join('');
     const hard = Object.keys(GNAME).flatMap(g => seen(g).map(id => ({g, id, m: mget(g, id)}))).filter(x => x.m.wrong >= 2 && !mastered(x.g, x.id)).sort((a, b) => b.m.wrong - a.m.wrong).slice(0, 10);
     const tlog = store.get(`tripLog:${kid}`, []);
-    const tlHtml = tlog.length ? `<p class="lbl">آخر الرحلات</p>${tlog.slice(0, 7).map(L => `<details class="qi"><summary style="cursor:pointer"><b>${esc(L.date)}</b>${L.extra ? ' (إضافية)' : ''} · تعلّم ${L.learned.length} · أصاب ${L.ok.length} · أخطأ ${L.wrong.length} · سجّل ${L.rec.length}</summary>${L.learned.length ? `<p class="note" style="margin:4px 0"><b>تعلّم:</b> ${L.learned.map(esc).join(' · ')}</p>` : ''}${L.wrong.length ? `<p class="note" style="margin:4px 0;color:var(--date)"><b>أخطأ:</b> ${L.wrong.map(esc).join(' · ')}</p>` : ''}${L.ok.length ? `<p class="note" style="margin:4px 0"><b>أصاب:</b> ${L.ok.map(esc).join(' · ')}</p>` : ''}${L.rec.length ? `<p class="note" style="margin:4px 0"><b>سجّل:</b> ${L.rec.map(esc).join(' · ')}</p>` : ''}</details>`).join('')}` : '';
-    B.innerHTML = measureHTML(kid) + tlHtml + `<p class="note">«متقن» = أجاب صحيحًا مرتين متتاليتين. الخطأ يُرجع السؤال إلى الصفر ويجعله يتكرر أكثر. المتقَن يعود في «مراجعة اليوم» بعد 1 ثم 3 ثم 7 ثم 21 ثم 45 يومًا. اختبار القافلة يسأل عن المتقَن فقط، بلا تلميح.</p>
-     ${(() => { const pl = store.get(`placement:${kid}`, null); return `<p class="lbl">تحديد المستوى: ${pl ? `${pl.ok}/${pl.n} في ${esc(pl.date)} — المستوى ${pl.level} (سهل ${pl.byL[0] ? pl.byL[0].join('/') : '—'} · أوسط ${pl.byL[1] ? pl.byL[1].join('/') : '—'} · أصعب ${pl.byL[2] ? pl.byL[2].join('/') : '—'})` : 'لم يُجرَ بعد'} <button class="btn ghost sm" type="button" id="ddPlace">${pl ? 'أعده' : 'أجرِه'}</button></p>`; })()}
-     <p class="lbl">المراحل: ${stagesDoneCount()} من ${STAGES.length} · أيام متتالية: ${dayStreak()} · مستحق للمراجعة اليوم: ${dueCount()} (راجع ${store.get(`rvDone:${kid}`, 0)}) · الاختبارات: ${hist.filter(h => h.pass).length ? 'نجح في ' + [...new Set(hist.filter(h => h.pass).map(h => h.n))].join('، ') : 'لم ينجح بعد'} (${hist.length} محاولة)</p>
+    const fm = K().gender === 'f', V = (m, f) => fm ? f : m;
+    const tlHtml = tlog.length ? `<p class="lbl">آخر الرحلات</p>${tlog.slice(0, 7).map(L => `<details class="qi"><summary style="cursor:pointer"><b>${esc(L.date)}</b>${L.extra ? ' (إضافية)' : ''} · ${V('تعلّم', 'تعلّمت')} ${L.learned.length} · ${V('أصاب', 'أصابت')} ${L.ok.length} · ${V('أخطأ', 'أخطأت')} ${L.wrong.length} · ${V('سجّل', 'سجّلت')} ${L.rec.length}</summary>${L.learned.length ? `<p class="note" style="margin:4px 0"><b>${V('تعلّم', 'تعلّمت')}:</b> ${L.learned.map(esc).join(' · ')}</p>` : ''}${L.wrong.length ? `<p class="note" style="margin:4px 0;color:var(--date)"><b>${V('أخطأ', 'أخطأت')}:</b> ${L.wrong.map(esc).join(' · ')}</p>` : ''}${L.ok.length ? `<p class="note" style="margin:4px 0"><b>${V('أصاب', 'أصابت')}:</b> ${L.ok.map(esc).join(' · ')}</p>` : ''}${L.rec.length ? `<p class="note" style="margin:4px 0"><b>${V('سجّل', 'سجّلت')}:</b> ${L.rec.map(esc).join(' · ')}</p>` : ''}</details>`).join('')}` : '';
+    B.innerHTML = measureHTML(kid) + tlHtml + `<p class="note">«متقن» = أجاب صحيحًا في يومين مختلفين (لا يُحسب في اليوم الواحد إلا جوابٌ واحد). ويعود كل سؤالٍ صحيحٍ في «مراجعة اليوم» بعد يوم، ثم 3 أيام، ثم 7 ثم 21 ثم 45 يومًا. والخطأ يُنزله درجةً واحدة، ويُعاد في الرحلة نفسها بعد بطاقات، ثم في الغد. اختبار القافلة يسأل عن المتقَن فقط، بلا تلميح.</p>
+     ${(() => { const pl = store.get(`placement:${kid}`, null); return `<p class="lbl">تحديد المستوى: ${pl ? `${pl.ok}/${pl.n} في ${esc(pl.date)} — المستوى ${pl.level} (سهل ${pl.byL[0] ? pl.byL[0].join('/') : '—'} · أوسط ${pl.byL[1] ? pl.byL[1].join('/') : '—'} · أصعب ${pl.byL[2] ? pl.byL[2].join('/') : '—'})` : 'لم يُجرَ بعد'} <button class="btn ghost sm" type="button" id="ddPlace">${pl ? 'أعيدوه' : 'أجروه'}</button></p>`; })()}
+     <p class="lbl">المراحل: ${stagesDoneCount()} من ${STAGES.length} · أيام هذا الأسبوع: ${weekPlayed()} من ${WEEK_GOAL}، وأسابيع مكتملة: ${weeksMet()} · مستحق للمراجعة اليوم: ${dueCount()} (راجع ${store.get(`rvDone:${kid}`, 0)}) · الاختبارات: ${hist.filter(h => h.pass).length ? 'نجح في ' + [...new Set(hist.filter(h => h.pass).map(h => h.n))].join('، ') : 'لم ينجح بعد'} (${hist.length} محاولة)</p>
      <div class="tablewrap"><table class="dash"><tr><th>اللعبة</th><th>متقن</th><th>جرّب</th><th>يتعثر</th></tr>${rows || '<tr><td colspan="4">لم يلعب بعد.</td></tr>'}</table></div>
      <p class="lbl">الأصعب عليه (أخطأ مرتين فأكثر)</p>${hard.length ? `<ul style="margin:0;padding-right:1.2em">${hard.map(x => `<li>${esc(describe(x.g, x.id))} <span class="ref">(${x.m.wrong} أخطاء)</span></li>`).join('')}</ul>` : '<p class="note">لا شيء بعد.</p>'}
-     <details><summary class="note" style="cursor:pointer">إعادة ضبط تقدّم ${esc(K().name)} كله</summary><div class="btns" style="justify-content:flex-start"><button class="btn warm sm" type="button" id="ddReset">امسح تقدّم هذا الطفل</button></div></details>`;
-    B.querySelector('#ddReset').addEventListener('click', e => { const b = e.target; if (!b.dataset.c){ b.dataset.c = '1'; b.textContent = 'متأكد؟ اضغط مرة أخرى'; return; }
+     <details><summary class="note" style="cursor:pointer">إعادة ضبط تقدّم ${esc(K().name)} كله</summary><div class="btns" style="justify-content:flex-start"><button class="btn warm sm" type="button" id="ddReset">امسحوا تقدّم هذا الطفل</button></div></details>`;
+    B.querySelector('#ddReset').addEventListener('click', e => { const b = e.target; if (!b.dataset.c){ b.dataset.c = '1'; b.textContent = 'متأكدون؟ اضغطوا مرة أخرى'; return; }
       store.keys().forEach(k => { if (new RegExp(`^[A-Za-z]+:${kid}(:|$)`).test(k)) store.del(k); }); ['tri','kq','kqa'].forEach(n => { const a = store.get(n, null); if (Array.isArray(a)) store.set(n, a.filter(x => x.kid !== kid)); });
       resetGames(); renderGrove(); renderPalm(); renderDad(); });
     const pb = B.querySelector('#ddPlace'); if (pb) pb.addEventListener('click', () => { store.set(`placeSkip:${kid}`, false); go('place', 'plCard'); });
-  } else if (ddTab === 'rec'){ B.innerHTML = '<p class="note">استمع، واضغط الكلمة التي أخطأ فيها، واكتب أو سجّل ملاحظة، ثم اعتمد أو اطلب التصحيح. المعتمد يفتح له «سلّة التمر»، ويدخل «إذاعة الواحة». ولتسمعه العائلة في «إذاعة الباكورة» أو يضعه في مجلّة: «ركن وليّ الأمر» ← «من الواحة والحسنية».</p><div id="ddRec" class="queue"></div>'; renderReview(B.querySelector('#ddRec'), false); }
+  } else if (ddTab === 'rec'){ B.innerHTML = '<p class="note">استمعوا، واضغطوا الكلمة التي أخطأ فيها، واكتبوا أو سجّلوا ملاحظة، ثم اعتمِدوا أو اطلبوا التصحيح. المعتمد يفتح له «سلّة التمر»، ويدخل «إذاعة الواحة». ولتسمعه العائلة في «إذاعة الباكورة» أو يضعه في مجلّة: «ركن وليّ الأمر» ← «من الواحة والحسنية».</p><div id="ddRec" class="queue"></div>'; renderReview(B.querySelector('#ddRec'), false); }
   else if (ddTab === 'gift'){ renderGiftRequests(B); }
   else if (ddTab === 'amal'){ renderAmalPanel(B); }
   else if (ddTab === 'tri'){ renderTriPanel(B); }
   else if (ddTab === 'week'){ renderWeekPanel(B); }
   else if (ddTab === 'voice'){ renderVoiceStudio(B); }
-  else if (ddTab === 'kidset'){ const c = cmpGet(); B.innerHTML = `<p class="note">واجهة ${esc(K().name)} البسيطة: شاشة بزر «رحلة اليوم»، ورفيق يتكلم. «كل الواحات» تظهر لمن عمره 9 فأكثر، ويمكنك فتحها للأصغر.</p>
+  else if (ddTab === 'orf') renderOrf(B);
+  else if (ddTab === 'kidset'){ const c = cmpGet(); B.innerHTML = `<p class="note">واجهة ${esc(K().name)} البسيطة: شاشة بزر «رحلة اليوم»، ورفيق يتكلم. «كل الواحات» تظهر لمن عمره 9 فأكثر، ويمكنكم فتحها للأصغر.</p>
      <label class="row" style="gap:8px"><input type="checkbox" id="ksMode" ${kidMode() ? 'checked' : ''}> الواجهة البسيطة للطفل</label>
-     <label class="row" style="gap:8px"><input type="checkbox" id="ksLib" ${store.get(`libOpen:${kid}`, false) ? 'checked' : ''}> أظهر «كل الواحات» و«كنوز البيان» حتى لو كان صغيرًا</label>
-     <label class="row" style="gap:8px"><input type="checkbox" id="ksMute" ${store.get('mute', false) ? 'checked' : ''}> اكتم صوت القارئ الآلي (تبقى تسجيلاتك)</label>
+     <label class="row" style="gap:8px"><input type="checkbox" id="ksLib" ${store.get(`libOpen:${kid}`, false) ? 'checked' : ''}> أظهروا «كل الواحات» و«كنوز البيان» حتى لو كان صغيرًا</label>
+     ${Object.keys(DATA.glosses || {}).length ? `<label class="row" style="gap:8px"><input type="checkbox" id="ksGloss" ${glossOn() ? 'checked' : ''}> معنى الكلمة الجديدة بالصينية (مع البينيين) والإنجليزية في بطاقة الدرس</label>` : ''}
+     <label class="row" style="gap:8px"><input type="checkbox" id="ksMute" ${store.get('mute', false) ? 'checked' : ''}> اكتموا صوت القارئ الآلي (تبقى تسجيلاتكم)</label>
      <label class="row" style="gap:8px"><input type="checkbox" id="ksAi" ${store.get('aiAllowed', false) ? 'checked' : ''}> اسمح بمساعد الواحة (يرسل نص الطفل وعمره إلى النموذج للتصحيح؛ في صفحة Claude فقط)</label>
-     <p class="note">الرفيق: ${c ? esc(c.name) + ' (' + esc((CMPS[c.kind] || {}).name || '') + ')' : 'لم يُختر بعد'} <button class="btn ghost sm" type="button" id="ksReset">أعد أول لقاء</button></p>
+     <p class="lbl">محفوظ ${esc(K().name)}</p><p class="note" style="margin:2px 0 4px">ضعوا علامةً على ما ${K().gender === 'f' ? 'تحفظه' : 'يحفظه'} من المصحف، فتأتي الكلمات والآيات والتصريف في رحلته منه وحده. إن لم تختاروا شيئًا فالمحفوظ كله.</p>
+     <div class="chips" id="ksMemo">${(DATA.quran && DATA.quran.units || []).map(u => `<label class="chip2" style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" value="${esc(u.id)}" ${store.get(`memo:${kid}`, null) && store.get(`memo:${kid}`, []).includes(u.id) ? 'checked' : ''}> ${esc(u.name)}</label>`).join('')}</div>
+     <p class="note">الرفيق: ${c ? esc(c.name) + ' (' + esc((CMPS[c.kind] || {}).name || '') + ')' : 'لم يُختر بعد'} <button class="btn ghost sm" type="button" id="ksReset">أعيدوا أول لقاء</button></p>
      <p class="lbl">نسخة احتياطية من تقدّم الأطفال كلهم</p><p class="note">تشمل الإتقان والمراحل والرحلات والزينة والإعدادات (لا التسجيلات الصوتية؛ لها تصديرها في تبويب التسجيلات). خذها قبل تغيير الجهاز أو حذف التطبيق.</p>
-     <div class="btns" style="justify-content:flex-start"><button class="btn sm" type="button" id="ksBackup">صدّر نسخة احتياطية</button><label class="btn ghost sm" style="cursor:pointer">استورد نسخة <input type="file" id="ksRestore" accept=".json,application/json" hidden></label></div><p class="fb" id="ksFb"></p>`;
+     <div class="btns" style="justify-content:flex-start"><button class="btn sm" type="button" id="ksBackup">صدّروا نسخة احتياطية</button><label class="btn ghost sm" style="cursor:pointer">استوردوا نسخة <input type="file" id="ksRestore" accept=".json,application/json" hidden></label></div><p class="fb" id="ksFb"></p>`;
     B.querySelector('#ksMode').addEventListener('change', e => store.set(`kidMode:${kid}`, e.target.checked));
     B.querySelector('#ksLib').addEventListener('change', e => store.set(`libOpen:${kid}`, e.target.checked));
+    { const gc = B.querySelector('#ksGloss'); if (gc) gc.addEventListener('change', e => store.set(`gloss:${kid}`, e.target.checked)); }
+    offlineAudioBox(B);
+    B.querySelector('#ksMemo').addEventListener('change', () => { const v = [...B.querySelectorAll('#ksMemo input:checked')].map(x => x.value); store.set(`memo:${kid}`, v.length ? v : null); });
     B.querySelector('#ksMute').addEventListener('change', e => store.set('mute', e.target.checked));
     B.querySelector('#ksAi').addEventListener('change', e => { store.set('aiAllowed', e.target.checked); document.querySelectorAll('.aiBtn').forEach(b => b.hidden = !(SAMPLE && e.target.checked)); });
     B.querySelector('#ksBackup').addEventListener('click', () => { const out = {app: 'waha', v: 1, date: today(), data: {}}; store.keys().forEach(k => { if (!/^(trip|greeted|dailyPick|amalPick):/.test(k)) out.data[k] = store.get(k, null); }); saveFile(`waha-backup-${today()}.json`, JSON.stringify(out), $('ksFb')); });
-    B.querySelector('#ksRestore').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; try { const o = JSON.parse(await f.text()); if (!o || o.app !== 'waha' || !o.data) throw new Error('bad'); const n = Object.keys(o.data).length; if (!confirm(`استيراد ${n} مفتاحًا من نسخة ${o.date || ''}؟ سيحلّ محل ما على هذا الجهاز.`)) return; Object.keys(o.data).forEach(k => store.set(k, o.data[k])); $('ksFb').textContent = 'استُوردت النسخة. أعد تحميل الصفحة.'; $('ksFb').className = 'fb ok'; setTimeout(() => location.reload(), 1200); } catch (err) { $('ksFb').textContent = 'الملف ليس نسخة احتياطية من الواحة.'; $('ksFb').className = 'fb bad'; } });
+    B.querySelector('#ksRestore').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; try { const o = JSON.parse(await f.text()); if (!o || o.app !== 'waha' || !o.data) throw new Error('bad'); const n = Object.keys(o.data).length; if (!confirm(`استيراد ${n} مفتاحًا من نسخة ${o.date || ''}؟ سيحلّ محل ما على هذا الجهاز.`)) return; Object.keys(o.data).forEach(k => store.set(k, o.data[k])); $('ksFb').textContent = 'استُوردت النسخة. أعيدوا تحميل الصفحة.'; $('ksFb').className = 'fb ok'; setTimeout(() => location.reload(), 1200); } catch (err) { $('ksFb').textContent = 'الملف ليس نسخة احتياطية من الواحة.'; $('ksFb').className = 'fb bad'; } });
     B.querySelector('#ksReset').addEventListener('click', () => { store.del ? store.del(`cmp:${kid}`) : store.set(`cmp:${kid}`, null); store.set(`planted:${kid}`, false); renderDad(); }); }
   else if (ddTab === 'write'){
-    const queue = store.get(`queue:${kid}`, []); B.innerHTML = '<p class="note">رسائله وأخباره، وتقييم مساعد الواحة إن وُجد. راجع معه خطأً واحدًا.</p><div class="queue" id="ddQ"></div>'; const Q = B.querySelector('#ddQ'); if (!queue.length) Q.innerHTML = '<p class="note">لم يرسل شيئًا بعد.</p>';
+    const queue = store.get(`queue:${kid}`, []); B.innerHTML = '<p class="note">رسائله وأخباره، وتقييم مساعد الواحة إن وُجد. راجعوا معه خطأً واحدًا.</p><div class="queue" id="ddQ"></div>'; const Q = B.querySelector('#ddQ'); if (!queue.length) Q.innerHTML = '<p class="note">لم يرسل شيئًا بعد.</p>';
     queue.forEach(q => { const d = el('div','qi', `<div class="row" style="justify-content:space-between"><span><span class="chip">${esc(q.kind)}</span> ${esc(q.title || '')} <span class="ref">${esc(q.date)}</span></span>${q.reviewed ? '<span class="badge ok">راجعتُه</span>' : ''}</div><p class="tx">${esc(q.text)}</p>`);
       if (q.ai) d.appendChild(aiCard(q.ai)); if (!q.reviewed){ const b = el('button','btn ghost sm','راجعتُه'); b.type='button'; b.style.alignSelf='flex-start'; b.addEventListener('click', () => { q.reviewed = true; store.set(`queue:${kid}`, queue); renderDad(); }); d.appendChild(b); } Q.appendChild(d); });
   } else if (ddTab === 'kq'){
     const pend = store.get('kq', []); const appr = store.get('kqa', []); B.innerHTML = `<p class="note">أسئلة ألّفها الأبناء. ما تجيزه يظهر لإخوتهم في «أسئلة الإخوة»، ويفتح لصاحبه الطائرة الورقية بعد ثلاثة.</p><div class="queue" id="ddK"></div>${appr.length ? `<p class="lbl">المجازة (${appr.length})</p><ul style="margin:0;padding-right:1.2em">${appr.map(q => `<li>${esc((kids[q.kid] || {}).name || '')}: ${esc(q.q)} ← ${esc(q.a)}</li>`).join('')}</ul>` : ''}`;
-    const Kq = B.querySelector('#ddK'); if (!pend.length) Kq.innerHTML = '<p class="note">لا أسئلة بانتظارك.</p>';
+    const Kq = B.querySelector('#ddK'); if (!pend.length) Kq.innerHTML = '<p class="note">لا أسئلة بانتظاركم.</p>';
     pend.forEach(q => { const d = el('div','qi', `<p style="margin:0"><b>${esc((kids[q.kid] || {}).name || '')}</b>: ${esc(q.q)}</p><p class="note">✓ ${esc(q.a)} · ✗ ${esc(q.wrong.join('، '))}${q.src ? ' · المصدر: ' + esc(q.src) : ''}</p>`);
-      const row = el('div','btns'); row.style.justifyContent = 'flex-start'; const ok = el('button','btn sm','أجِز'); ok.type='button'; const no = el('button','btn ghost sm','احذف'); no.type='button';
+      const row = el('div','btns'); row.style.justifyContent = 'flex-start'; const ok = el('button','btn sm','أجيزوا'); ok.type='button'; const no = el('button','btn ghost sm','احذفوا'); no.type='button';
       ok.addEventListener('click', () => { store.set('kq', pend.filter(x => x.id !== q.id)); store.set('kqa', [...appr, q]); renderDad(); checkStages(); }); no.addEventListener('click', () => { store.set('kq', pend.filter(x => x.id !== q.id)); renderDad(); });
       row.append(ok, no); d.appendChild(row); Kq.appendChild(d); });
   }
 }
-/* «سطر اليوم»: لكل طفل سطر واحد — رحلة اليوم، وما أخطأ فيه، وآخر ما قاله بصوته — ورسالة منك إليه بصوتك أو بكلمة */
+/* «سطر اليوم»: لكل طفل سطر واحد — رحلة اليوم، وما أخطأ فيه، وآخر ما قاله بصوته — ورسالة منكم إليه بصوتكم أو بكلمة */
 async function renderTodayLine(B){
-  B.innerHTML = '<p class="note">كل الأطفال في شاشة واحدة. اسمع ما قالوه اليوم، وأرسل لكل واحد كلمة أو صوتك: يسمعها من رفيقه عند فتح واحته.</p>';
+  B.innerHTML = '<p class="note">كل الأطفال في شاشة واحدة. اسمعوا ما قالوه اليوم، وأرسلوا لكل واحد كلمة أو صوتكم: يسمعها من رفيقه عند فتح واحته.</p>';
   const all = await recAll(); const td = today();
-  /* ما ينتظر اعتمادك في القسمين: تسجيلات الواحة، وأعمال الاستوديو في «كنوز البيان» */
-  { const recP = all.filter(r => r.status === 'pending' && r.source !== 'import' && r.kid >= 0).length; let works = 0; try { works = (JSON.parse(localStorage.getItem('kb-works-v1') || '[]') || []).filter(w => w && w.status === 'sent').length; } catch (e) {}
-    if (recP || works){ const w = el('div','qi'); w.innerHTML = `<p class="lbl" style="margin:0 0 6px">بانتظار اعتمادك</p>`; const r = el('div','row'); r.style.cssText = 'gap:8px;flex-wrap:wrap';
+  /* ما ينتظر اعتمادكم في القسمين: تسجيلات الواحة، وأعمال الاستوديو في «كنوز البيان» */
+  { const recP = all.filter(r => r.status === 'pending' && r.source !== 'import' && r.kid >= 0 && !PRIVATE_K.has(r.kind)).length;   /* what the child told you (أخبرني، كلمة…) is heard below, not approved */ let works = 0; try { works = (JSON.parse(localStorage.getItem('kb-works-v1') || '[]') || []).filter(w => w && w.status === 'sent').length; } catch (e) {}
+    if (recP || works){ const w = el('div','qi'); w.innerHTML = `<p class="lbl" style="margin:0 0 6px">بانتظار اعتمادكم</p>`; const r = el('div','row'); r.style.cssText = 'gap:8px;flex-wrap:wrap';
       if (recP){ const b1 = el('button','btn ghost sm', `🎙 ${recP} ${recP === 1 ? 'تسجيل' : recP === 2 ? 'تسجيلان' : 'تسجيلات'} في الواحة`); b1.type = 'button'; b1.addEventListener('click', () => { ddTab = 'rec'; renderDad(); }); r.appendChild(b1); }
-      if (works){ const b2 = el('a','btn ghost sm', `💎 ${works} ${works === 1 ? 'عمل' : works === 2 ? 'عملان' : 'أعمال'} في «كنوز البيان»`); b2.href = 'kunuz/index.html#parent'; r.appendChild(b2); }
+      if (works){ const b2 = el('a','btn ghost sm', `💎 ${works === 1 ? 'عملٌ واحد' : works === 2 ? 'عملان' : works + ' أعمال'} في «كنوز البيان»`); b2.href = 'kunuz/index.html#parent'; b2.addEventListener('click', e => { if (window.KZ_PARENT_HUB){ e.preventDefault(); window.KZ_PARENT_HUB.corner(); } }); r.appendChild(b2); }
       w.appendChild(r); B.appendChild(w); } }
   kids.forEach((k, i) => {
     const log = store.get(`tripLog:${i}`, []).find(L => L.date === td && !L.extra); const doneToday = !!log; const recs = all.filter(r => r.kid === i && r.date === td && ['أخبرني', 'جملة', 'كلمة', 'رأيتُها اليوم'].includes(r.kind)).sort((a, b) => b.id.localeCompare(a.id));
     const wrong = doneToday ? log.wrong : []; const bag = store.get(`bag:${i}`, []).filter(w => w.day === dayN()).map(w => w.w);
-    const d = el('div','qi'); d.innerHTML = `<div class="row" style="justify-content:space-between;align-items:center"><span>${avatarHtml(k, 28)} <b>${esc(k.name)}</b> ${doneToday ? '<span class="badge ok">رحلة اليوم ✓</span>' : (k.gender === 'f' ? '<span class="badge wait">لم ترحل اليوم</span>' : '<span class="badge wait">لم يرحل اليوم</span>')}</span><span class="ref">🔥 ${(() => { const kk = kid; kid = i; const n = dayStreak(); kid = kk; return n; })()} يوم</span></div>
-      ${doneToday ? `<p class="note" style="margin:4px 0">${k.gender === 'f' ? 'تعلّمت' : 'تعلّم'}: ${bag.length ? bag.map(esc).join('، ') : (log.learned.length ? log.learned.length + ' دروس' : '—')} · ${k.gender === 'f' ? 'أصابت' : 'أصاب'} ${log.ok.length} · ${wrong.length ? `<span style="color:var(--date)">${k.gender === 'f' ? 'أخطأت' : 'أخطأ'} في: ${wrong.map(esc).join(' · ')}</span>` : 'بلا أخطاء'}</p>` : ''}`;
+    const d = el('div','qi'); d.innerHTML = `<div class="row" style="justify-content:space-between;align-items:center"><span>${avatarHtml(k, 28)} <b>${esc(k.name)}</b> ${doneToday ? '<span class="badge ok">رحلة اليوم ✓</span>' : (k.gender === 'f' ? '<span class="badge wait">لم ترحل اليوم</span>' : '<span class="badge wait">لم يرحل اليوم</span>')}</span><span class="ref">☀️ ${weekPlayed(i)} من ${WEEK_GOAL} هذا الأسبوع</span></div>
+      ${doneToday ? `<p class="note" style="margin:4px 0">${k.gender === 'f' ? 'تعرّفت إلى' : 'تعرّف إلى'}: ${bag.length ? bag.map(esc).join('، ') : (log.learned.length ? log.learned.length + ' دروس' : '—')} · ${k.gender === 'f' ? 'أصابت' : 'أصاب'} ${log.ok.length} · ${wrong.length ? `<span style="color:var(--date)">${k.gender === 'f' ? 'أخطأت' : 'أخطأ'} في: ${wrong.map(esc).join(' · ')}</span>` : 'بلا أخطاء'}</p>` : ''}`;
     { const sl = secLine(i, 0, k); if (sl){ const p2 = el('p','note'); p2.style.margin = '2px 0 4px'; p2.textContent = sl; d.appendChild(p2); } }
-    recs.slice(0, 3).forEach(r => { const row = el('div','row'); row.style.alignItems = 'center'; row.innerHTML = `<span class="chip">${esc(r.kind)}</span> <span class="note">${esc(r.text).slice(0, 70)}</span>`; const m = mediaEl(r); if (m.tagName === 'AUDIO'){ m.style.width = '160px'; } row.appendChild(m); d.appendChild(row); });
-    const mrow = el('div','row'); mrow.style.cssText = 'align-items:center;flex-wrap:wrap;gap:6px'; const tx = el('input','f'); tx.placeholder = k.gender === 'f' ? 'كلمة لها (تُقرأ بصوت الرفيق)' : 'كلمة له (تُقرأ بصوت الرفيق)'; tx.style.cssText = 'flex:1 1 100%;min-width:100%'; const sendT = el('button','btn ghost sm','أرسل الكلمة'); sendT.type = 'button'; const mic = el('button','btn sm','🎙 سجّل رسالة بصوتك'); mic.type = 'button'; const mb = el('div'); const fb = el('p','fb');
+    recs.slice(0, 3).forEach(r => { const row = el('div','row'); row.style.alignItems = 'center'; row.innerHTML = `<span class="chip">${esc(r.kind)}</span> <span class="note">${esc(r.text).slice(0, 70)}</span>`; const m = mediaEl(r); if (m.classList.contains('aplay')){ m.style.width = '180px'; } row.appendChild(m); d.appendChild(row);
+      if (r.kind === 'أخبرني'){ const rb = el('button','btn ghost sm','↩ ردّوا عليه بصوتكم'); rb.type = 'button'; const rbx = el('div'); row.append(rb); d.appendChild(rbx);
+        rb.addEventListener('click', () => { if (rbx.childElementCount){ rbx.innerHTML = ''; return; } micWidget(rbx, {label: 'اضغطوا وردّوا بالعربية', max: 60000, onSaved: async blob => { await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid: -1, to: i, kind: 'من أبي', ref: td, replyTo: r.id, text: r.text ? `ردًّا على: ${r.text}` : '', date: td, type: blob.type || 'audio/webm', blob, status: 'approved', notes: [], source: 'local', heard: false}); rb.textContent = '✓ أُرسل الردّ'; rb.disabled = true; }}); }); } });
+    const mrow = el('div','row'); mrow.style.cssText = 'align-items:center;flex-wrap:wrap;gap:6px'; const tx = el('input','f'); tx.placeholder = k.gender === 'f' ? 'كلمة لها (تُقرأ بصوت الرفيق)' : 'كلمة له (تُقرأ بصوت الرفيق)'; tx.style.cssText = 'flex:1 1 100%;min-width:100%'; const sendT = el('button','btn ghost sm','أرسلوا الكلمة'); sendT.type = 'button'; const mic = el('button','btn sm','🎙 سجّلوا رسالة بصوتكم'); mic.type = 'button'; const mb = el('div'); const fb = el('p','fb');
     sendT.addEventListener('click', async () => { const t = tx.value.trim(); if (!t) return; await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid: -1, to: i, kind: 'من أبي', ref: td, text: t, date: td, type: '', blob: null, status: 'approved', notes: [], source: 'local', heard: false}); tx.value = ''; fb.textContent = `أُرسلت إلى ${k.name}؛ ${k.gender === 'f' ? 'تسمعها عند فتح واحتها' : 'يسمعها عند فتح واحته'}.`; fb.className = 'fb ok'; });
-    mic.addEventListener('click', () => { if (mb.childElementCount){ mb.innerHTML = ''; return; } micWidget(mb, {label: 'اضغط وسجّل رسالتك', max: 60000, onSaved: async blob => { await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid: -1, to: i, kind: 'من أبي', ref: td, text: tx.value.trim(), date: td, type: blob.type || 'audio/webm', blob, status: 'approved', notes: [], source: 'local', heard: false}); fb.textContent = `أُرسلت رسالتك الصوتية إلى ${k.name}.`; fb.className = 'fb ok'; }}); });
+    mic.addEventListener('click', () => { if (mb.childElementCount){ mb.innerHTML = ''; return; } micWidget(mb, {label: 'اضغطوا وسجّلوا رسالتكم', max: 60000, onSaved: async blob => { await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid: -1, to: i, kind: 'من أبي', ref: td, text: tx.value.trim(), date: td, type: blob.type || 'audio/webm', blob, status: 'approved', notes: [], source: 'local', heard: false}); fb.textContent = `أُرسلت رسالتكم الصوتية إلى ${k.name}.`; fb.className = 'fb ok'; }}); });
     mrow.append(tx, sendT, mic); d.append(mrow, mb, fb); B.appendChild(d);
   });
 }
@@ -1143,12 +1348,12 @@ INIT.dad = renderDad;
 /* ================= مساعد الواحة: تصحيح الكتابة بسؤال Claude (إن سمح به الأب) ================= */
 let SAMPLE = undefined;
 (async () => { try { SAMPLE = (window.claude && window.claude.use) ? await window.claude.use('sample') : null; } catch (e) { SAMPLE = null; } document.querySelectorAll('.aiBtn').forEach(b => b.hidden = !(SAMPLE && store.get('aiAllowed', false))); })();
-function aiCard(r){ const d = el('div','ai'); d.innerHTML = `<span class="h">مساعد الواحة · ${['لم أفهم النص', 'فيه أخطاء عدة', 'فيه خطأ بسيط', 'لا أخطاء'][Math.max(0, Math.min(3, +r.score || 0))]}</span><p style="margin:0">${esc(r.praise || '')}</p>` + (Array.isArray(r.fixes) && r.fixes.length ? `<ul>${r.fixes.map(f => `<li class="fix"><b>${esc(f.wrong || '')}</b> ← <b>${esc(f.right || '')}</b>${f.why ? `: ${esc(f.why)}` : ''}</li>`).join('')}</ul>` : '') + (r.better ? `<details><summary class="note" style="cursor:pointer">صيغة أحسن</summary><p class="tx" style="font-family:var(--f-q);font-size:1.15rem;margin:4px 0 0">${esc(r.better)}</p></details>` : '') + '<span class="note">تقييم آلي؛ أبوك يراجعه.</span>'; return d; }
+function aiCard(r){ const d = el('div','ai'); d.innerHTML = `<span class="h">مساعد الواحة · ${['لم أفهم النص', 'فيه أخطاء عدة', 'فيه خطأ بسيط', 'لا أخطاء'][Math.max(0, Math.min(3, +r.score || 0))]}</span><p style="margin:0">${esc(r.praise || '')}</p>` + (Array.isArray(r.fixes) && r.fixes.length ? `<ul>${r.fixes.map(f => `<li class="fix"><b>${esc(f.wrong || '')}</b> ← <b>${esc(f.right || '')}</b>${f.why ? `: ${esc(f.why)}` : ''}</li>`).join('')}</ul>` : '') + (r.better ? `<details><summary class="note" style="cursor:pointer">صيغة أحسن</summary><p class="tx" style="font-family:var(--f-q);font-size:1.15rem;margin:4px 0 0">${esc(r.better)}</p></details>` : '') + '<span class="note">تقييمٌ آلي، ويراجعه وليّ ⟨أمرك|أمركِ⟩.</span>'; return d; }
 async function aiFeedback(btn, out, kind, text, ctx, title, qkind){
   if (!SAMPLE || !store.get('aiAllowed', false)){ out.innerHTML = '<p class="note">مساعد الواحة غير مفعّل؛ يفعّله ولي الأمر من لوحته.</p>'; return; } if (!text.trim()) return; btn.disabled = true; out.innerHTML = '<p class="note">مساعد الواحة يقرأ…</p>';
   const prompt = `أنت معلّم لغة عربية ⟨لطفل|لطفلة⟩ ⟨عمره|عمرها⟩ ${K().age} سنوات، ⟨لغته|لغتها⟩ الأم الصينية ثم الإنجليزية، والعربية ⟨لغته|لغتها⟩ الثالثة؛ ⟨يقرأ|تقرأ⟩ ⟨وينطق|وتنطق⟩ ممتازًا ⟨لكنه|لكنها⟩ ⟨ضعيف|ضعيفة⟩ في الكتابة والثروة اللغوية. ⟨كتب|كتبت⟩ ⟨الطفل|الطفلة⟩ ${kind}:\n«${text.trim().slice(0, 1500)}»\n${ctx}\nقيّم بصدق ولطف، وصحّح الإملاء والنحو والتذكير والتأنيث وحروف الجر، ولا تخترع أخطاء. أعد JSON فقط بهذا الشكل:\n{"score": 3, "praise": "جملة تشجيع قصيرة صادقة", "fixes": [{"wrong": "الكلمة أو العبارة الخاطئة كما ⟨كتبها|كتبتها⟩", "right": "الصواب", "why": "سبب قصير جدًا بلغة طفل"}], "better": "النص كله مكتوبًا صحيحًا بلغة بسيطة مشكولة قليلًا"}\nالمعنى: score 3 = لا أخطاء، 2 = خطأ بسيط واحد أو اثنان، 1 = أخطاء عدة، 0 = غير مفهوم. حدّ fixes بأهم ثلاثة. إن لم يكن خطأ فاجعل fixes مصفوفة فارغة.`;
   try { const r = await SAMPLE.json(prompt, {modelTier:'default', effort:'low', cache:false}); out.innerHTML = ''; out.appendChild(aiCard(r)); out.dataset.ai = JSON.stringify(r); queueAdd({kind: qkind || (kind.includes('خبر') ? 'خبر (مسودة)' : 'رسالة'), title, text, ai: r}); }
-  catch (e) { const code = e && e.code; out.innerHTML = `<p class="note">${code === 'not_granted' || code === 'sampling_disabled' ? 'مساعد الواحة غير مسموح به على هذا الجهاز. ⟨أرِ|أرِي⟩ رسالتك لأبيك.' : code === 'rate_limited' ? 'المساعد مشغول الآن؛ ⟨حاول|حاولي⟩ بعد قليل.' : 'تعذّر التصحيح الآن؛ ⟨حاول|حاولي⟩ مرة أخرى أو ⟨أرِها|أرِيها⟩ لأبيك.'}</p>`; if (code === 'not_granted' || code === 'sampling_disabled' || code === 'not_declared') { SAMPLE = null; document.querySelectorAll('.aiBtn').forEach(b => b.hidden = true); } }
+  catch (e) { const code = e && e.code; out.innerHTML = `<p class="note">${code === 'not_granted' || code === 'sampling_disabled' ? 'مساعد الواحة غير مسموح به على هذا الجهاز. ⟨أرِ|أرِي⟩ رسالتك لأهلك.' : code === 'rate_limited' ? 'المساعد مشغول الآن؛ ⟨حاول|حاولي⟩ بعد قليل.' : 'تعذّر التصحيح الآن؛ ⟨حاول|حاولي⟩ مرة أخرى أو ⟨أرِها|أرِيها⟩ لأهلك.'}</p>`; if (code === 'not_granted' || code === 'sampling_disabled' || code === 'not_declared') { SAMPLE = null; document.querySelectorAll('.aiBtn').forEach(b => b.hidden = true); } }
   btn.disabled = false;
 }
 
@@ -1172,12 +1377,18 @@ function dailyPick(){
   picks = chosen.map(g => { const o = OASES.find(x => x.games.includes(g)); const st = STAGES.find(x => x.g === g); const t = TAB[g] && o && o.tabs.some(x => x[0] === TAB[g]) ? TAB[g] : st ? st.t : (o ? o.tabs[0][0] : 'oasis'); return {g, o: o ? o.id : 'roots', t}; });
   store.set(key, picks); return picks;
 }
-function dayStreak(){ let n = 0; const d = new Date(); for (let i = 0; i < 60; i++){ const k = `dailyDone:${kid}:${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; if (store.get(k, false)) n++; else if (i > 0) break; d.setDate(d.getDate() - 1); } return n; }
+/* الأسبوع من السبت إلى الجمعة: أربعة أيام من «مهمة اليوم» تُتمّه، يختارها الطفل كما يشاء، واليوم الفائت لا يُنقص شيئًا */
+const WEEK_GOAL = 4;
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+function weekKey(d){ return ymd(new Date(d.getFullYear(), d.getMonth(), d.getDate() - (d.getDay() + 1) % 7)); }
+function weekPlayed(k = kid){ const d = new Date(); let n = 0; let other = new Set(); try { const S = window.KZ_SECTIONS; if (S && S.playDays) other = new Set(S.playDays(k)); } catch (e) {}
+  for (let i = 0; i <= (d.getDay() + 1) % 7; i++){ const day = ymd(new Date(d.getFullYear(), d.getMonth(), d.getDate() - i)); if (store.get(`dailyDone:${k}:${day}`, false) || other.has(day)) n++; } return n; }
+function weeksMet(k = kid){ const w = {}; store.keys().forEach(key => { const m = /^dailyDone:(\d+):(\d{4})-(\d\d)-(\d\d)$/.exec(key); if (m && +m[1] === k && store.get(key, false)){ const wk = weekKey(new Date(+m[2], +m[3] - 1, +m[4])); w[wk] = (w[wk] || 0) + 1; } }); return Object.values(w).filter(n => n >= WEEK_GOAL).length; }
 function renderDaily(){
   const box = $('daily'); const picks = dailyPick(); const d = store.get(`day:${kid}:${today()}`, {}); const done = picks.map(p => (d[p.g] || 0) >= DAILY_N);
   if (done.every(Boolean)) store.set(`dailyDone:${kid}:${today()}`, true);
-  const streak = dayStreak(); const due = dueCount(); const rvToday = store.get(`rvDay:${kid}:${today()}`, 0);
-  box.innerHTML = `<div class="row" style="justify-content:space-between"><span class="lbl">مهمة اليوم: ثلاث دقائق</span><span class="note">${streak ? `${streak} ${streak === 1 ? 'يوم' : streak === 2 ? 'يومان' : 'أيام'} متتالية ${'☀️'.repeat(Math.min(streak, 5))}` : '⟨ابدأ|ابدئي⟩ سلسلة أيامك'}</span></div>
+  const wn = weekPlayed(); const due = dueCount(); const rvToday = store.get(`rvDay:${kid}:${today()}`, 0);
+  box.innerHTML = `<div class="row" style="justify-content:space-between"><span class="lbl">مهمة اليوم: ثلاث دقائق</span><span class="note">${wn >= WEEK_GOAL ? `⟨أتممتَ|أتممتِ⟩ أسبوعك ${'☀️'.repeat(Math.min(wn, 7))}` : `هذا الأسبوع: ${wn} من ${WEEK_GOAL} أيام ${'☀️'.repeat(wn)}`}</span></div>
    <div class="chips" id="dailyChips">${picks.map((p, i) => `<button class="chip2" type="button" data-i="${i}" aria-pressed="${done[i]}">${done[i] ? '✓ ' : ''}${GNAME[p.g]} <span class="ref">${Math.min(d[p.g] || 0, DAILY_N)}/${DAILY_N}</span></button>`).join('')}</div>
    ${(due || rvToday) ? `<div class="chips" style="margin-top:6px"><button class="chip2" type="button" id="dailyRv" aria-pressed="${!due}">${due ? '🔁 مراجعة اليوم' : '✓ ⟨راجعتَ|راجعتِ⟩ ما استُحق اليوم'} ${due ? `<span class="ref">${due} مستحقة</span>` : ''}</button></div>` : ''}
    <p class="note" style="margin-top:6px">${done.every(Boolean) ? '⟨أنهيتَ|أنهيتِ⟩ مهمة اليوم. ما زاد فهو زيادة في واحتك.' : 'ثلاثة أسئلة في كل لعبة، ثم ⟨تكون|تكونين⟩ قد ⟨أنجزتَ|أنجزتِ⟩ يومك.'}</p>`;
@@ -1276,11 +1487,33 @@ function unb64(s, type){ const bin = atob(s); const u = new Uint8Array(bin.lengt
 const ST_OK = ['pending', 'fix', 'approved'];
 const STATUS = {pending:['بانتظار المراجعة','wait'], approved:['معتمد','ok'], fix:['فيه ملاحظات','wait']};
 const isQuran = r => r.kind === 'آية' || r.kind === 'صفحة';
-const PRIVATE_K = new Set(['أخبرني', 'رأيتُها اليوم', 'كلمة', 'جملة', 'من أبي']);   // تسجيلات بين الطفل وأبيه: لا تُهدى ولا تُصدَّر إلى المعلم ولا تدخل الإذاعة
+const PRIVATE_K = new Set(['أخبرني', 'رأيتُها اليوم', 'كتابتي', 'كلمة', 'جملة', 'من أبي', 'قراءة الربع']);   // تسجيلات بين الطفل وأبيه: لا تُهدى ولا تُصدَّر إلى المعلم ولا تدخل الإذاعة
 const giftable = r => r.status === 'approved' && (!isQuran(r) || r.approvedBy === 'المعلم') && !PRIVATE_K.has(r.kind) && !String(r.type || '').startsWith('image/');
 function statusBadge(r){ if (r.status === 'approved' && isQuran(r) && r.approvedBy !== 'المعلم') return '<span class="badge wait">معتمد مبدئيًّا (القرآن يعتمده الشيخ)</span>'; return `<span class="badge ${STATUS[r.status][1]}">${STATUS[r.status][0]}</span>`; }
-function mediaEl(r){ if (r && r.type && String(r.type).startsWith('image/')){ const i = document.createElement('img'); i.src = URL.createObjectURL(r.blob); i.alt = ''; i.style.cssText = 'max-width:70%;max-height:260px;border-radius:12px;display:block;margin:6px auto'; return i; } return audioEl(r.blob); }
-function audioEl(blob){ const a = document.createElement('audio'); a.controls = true; a.preload = 'none'; a.style.width = '100%'; a.src = URL.createObjectURL(blob); return a; }
+/* every recording shown holds its object URL; lists re-render whole, so the URLs whose element left the page are released
+   (otherwise a Friday review pinned tens of megabytes) */
+const LIVE_URL = new Map();
+function liveUrl(blob, elm){ const u = URL.createObjectURL(blob); LIVE_URL.set(u, elm); if (LIVE_URL.size > 40) setTimeout(urlSweep, 0); return u; }
+function urlSweep(){ for (const [u, e] of LIVE_URL) if (!e.isConnected){ try { URL.revokeObjectURL(u); } catch (x) {} LIVE_URL.delete(u); } }
+function mediaEl(r){ if (r && r.type && String(r.type).startsWith('image/')){ const i = document.createElement('img'); i.src = liveUrl(r.blob, i); i.alt = ''; i.style.cssText = 'max-width:70%;max-height:260px;border-radius:12px;display:block;margin:6px auto'; return i; } return audioEl(r.blob); }
+/* the web app keeps a verse once it has been heard online; before that, offline, it cannot be played (the Android app carries all) */
+const OFFLINE_RC = 'هذه التلاوة لم تُحفظ على الجهاز بعد، فتُسمع حين يتّصل بالإنترنت أوّل مرة.';
+/* a small player of our own: the browser's shows its times in 0:00, and every number on screen is ١٢٣. It behaves like the audio
+   element for the callers (play, pause, paused, the play/pause/ended events, data-keep) */
+function audioEl(blob){
+  const w = el('div', 'aplay'), a = document.createElement('audio'); a.preload = 'metadata'; a.src = liveUrl(blob, w);
+  const b = el('button', 'aplay-b', '▶'); b.type = 'button'; b.setAttribute('aria-label', 'تشغيل');
+  const bar = el('span', 'aplay-bar'), fill = el('i'); bar.appendChild(fill); const t = el('span', 'aplay-t', '٠:٠٠');
+  const fmt = s => { s = Math.max(0, Math.round(s || 0)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+  const show = () => { const d = isFinite(a.duration) ? a.duration : 0; t.textContent = d ? `${fmt(a.currentTime)} / ${fmt(d)}` : fmt(a.currentTime); fill.style.width = d ? `${Math.min(100, 100 * a.currentTime / d)}%` : '0'; };
+  b.addEventListener('click', () => { if (a.paused){ const p = a.play(); if (p && p.catch) p.catch(() => {}); } else a.pause(); });
+  bar.addEventListener('click', e => { const d = a.duration; if (!isFinite(d) || !d) return; const r = bar.getBoundingClientRect(); const x = (r.right - e.clientX) / r.width; a.currentTime = Math.max(0, Math.min(d, x * d)); show(); });
+  ['play', 'pause', 'ended'].forEach(n => a.addEventListener(n, () => { b.textContent = a.paused ? '▶' : '⏸'; b.setAttribute('aria-label', a.paused ? 'تشغيل' : 'إيقاف'); w.dispatchEvent(new Event(n)); }));
+  a.addEventListener('timeupdate', show); a.addEventListener('loadedmetadata', show);
+  w.append(b, bar, t, a);
+  w.play = () => a.play(); w.pause = () => a.pause(); Object.defineProperty(w, 'paused', {get: () => a.paused});
+  return w;
+}
 function wordsHtml(text, marks, clickable){ return text.split(/\s+/).map((w, i) => `<span class="${clickable ? 'tok' : ''} ${marks.includes(i) ? 'rw' : ''}" data-i="${i}" style="${marks.includes(i) ? 'background:color-mix(in srgb,var(--bad) 22%,var(--bg));border-radius:6px;padding:0 4px' : ''}">${esc(w)}</span>`).join(' '); }
 function recordFrom(kind, ref, text, fromGift, opts){
   opts = opts || {}; const s = $('sheet'); s.innerHTML = `<div class="top"><h2 style="font-family:var(--f-ui);font-size:1.3rem">🎙 ⟨سجّل|سجّلي⟩ بصوتك</h2><button class="x" aria-label="إغلاق">✕</button></div>
@@ -1350,16 +1583,16 @@ async function renderReview(box, teacher){
   if (!all.length){ box.appendChild(el('p','note', teacher ? 'استورد ملف الطالب أولًا.' : 'لا تسجيلات لهذا الطفل بعد.')); return; }
   all.forEach(r => { const d = el('div','qi'); const last = r.notes[r.notes.length - 1]; let marks = last && last.by === (teacher ? 'المعلم' : 'ولي الأمر') ? [...(last.marks || [])] : [];
     d.innerHTML = `<div class="row" style="justify-content:space-between"><span>${teacher ? `<b>${esc(r.kidName || '')}</b> · ` : ''}<span class="chip">${esc(r.kind)}</span> ${esc(r.ref)} <span class="ref">${esc(r.date)}</span></span>${statusBadge(r)}</div>${isQuran(r) && !teacher ? '<p class="note">القرآن: اعتمادك مبدئي ولا يُهدى به؛ الهدية بعد اعتماد الشيخ.</p>' : ''}
-      <p class="note">اضغط الكلمة التي ${(kids[r.kid] || {}).gender === 'f' ? 'أخطأت' : 'أخطأ'} فيها لتعليمها:</p><p class="tx" style="font-size:1.2rem" data-w>${wordsHtml(r.text, marks, true)}</p>`;
+      ${FREE_KINDS.has(r.kind) ? `<p class="note">${esc(r.text)}</p><p class="note">نصٌّ ${(kids[r.kid] || {}).gender === 'f' ? 'اختارته أو قالته' : 'اختاره أو قاله'} بنفسه: استمعوا، واكتبوا ملاحظتكم أو سجّلوها.</p>` : `<p class="note">اضغطوا الكلمة التي ${(kids[r.kid] || {}).gender === 'f' ? 'أخطأت' : 'أخطأ'} فيها لتعليمها:</p><p class="tx" style="font-size:1.2rem" data-w>${wordsHtml(r.text, marks, true)}</p>`}`;
     d.appendChild(mediaEl(r));
     r.notes.forEach(n => { const nn = el('div','ai', `<span class="h">${esc(n.by)} · ${esc(n.date || '')}</span>${n.text ? `<p style="margin:0">${esc(n.text)}</p>` : ''}`); if (n.audio) nn.appendChild(audioEl(n.audio)); d.appendChild(nn); });
     const ta = document.createElement('textarea'); ta.placeholder = 'ملاحظتك (الخطأ والصواب كما يُكتب ويُقرأ)'; ta.style.minHeight = '4em'; ta.id = 'nt' + r.id; d.appendChild(ta);
     const af = document.createElement('input'); af.type = 'file'; af.accept = 'audio/*'; af.setAttribute('capture', ''); af.hidden = true; af.id = 'na' + r.id; d.appendChild(af);
-    const row = el('div','btns'); row.style.justifyContent = 'flex-start'; const ab = el('button','btn ghost sm','🎙 أرفق ملاحظة صوتية'); ab.type='button'; ab.addEventListener('click', () => af.click()); af.addEventListener('change', () => { ab.textContent = af.files[0] ? '🎙 ' + af.files[0].name.slice(0, 18) : '🎙 أرفق ملاحظة صوتية'; });
-    const ok = el('button','btn sm','اعتمد التسجيل'); ok.type='button'; const fx = el('button','btn warm sm','يحتاج تصحيحًا'); fx.type='button';
+    const row = el('div','btns'); row.style.justifyContent = 'flex-start'; const ab = el('button','btn ghost sm','🎙 أرفقوا ملاحظة صوتية'); ab.type='button'; ab.addEventListener('click', () => af.click()); af.addEventListener('change', () => { ab.textContent = af.files[0] ? '🎙 ' + af.files[0].name.slice(0, 18) : '🎙 أرفقوا ملاحظة صوتية'; });
+    const ok = el('button','btn sm','اعتمدوا التسجيل'); ok.type='button'; const fx = el('button','btn warm sm','يحتاج تصحيحًا'); fx.type='button';
     const save = async status => { const n = {by: teacher ? 'المعلم' : 'ولي الأمر', text: ta.value.trim(), marks: [...marks], date: today(), audio: af.files[0] || null}; if (n.text || n.marks.length || n.audio || status === 'approved') r.notes.push(n); r.status = status; if (status === 'approved') r.approvedBy = teacher ? 'المعلم' : 'ولي الأمر'; await recPut(r); recCountApproved(); renderReview(box, teacher); };
     ok.addEventListener('click', () => save('approved')); fx.addEventListener('click', () => save('fix')); row.append(ok, fx, ab); d.appendChild(row);
-    d.querySelector('[data-w]').addEventListener('click', e => { const t = e.target.closest('.tok'); if (!t) return; const i = +t.dataset.i; marks = marks.includes(i) ? marks.filter(x => x !== i) : [...marks, i]; d.querySelector('[data-w]').innerHTML = wordsHtml(r.text, marks, true); });
+    if (d.querySelector('[data-w]')) d.querySelector('[data-w]').addEventListener('click', e => { const t = e.target.closest('.tok'); if (!t) return; const i = +t.dataset.i; marks = marks.includes(i) ? marks.filter(x => x !== i) : [...marks, i]; d.querySelector('[data-w]').innerHTML = wordsHtml(r.text, marks, true); });
     box.appendChild(d); });
 }
 
@@ -1398,9 +1631,16 @@ async function renderGifts(){
     const a = audioEl(g.blob); d.appendChild(a);
     if (gfMode === 'in'){
       a.addEventListener('play', async () => { if (g.status === 'sent'){ g.status = 'opened'; await dbPut('gift', g); } }, {once:true});
-      if (g.status !== 'mastered'){ const b = giftBlank(g); const box = el('div', null, `<p class="note">⟨استمع|استمعي⟩ ثم ⟨اكتب|اكتبي⟩ الكلمة الناقصة ⟨لتُتمّ|لتُتمّي⟩ الهدية:</p><p class="q s">${b.ws.map((w, i) => i === b.i ? '<mark>……</mark>' : esc(w)).join(' ')}</p><div class="tb"></div><p class="fb"></p>`); d.appendChild(box);
-        typeBox(box.querySelector('.tb'), b.answer, {id:'gi' + g.id, noFocus:true, onDone: async stt => { feedback(box.querySelector('.fb'), stt, '⟨أتممتَ|أتممتِ⟩ الهدية!', `الكلمة: ${b.answer}. ⟨حاول|حاولي⟩ مرة أخرى بعد الاستماع.`, `قريب! الكلمة: ${b.answer}`); award('gift', g.id, stt === 'ok' ? true : stt === 'near' ? null : false);
-          if (stt === 'ok'){ g.status = 'mastered'; g.masteredDate = today(); await dbPut('gift', g); if (g.source === 'local' && g.from >= 0) bump(`giftsMastered:${g.from}`); setTimeout(renderGifts, 900); } }}); }
+      if (g.status !== 'mastered'){ const b = giftBlank(g);
+        /* eight and under choose the missing word among three, each heard before it is chosen; from nine they write it */
+        const others = tier() === 'small' ? shuffle([...new Set(b.ws.filter((w, i) => i !== b.i && N1(w).length >= 2 && N1(w) !== N1(b.answer)))]).slice(0, 2) : [];
+        const choose = others.length > 0;
+        const how = choose ? T('استمع ثم اختر الكلمة الناقصة لتُتمّ الهدية', 'استمعي ثم اختاري الكلمة الناقصة لتُتمّي الهدية') : T('استمع ثم اكتب الكلمة الناقصة لتُتمّ الهدية', 'استمعي ثم اكتبي الكلمة الناقصة لتُتمّي الهدية');
+        const box = el('div', null, `<p class="note">${esc(how)}:</p><p class="q s">${b.ws.map((w, i) => i === b.i ? '<mark>……</mark>' : esc(w)).join(' ')}</p><div class="tb"></div><p class="fb"></p>`); box.querySelector('.note').appendChild(hearBtn(how)); d.appendChild(box);
+        const done = async stt => { feedback(box.querySelector('.fb'), stt, '⟨أتممتَ|أتممتِ⟩ الهدية!', `الكلمة: ${b.answer}. ⟨حاول|حاولي⟩ مرة أخرى بعد الاستماع.`, `قريب! الكلمة: ${b.answer}`); award('gift', g.id, stt === 'ok' ? true : stt === 'near' ? null : false);
+          if (stt === 'ok'){ g.status = 'mastered'; g.masteredDate = today(); await dbPut('gift', g); if (g.source === 'local' && g.from >= 0) bump(`giftsMastered:${g.from}`); setTimeout(renderGifts, 900); } else if (choose) setTimeout(renderGifts, 2500); };
+        if (choose) mcq(box.querySelector('.tb'), [b.answer, ...others], b.answer, ok => done(ok ? 'ok' : 'bad'), 'm');
+        else typeBox(box.querySelector('.tb'), b.answer, {id:'gi' + g.id, noFocus:true, onDone: done}); }
       else { d.appendChild(el('p','note', `⟨أتممتَها|أتممتِها⟩${g.masteredDate ? ' في ' + esc(g.masteredDate) : ''}. ${g.source === 'import' ? '⟨أرسل|أرسلي⟩ ردّ الشكر ليعرف مُهديك.' : 'نبتت شجرة ' + esc(g.fromName) + '.'}`)); }
       const row = el('div','btns'); row.style.justifyContent = 'flex-start';
       const rb = el('button','btn ghost sm','🎙 ⟨سجّلها|سجّليها⟩ بصوتك'); rb.type='button'; rb.addEventListener('click', () => recordFrom(g.kind, g.ref, g.text, g.id)); row.appendChild(rb);
@@ -1425,10 +1665,10 @@ INIT.giftShelf = renderGifts;
 /* لوحة ولي الأمر: طلبات الإهداء خارج البيت */
 async function renderGiftRequests(box){
   const q = store.get(`giftReq:${kid}`, []); const recs = await recAll(); const gifts = await dbAll('gift');
-  box.innerHTML = `<p class="note">الهدية خارج البيت تخرج من هنا فقط، باسم الطفل الأول، والصورة معطّلة إلا إن فعّلتَها للهدية. أرسل الملف إلى ولي أمر الصديق ليستورده وهو على ملف ابنه.</p>`;
+  box.innerHTML = `<p class="note">الهدية خارج البيت تخرج من هنا فقط، باسم الطفل الأول، والصورة معطّلة إلا إن فعّلتموها للهدية. أرسلوا الملف إلى وليّ أمر الصديق ليستورده وهو على ملف ابنه.</p>`;
   if (!q.length) box.appendChild(el('p','note','لا طلبات إهداء.'));
   for (const req of q){ const r = recs.find(x => x.id === req.recId); if (!r) continue; const d = el('div','qi', `<p style="margin:0"><span class="chip">${esc(r.kind)}</span> ${esc(r.ref)} · ${esc(req.date)}${giftable(r) ? '' : ' <span class="badge wait">لم يعد معتمدًا للإهداء</span>'}</p><p class="tx" style="font-size:1.1rem">${esc(r.text)}</p><label class="note"><input type="checkbox" id="gp${r.id}"> أرفق صورة ${esc(K().name)} في هذه الهدية</label>`);
-    const row = el('div','btns'); row.style.justifyContent = 'flex-start'; const ex = el('button','btn sm','صدّر الهدية'); ex.type='button'; ex.disabled = !giftable(r); const rm = el('button','btn ghost sm','ارفض'); rm.type='button'; const fb = el('p','fb');
+    const row = el('div','btns'); row.style.justifyContent = 'flex-start'; const ex = el('button','btn sm','صدّروا الهدية'); ex.type='button'; ex.disabled = !giftable(r); const rm = el('button','btn ghost sm','ارفض'); rm.type='button'; const fb = el('p','fb');
     ex.addEventListener('click', async () => { const chain = await giftChain(r); const withPhoto = d.querySelector('#gp' + r.id).checked; const id = 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
       const pkg = JSON.stringify({v:1, type:'gift', items:[{id, fromName: K().name, fromPhoto: withPhoto ? (K().photo || null) : null, chain, kind: r.kind, ref: r.ref, text: r.text, type: r.type, b64: await b64(r.blob), date: today()}]});
       await saveFile(`hadiya-${K().name}-${today()}.json`, pkg, fb); if (fb.className.includes('ok')){ await dbPut('gift', {id, from: kid, fromName: K().name, to: -1, toName: 'صديق', recId: r.id, kind: r.kind, ref: r.ref, text: r.text, type: r.type, blob: r.blob, date: today(), chain, status:'sent', source:'local'}); bump(`giftsSent:${kid}`); store.set(`giftReq:${kid}`, q.filter(x => x.recId !== r.id)); checkStages(); renderGiftRequests(box); } });
@@ -1469,8 +1709,8 @@ function renderAmalDaily(){
 }
 function renderAmalPanel(box){
   const log = store.get(`amalLog:${kid}`, []); const pend = log.filter(x => !x.confirmed);
-  box.innerHTML = `<p class="note">ما قال الطفل إنه فعله. أكّده إن صحّ، فيُحسب له في «الحديقة». الأعمال مسودة مربوطة بأحاديث القسم.</p>`;
-  if (!pend.length) box.appendChild(el('p','note','لا شيء بانتظارك.'));
+  box.innerHTML = `<p class="note">ما قال الطفل إنه فعله. أكّدوه إن صحّ، وتحدّثوا معه فيه؛ هو بينكم، لا يُحسب نقاطًا ولا مشهدًا. الأعمال مسودة مربوطة بأحاديث القسم.</p>`;
+  if (!pend.length) box.appendChild(el('p','note','لا شيء بانتظاركم.'));
   pend.forEach(x => { const a = AMAL.find(y => y.id === x.id); const d = el('div','qi', `<p style="margin:0">${esc(x.date)} · ${esc(a ? a.deed : x.id)}</p>`); const row = el('div','btns'); row.style.justifyContent = 'flex-start';
     const ok = el('button','btn sm','أكّد'); ok.type='button'; ok.addEventListener('click', () => { x.confirmed = true; store.set(`amalLog:${kid}`, log); bump(`amalDone:${kid}`); checkStages(); renderAmalPanel(box); });
     const no = el('button','btn ghost sm','احذف'); no.type='button'; no.addEventListener('click', () => { store.set(`amalLog:${kid}`, log.filter(y => y !== x)); renderAmalPanel(box); });
@@ -1514,17 +1754,38 @@ RESETS.push(() => { RV = null; });
 
 
 /* ================= اختبار تحديد المستوى: 20 سؤالًا من ثلاثة مستويات عند أول دخول ================= */
+/* لا تسأل الواحة عن «كنوز البيان» ولا عن المنظومة الحسنية إلا ما درسه الطفل هناك: درسٌ نال جوهرته، ومحطةٌ أتمّها، وبيتٌ أجاب عنه.
+   فسؤالها مراجعةٌ لما تعلّمه، لا امتحانٌ فيما لم يُعلَّمه. يُقرأ من التخزين مرةً كل ثانيتين لكل طفل */
+const STUDIED = {};
+function studied(){ const c = STUDIED[kid]; if (c && Date.now() - c.t < 2000) return c.v;
+  let r = null; try { const S = window.KZ_SECTIONS; r = S && S.studied ? S.studied(kid) : null; } catch (e) {}
+  /* the trip asks about it from the day after it was first seen studied, so the question is a recall and not a copy */
+  const first = store.get(`studiedDay:${kid}`, {}), d = dayN(); let ch = false;
+  const keep = (tag, arr) => new Set((arr || []).filter(x => { const k = tag + x; if (first[k] == null){ first[k] = d; ch = true; } return first[k] < d; }));
+  const v = {kz: keep('kz:', r && r.kz), hsSt: keep('st:', r && r.hsSt), hsV: keep('v:', r && r.hsV)};
+  if (ch) store.set(`studiedDay:${kid}`, first);
+  STUDIED[kid] = {t: Date.now(), v}; return v; }
+/* each child's own memorised part (2.6): the parent ticks the parts of the mushaf the child knows («محفوظ الطفل» in the board).
+   Nothing ticked yet means all of them, as before. The words, verses and forms the oasis asks about come from it */
+const MEMO = {};
+function memoUnits(k){ const i = k == null ? kid : k; const u = store.get(`memo:${i}`, null); return Array.isArray(u) && u.length ? u : (DATA.quran && DATA.quran.units || []).map(x => x.id); }
+function memoSet(){ const key = memoUnits().join(','); const c = MEMO[kid]; if (c && c.key === key) return c.set;
+  const pages = new Set(); (DATA.quran && DATA.quran.units || []).forEach(u => { if (key.split(',').includes(u.id)) u.pages.forEach(p => pages.add(p)); });
+  const set = new Set(); (DATA.quran && DATA.quran.pages || []).forEach(pg => { if (pages.has(pg.p)) pg.ayat.forEach(x => set.add(`${x[0]}:${x[1]}`)); });
+  MEMO[kid] = {key, set}; return set; }
+const inMemo = v => !!v && memoSet().has(`${v.s}:${v.a}`);
+const lemmaInMemo = (k, lemma) => { const f = ALL[k] && ALL[k].family.find(x => x.lemma === lemma); return !f || !f.verses || !f.verses.length || f.verses.some(inMemo); };
 const POOL = {
-  rl: () => Object.keys(ALL).flatMap(k => (ALL[k].roles || []).map(r => `${k}|${r.q}`)),
-  drv: () => Object.keys(ALL).flatMap(k => ALL[k].family.map(f => `${k}|${f.lemma}`)),
-  fill: () => Object.keys(ALL).flatMap(k => ALL[k].family.flatMap(f => f.verses.map(v => `${k}|${v.s}:${v.a}|${strip(v.word)}`))),
+  rl: () => Object.keys(ALL).flatMap(k => (ALL[k].roles || []).filter(r => lemmaInMemo(k, r.a)).map(r => `${k}|${r.q}`)),
+  drv: () => Object.keys(ALL).flatMap(k => ALL[k].family.filter(f => !f.verses || !f.verses.length || f.verses.some(inMemo)).map(f => `${k}|${f.lemma}`)),
+  fill: () => Object.keys(ALL).flatMap(k => ALL[k].family.flatMap(f => f.verses.filter(inMemo).map(v => `${k}|${v.s}:${v.a}|${strip(v.word)}`))),
   uk: () => Object.keys(ALL).flatMap(k => (ALL[k].unknown || []).map(u => `${k}|${u.lemma}`)),
   gzw: () => GZ.quran.map(q => q.id), gzd: () => GZ.dots.flatMap(G => G.words.map(t => `${G.id}|${t.word}`)), gzf: () => GF.map(x => x.id),
   sha: () => SH.abyat.map(x => x.id), shl: () => SH.abyat.map(x => x.id), shp: () => SH.abyat.map(x => x.id), pml: () => SH.qasaid.flatMap(q => q.lines.map((l, i) => `${q.id}|${i}`)),
   hys: () => HY.situations.map(x => x.id), hyc: () => HY.things.map(t => t.noun), hk: () => HIK.map(x => x.text), wh: () => HAD.items.map(x => x.id),
   nt: () => NT.stories.flatMap(s => s.questions.map((q, i) => `${s.id}|${i}`)), sfr: () => SF.articles.flatMap(a => a.tf.map((t, i) => `${a.id}|${i}`)),
-  kz: () => KZD.lessons.flatMap(l => l.quiz.map((q, i) => `${l.id}|${i}`)),
-  dct: () => DCT.map(x => strip(x.w)), cnj: () => CJ.items.map(cjId), ajd: () => AJ.defs.map(d => d.term), ajc: () => (AJ.counts || []).map(c => c.q), irb: () => irbIds(), tri: () => triApproved().map(t => t.id), hsq: () => (DATA.hasaniya && DATA.hasaniya.quizzes || []).map(q => q.id),
+  kz: () => { const st = studied(); return KZD.lessons.filter(l => st.kz.has(l.id)).flatMap(l => l.quiz.map((q, i) => `${l.id}|${i}`)); },
+  dct: () => DCT.map(x => strip(x.w)), cnj: () => CJ.items.filter(x => !x.verse || inMemo(x.verse)).map(cjId), ajd: () => AJ.defs.map(d => d.term), ajc: () => (AJ.counts || []).map(c => c.q), irb: () => irbIds(), tri: () => triApproved().map(t => t.id), hsq: () => { const st = studied(); return (DATA.hasaniya && DATA.hasaniya.quizzes || []).filter(q => st.hsV.has(q.ref) || st.hsSt.has(q.ref.replace(/v\d+$/, ''))).map(q => q.id); },
 };
 const PL_LEVELS = [['hyc','hys','hk','uk','gzd'], ['rl','fill','wh','dct','shp'], ['drv','cnj','sha','shl','gzw','gzf','pml','ajd']];
 const PL_COUNTS = [7, 7, 6];
@@ -1605,7 +1866,7 @@ RESETS.push(() => { trCur = null; });
 /* لوحة ولي الأمر */
 function renderTriPanel(box){
   const list = triAll(); const pend = list.filter(t => t.status === 'pending'), ok = list.filter(t => t.status === 'ok');
-  box.innerHTML = `<p class="note">الطفل يكتب معنى الكلمة بالصينية والإنجليزية في بطاقة النخلة؛ صحّح إن شئت ثم أجِز، فتظهر لإخوته في «بثلاث لغات».</p>` + (pend.length ? pend.map(t => `<div class="qi" data-id="${t.id}"><div class="row" style="justify-content:space-between"><span>${avatarHtml(kids[t.kid] || {name:t.by || '?'}, 28)} <b>${esc((kids[t.kid] || {}).name || t.by || '')}</b> · <b>${esc(t.lemma)}</b> <span class="ref">${esc((ALL[t.k] || {}).root || '')} · ${esc(t.date)}</span></span></div><div class="row" style="gap:6px;flex-wrap:wrap"><input class="f" lang="zh" value="${esc(t.zh || '')}" placeholder="中文" style="flex:1;min-width:100px" data-f="zh"><input class="f" lang="en" dir="ltr" value="${esc(t.en || '')}" placeholder="English" style="flex:1;min-width:100px" data-f="en"></div><div class="btns" style="justify-content:flex-start"><button class="btn sm" type="button" data-a="ok">أجِز</button><button class="btn ghost sm" type="button" data-a="del">احذف</button></div></div>`).join('') : '<p class="note">لا كلمات بانتظارك.</p>')
+  box.innerHTML = `<p class="note">الطفل يكتب معنى الكلمة بالصينية والإنجليزية في بطاقة النخلة؛ صحّحوا إن شئتم ثم أجيزوا، فتظهر لإخوته في «بثلاث لغات».</p>` + (pend.length ? pend.map(t => `<div class="qi" data-id="${t.id}"><div class="row" style="justify-content:space-between"><span>${avatarHtml(kids[t.kid] || {name:t.by || '?'}, 28)} <b>${esc((kids[t.kid] || {}).name || t.by || '')}</b> · <b>${esc(t.lemma)}</b> <span class="ref">${esc((ALL[t.k] || {}).root || '')} · ${esc(t.date)}</span></span></div><div class="row" style="gap:6px;flex-wrap:wrap"><input class="f" lang="zh" value="${esc(t.zh || '')}" placeholder="中文" style="flex:1;min-width:100px" data-f="zh"><input class="f" lang="en" dir="ltr" value="${esc(t.en || '')}" placeholder="English" style="flex:1;min-width:100px" data-f="en"></div><div class="btns" style="justify-content:flex-start"><button class="btn sm" type="button" data-a="ok">أجيزوا</button><button class="btn ghost sm" type="button" data-a="del">احذف</button></div></div>`).join('') : '<p class="note">لا كلمات بانتظاركم.</p>')
     + (ok.length ? `<p class="lbl">المجازة (${ok.length})</p>` + ok.map(t => `<p style="margin:0" data-id="${t.id}">✓ <b>${esc(t.lemma)}</b>: ${esc([t.zh, t.en].filter(Boolean).join(' · '))} <span class="ref">${esc((kids[t.kid] || {}).name || t.by || '')}</span> <button class="btn ghost sm" type="button" data-a="del">احذف</button></p>`).join('') : '');
   if (box.dataset.triBound) return; box.dataset.triBound = '1';
   box.addEventListener('click', e => { const b = e.target.closest('button[data-a]'); if (!b) return; const row = b.closest('[data-id]'); const id = row.dataset.id; const list = triAll(); const t = list.find(x => x.id === id); if (!t) return;
@@ -1638,6 +1899,7 @@ async function renderMushaf(){
   const L = B.querySelector('#muPages');
   pages.forEach((pg, i) => { const rs = pageRecs(all, pg.p, kid); const d = el('div','qi'); d.innerHTML = `<div class="row" style="justify-content:space-between"><span><b>صفحة ${AR_NUM(pg.p)}</b> <span class="ref">${esc(pageTitle(pg))}${pg.partial ? ' (ما في النطاق منها)' : ''}</span></span>${MU_BADGE[sts[i]]}</div>`;
     const row = el('div','btns'); row.style.justifyContent = 'flex-start'; const rb = el('button','btn sm' + (rs.length ? ' ghost' : ''), rs.length ? '🎙 ⟨أعد|أعيدي⟩ تسجيلها' : '🎙 ⟨سجّل|سجّلي⟩ الصفحة'); rb.type = 'button'; rb.addEventListener('click', () => recordPage(pg, u)); row.appendChild(rb);
+    if (AUD && pg.ayat.some(([s, a]) => hasH(s, a) || hasO(s))){ const tb = el('button','btn ghost sm','🔊 ⟨استمع|استمعي⟩'); tb.type = 'button'; tb.addEventListener('click', () => tlSheet(pg)); row.appendChild(tb); }
     const vb = el('button','btn ghost sm','📖 ⟨اقرأها|اقرئيها⟩'); vb.type = 'button'; vb.addEventListener('click', () => { const s = $('sheet'); s.innerHTML = `<div class="top"><h2 style="font-family:var(--f-ui);font-size:1.3rem">صفحة ${AR_NUM(pg.p)} · ${esc(pageTitle(pg))}</h2><button class="x" aria-label="إغلاق">✕</button></div>${pageHtml(pg)}`; showSheet(); s.querySelector('.x').addEventListener('click', closeSheet); }); row.appendChild(vb);
     if (rs.length){ const last = rs.sort((a, b) => b.date.localeCompare(a.date))[0]; const pb = el('button','btn ghost sm','▶'); pb.type = 'button'; pb.setAttribute('aria-label','⟨استمع|استمعي⟩'); pb.addEventListener('click', () => { const old = d.querySelector('audio'); if (old) old.remove(); else d.appendChild(audioEl(last.blob)); }); row.appendChild(pb); }
     d.appendChild(row); L.appendChild(d); });
@@ -1655,6 +1917,125 @@ function playSeq(items, box){
   a.addEventListener('ended', () => { i++; play(); }); play();
 }
 INIT.mushaf = renderMushaf;
+/* ---- التلاوة ----
+   «للتعلّم»: الشيخ محمود خليل الحصري (المصحف المعلّم) آيةً آية؛ تُضاء الآية وهي تُتلى، وتُعاد مرةً أو ثلاثًا أو خمسًا، ومع «مهلة الترديد»
+   يسكت التطبيق بعد كل آية قدرَ طولها ليردّدها الطفل. والضغط على آيةٍ يبدأ منها.
+   «للاستماع»: الشيخ عبد الرحمن العوسي، السورة كاملة. يبدّل الطفل بينهما متى شاء، ويُحفظ اختياره.
+   الملفات في الجهاز (audio/)، تأتي حزمةً مع نسخة التطبيق (src/tools/audio_pack.py)؛ إن لم تكن فيها لم يظهر شيءٌ من هذا. */
+const AUD = window.WAHA_AUDIO || null;
+const pad3 = n => String(n).padStart(3, '0');
+/* the recitation for offline use, in the web app (idea 11): the Android app carries it all; the web app keeps a file once heard, so
+   the parents may fetch it all at once on Wi-Fi. Each file goes through the service worker, which keeps it */
+function offlineAudioBox(B){
+  const A = window.WAHA_AUDIO; if (!A || window.AndroidBridge || !('serviceWorker' in navigator) || !/^https?:/.test(location.protocol)) return;
+  const hs = []; Object.keys(A.h || {}).forEach(s => (A.h[s] || []).forEach(([a, b]) => { for (let x = a; x <= b; x++) hs.push(`audio/h/${pad3(s)}${pad3(x)}.mp3`); }));
+  const os = (A.o || []).map(s => `audio/o/${pad3(s)}.mp3`);
+  const box = el('div','qi'); box.innerHTML = `<p class="lbl" style="margin:0">التلاوة بلا إنترنت (لهذا الجهاز)</p><p class="note">نسخة المتصفح تحفظ الآية حين تُسمع أوّل مرة. لتعمل التلاوة كلّها بلا إنترنت نزّلوها مرةً واحدة على شبكة Wi-Fi.</p>`;
+  const row = el('div','btns'); row.style.justifyContent = 'flex-start'; const fb = el('p','fb'); fb.setAttribute('role', 'status');
+  const run = async (list, btn) => { if (btn.dataset.on){ btn.dataset.stop = '1'; return; } btn.dataset.on = '1'; delete btn.dataset.stop; const lab = btn.textContent; btn.textContent = '⏹ أوقفوا'; let done = 0, bad = 0, i = 0;
+    const one = async () => { while (i < list.length && !btn.dataset.stop){ const u = list[i++]; try { const r = await fetch(u); if (!r.ok) bad++; else await r.arrayBuffer(); } catch (e) { bad++; } done++; fb.textContent = `${done} من ${list.length}${bad ? ` (تعذّر ${bad})` : ''}`; } };
+    await Promise.all([one(), one(), one()]); delete btn.dataset.on; btn.textContent = lab; fb.textContent = btn.dataset.stop ? `أُوقف عند ${done} من ${list.length}.` : bad ? `نُزّل ${done - bad} من ${list.length}؛ تعذّر ${bad}، فأعيدوا المحاولة.` : `نُزّلت كلّها (${list.length}). تعمل الآن بلا إنترنت.`; fb.className = 'fb ' + (bad ? 'bad' : 'ok'); };
+  const b1 = el('button','btn ghost sm', `⬇ الحصري آيةً آية (${hs.length} آية)`); b1.type = 'button'; b1.addEventListener('click', () => run(hs, b1));
+  const b2 = el('button','btn ghost sm', `⬇ العوسي، السور كاملة (${os.length})`); b2.type = 'button'; b2.addEventListener('click', () => run(os, b2));
+  row.append(b1, b2); box.append(row, fb); B.appendChild(box);
+}
+const hasH = (s, a) => !!(AUD && AUD.h && (AUD.h[s] || []).some(([x, y]) => a >= x && a <= y));
+const hasO = s => !!(AUD && Array.isArray(AUD.o) && AUD.o.includes(+s));
+var TL = {a: null, o: null, q: [], i: 0, n: 0, t: 0, box: null};   // var: voiceStop and closeSheet may run before this line
+const tlMode = () => store.get(`tlMode:${kid}`, 'learn');
+function tlStop(){ clearTimeout(TL.t); try { if (VX.rec) micAbort(); } catch (e) {} const a = TL.a; TL.a = null; TL.q = []; if (TL.rb){ const b = TL.rb; TL.rb = null; b.textContent = RES('▶ ⟨استمع|استمعي⟩ إلى الآية بصوت الحصري'); }
+  if (a){ a.onended = a.onerror = null; try { a.pause(); } catch (e) {} }
+  if (TL.o){ try { TL.o.pause(); } catch (e) {} }
+  if (TL.box){ TL.box.querySelectorAll('.tl-on').forEach(x => x.classList.remove('tl-on')); const b = TL.box.querySelector('.tl-go'); if (b) b.textContent = RES('▶ ⟨استمع|استمعي⟩ آيةً آية'); } }
+function tlStep(){
+  if (!TL.a || !TL.box) return; const st = TL.box.querySelector('.tl-st');
+  if (TL.i >= TL.q.length){ tlStop(); if (st) st.textContent = 'انتهت التلاوة. بارك الله فيك.'; return; }
+  const it = TL.q[TL.i]; TL.box.querySelectorAll('.tl-on').forEach(x => x.classList.remove('tl-on'));
+  if (it.el){ it.el.classList.add('tl-on'); try { it.el.scrollIntoView({block: 'nearest', behavior: 'smooth'}); } catch (e) {} }
+  if (st) st.textContent = it.basm ? 'البسملة' : `سورة ${SNAME(it.s)}، الآية ${AR_NUM(it.a)}${TL.rep > 1 ? ` · ${AR_NUM(TL.n + 1)} من ${AR_NUM(TL.rep)}` : ''}`;
+  const a = TL.a; a.src = `audio/h/${pad3(it.s)}${pad3(it.a)}.mp3`;
+  a.onended = () => { if (TL.a !== a) return; TL.n++;
+    if (!it.basm && TL.n < TL.rep){ TL.t = setTimeout(tlStep, 500); return; }
+    TL.n = 0; TL.i++;
+    if (TL.gap && !it.basm){ if (st) st.textContent = RES('⟨ردّدها|ردّديها⟩ الآن…'); const wait = Math.min(30000, (isFinite(a.duration) ? a.duration : 4) * 1000 + 700);
+      const echo = store.get('tlEcho', false) && MIC_OK && !VX.rec; if (echo) micStart().then(() => { if (st) st.textContent = RES('🎙 ⟨ردّدها|ردّديها⟩ الآن، وأنا أسمعك…'); }).catch(() => {});
+      TL.t = setTimeout(async () => { if (echo && VX.rec){ const blob = await micStop(); if (blob && blob.size > 800 && it.el) echoKeep(it, blob); } if (TL.a === a) tlStep(); }, wait); }
+    else TL.t = setTimeout(tlStep, 300); };
+  a.onerror = () => { if (TL.a !== a) return; TL.n = 0; TL.i++; TL.t = setTimeout(tlStep, 200); };
+  a.play().catch(() => { if (TL.a === a){ tlStop(); if (st) st.textContent = navigator.onLine === false ? OFFLINE_RC : RES('لم تبدأ التلاوة. ⟨اضغط|اضغطي⟩ ▶ مرةً أخرى.'); } });
+}
+/* the child's echo of a verse (this screen only, not saved): «قارن» plays الحصري, then the child */
+function echoKeep(it, blob){
+  const old = it.el.nextElementSibling; if (old && old.classList.contains('tl-cmp')) old.remove();
+  const b = el('button','tiny tl-cmp','🔁 قارن'); b.type = 'button'; b.setAttribute('aria-label', RES('⟨قارن|قارني⟩ ترديدك بتلاوة الحصري'));
+  b.addEventListener('click', e => { e.stopPropagation(); tlStop(); voiceStop(); const h = new Audio(`audio/h/${pad3(it.s)}${pad3(it.a)}.mp3`); h.dataset.keep = '1';
+    h.onended = () => { const u = URL.createObjectURL(blob), c = new Audio(u); c.onended = () => URL.revokeObjectURL(u); c.play().catch(() => {}); }; h.play().catch(() => {}); });
+  it.el.insertAdjacentElement('afterend', b);
+}
+function tlPlay(from){ voiceStop(); tlStop(); if (!TL.box) return; TL.q = TL.box.__q || []; TL.i = from || 0; TL.n = 0; TL.rep = store.get('tlRep', 1); TL.gap = store.get('tlGap', false);
+  TL.a = new Audio(); const b = TL.box.querySelector('.tl-go'); if (b) b.textContent = RES('■ ⟨أوقف|أوقفي⟩'); tlStep(); }
+/* ayat: [[سورة، آية، نص]…] صفحةٌ أو سورة */
+function tlRender(box, ayat){
+  tlStop(); TL.box = box; TL.o = null; const mode = tlMode();
+  box.innerHTML = `<div class="tl-seg" role="group" aria-label="القارئ"><button type="button" data-m="learn" aria-pressed="${mode === 'learn'}">📖 للتعلّم<small>الحصري المعلّم، آيةً آية</small></button><button type="button" data-m="listen" aria-pressed="${mode === 'listen'}">🎧 للاستماع<small>العوسي، السورة كاملة</small></button></div><div class="tl-body"></div>`;
+  box.querySelector('.tl-seg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; store.set(`tlMode:${kid}`, b.dataset.m); tlRender(box, ayat); });
+  const B = box.querySelector('.tl-body');
+  if (mode === 'listen'){
+    const ss = [...new Set(ayat.map(x => x[0]))].filter(hasO);
+    if (!ss.length){ B.innerHTML = '<p class="note">لا تلاوة للاستماع لهذه السورة في نسخة التطبيق هذه.</p>'; return; }
+    let cs = ss.includes(store.get(`tlO:${kid}`, 0)) ? store.get(`tlO:${kid}`, 0) : ss[0];
+    const draw = () => { B.innerHTML = (ss.length > 1 ? `<div class="chips">${ss.map(x => `<button class="chip2" type="button" data-s="${x}" aria-pressed="${x === cs}">سورة ${esc(SNAME(x))}</button>`).join('')}</div>` : '') +
+        `<p class="lbl" style="margin:8px 0 4px">سورة ${esc(SNAME(cs))} كاملة، بصوت الشيخ عبد الرحمن العوسي</p><audio class="tl-o" controls preload="none" style="width:100%" src="audio/o/${pad3(cs)}.mp3"></audio>`;
+      TL.o = B.querySelector('.tl-o'); { const o0 = TL.o; o0.addEventListener('error', () => { if (o0.nextElementSibling && o0.nextElementSibling.classList.contains('fb')) return; const m = el('p','fb bad', navigator.onLine === false ? OFFLINE_RC : 'تعذّر تشغيل السورة.'); o0.insertAdjacentElement('afterend', m); }); }
+      TL.o.addEventListener('play', () => { const o = TL.o; if (!o) return; TL.o = null; o.dataset.keep = '1'; voiceStop(); delete o.dataset.keep; TL.o = o; });
+      B.querySelectorAll('[data-s]').forEach(b => b.addEventListener('click', () => { cs = +b.dataset.s; store.set(`tlO:${kid}`, cs); if (TL.o) TL.o.pause(); draw(); })); };
+    draw(); return;
+  }
+  const q = []; let h = '', curS = null;
+  ayat.forEach(([s, a, t]) => { if (!hasH(s, a)) return;
+    if (s !== curS){ curS = s; h += `<p class="lbl tl-sn">سورة ${esc(SNAME(s))}</p>`; if (a === 1 && s !== 1 && s !== 9){ h += `<p class="q tl-ay tl-b" data-i="${q.length}">${esc(BASMALA)}</p>`; q.push({s: 1, a: 1, basm: true}); } }
+    h += `<span class="tl-ay" role="button" tabindex="0" data-i="${q.length}">${esc(t)} ﴿${AR_NUM(a)}﴾</span> `; q.push({s, a}); });
+  if (!q.length){ B.innerHTML = '<p class="note">لا تلاوة للتعلّم لهذه الآيات في نسخة التطبيق هذه.</p>'; return; }
+  const rep = store.get('tlRep', 1), gap = store.get('tlGap', false);
+  B.innerHTML = `<div class="btns" style="justify-content:flex-start;align-items:center"><button class="btn sm tl-go" type="button">${RES('▶ ⟨استمع|استمعي⟩ آيةً آية')}</button>
+      <span class="chips" role="group" aria-label="تكرار كل آية">${[1, 3, 5].map(n => `<button class="chip2" type="button" data-rep="${n}" aria-pressed="${n === rep}">${n === 1 ? 'مرة' : `×${AR_NUM(n)}`}</button>`).join('')}</span>
+      <label class="note tl-gapl"><input type="checkbox" class="tl-gap" ${gap ? 'checked' : ''}> ${RES('مهلةٌ ⟨تردّد|تردّدين⟩ فيها كل آية')}</label>
+      ${MIC_OK ? `<label class="note tl-gapl"><input type="checkbox" class="tl-echo" ${store.get('tlEcho', false) ? 'checked' : ''}> ${RES('🎙 ⟨سجّل|سجّلي⟩ ترديدي ⟨لأقارنه|لأقارنه⟩ بالحصري')}</label>` : ''}</div>
+    <p class="note tl-st">${RES('⟨اضغط|اضغطي⟩ على أي آية ⟨لتبدأ|لتبدئي⟩ منها.')}</p><div class="tl-text">${h}</div>`;
+  box.__q = q; q.forEach((x, i) => { x.el = B.querySelector(`.tl-ay[data-i="${i}"]`); });
+  B.querySelector('.tl-go').addEventListener('click', () => { if (TL.a) tlStop(); else tlPlay(0); });
+  B.querySelectorAll('[data-rep]').forEach(b => b.addEventListener('click', () => { store.set('tlRep', +b.dataset.rep); TL.rep = +b.dataset.rep; B.querySelectorAll('[data-rep]').forEach(x => x.setAttribute('aria-pressed', x === b)); }));
+  B.querySelector('.tl-gap').addEventListener('change', e => { store.set('tlGap', e.target.checked); TL.gap = e.target.checked; });
+  { const ec = B.querySelector('.tl-echo'); if (ec) ec.addEventListener('change', e => { store.set('tlEcho', e.target.checked); if (e.target.checked && !TL.gap){ TL.gap = true; store.set('tlGap', true); const g = B.querySelector('.tl-gap'); if (g) g.checked = true; } }); }
+  const text = B.querySelector('.tl-text');
+  const pickAy = e => { const s = e.target.closest('.tl-ay'); if (s) tlPlay(+s.dataset.i); };
+  text.addEventListener('click', pickAy); text.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); pickAy(e); } });
+}
+function tlSheet(pg){ const s = $('sheet'); s.innerHTML = `<div class="top"><h2 style="font-family:var(--f-ui);font-size:1.3rem">صفحة ${AR_NUM(pg.p)} · ${esc(pageTitle(pg))}</h2><button class="x" aria-label="إغلاق">✕</button></div><div class="tl"></div>`;
+  showSheet(); s.querySelector('.x').addEventListener('click', closeSheet); tlRender(s.querySelector('.tl'), pg.ayat); }
+function renderTilawa(){
+  const C = $('tlSurahs'), B = $('tlTab'); if (!C || !B) return; C.innerHTML = '';
+  if (!AUD){ B.innerHTML = '<p class="note">حزمة التلاوة ليست في نسخة التطبيق هذه.</p>'; return; }
+  const ss = Object.keys(QN.surahs).map(Number).sort((a, b) => a - b); let cs = store.get(`tlS:${kid}`, ss[0]); if (!ss.includes(cs)) cs = ss[0];
+  /* السور في قائمةٍ واحدة مقسّمة بأجزاء المحفوظ، حتى لا تدفع خمسون زرًّا المشغّلَ إلى أسفل الصفحة */
+  const unitOf = x => QN.units.find(u => u.pages.includes((QN.surahs[x] || {}).page)) || {id: '', name: ''};
+  const groups = []; ss.forEach(x => { const u = unitOf(x); let g = groups.find(y => y.u === u); if (!g){ g = {u, ss: []}; groups.push(g); } g.ss.push(x); });
+  const i = ss.indexOf(cs);
+  C.innerHTML = `<button class="btn ghost sm" type="button" data-d="-1" ${i ? '' : 'disabled'} aria-label="السورة السابقة">→</button>
+    <label class="tl-pick"><span class="lbl">السورة</span><select id="tlSel">${groups.map(g => `<optgroup label="${esc(g.u.name)}">${g.ss.map(x => `<option value="${x}" ${x === cs ? 'selected' : ''}>${esc(SNAME(x))}</option>`).join('')}</optgroup>`).join('')}</select></label>
+    <button class="btn ghost sm" type="button" data-d="1" ${i < ss.length - 1 ? '' : 'disabled'} aria-label="السورة التالية">←</button>`;
+  C.querySelector('#tlSel').addEventListener('change', e => { store.set(`tlS:${kid}`, +e.target.value); renderTilawa(); });
+  C.querySelectorAll('[data-d]').forEach(b => b.addEventListener('click', () => { const n = ss[i + +b.dataset.d]; if (n){ store.set(`tlS:${kid}`, n); renderTilawa(); } }));
+  const ayat = []; QN.pages.forEach(pg => pg.ayat.forEach(x => { if (x[0] === cs) ayat.push(x); })); ayat.sort((x, y) => x[1] - y[1]);
+  tlRender(B, ayat);
+}
+INIT.tilawa = renderTilawa;
+/* one verse (or a few) from the pack, on a button that becomes its own stop button */
+function recite(btn, v){ const was = TL.box; if (TL.a && TL.rb === btn){ tlStop(); TL.box = was; return; } voiceStop(); tlStop(); TL.box = null;
+  const q = []; for (let a = v.a; a <= v.b; a++) q.push(a); let i = 0; const label = btn.textContent; btn.textContent = RES('■ ⟨أوقف|أوقفي⟩'); const a = new Audio(); TL.a = a; TL.rb = btn;
+  const end = () => { if (TL.a === a){ TL.a = null; TL.rb = null; } btn.textContent = label; };
+  const step = () => { if (TL.a !== a) return end(); if (i >= q.length) return end(); a.src = `audio/h/${pad3(v.s)}${pad3(q[i])}.mp3`; i++; a.play().catch(end); };
+  a.onended = step; a.onerror = end; step(); }
 /* ---- التتابع ---- */
 const RY_SURAHS = [...Object.keys(QN.surahs).map(Number)].sort((a, b) => (QN.surahs[a].n - QN.surahs[b].n) || (a - b));
 let rySurah = store.get('rySurah', RY_SURAHS[0] || 112);
@@ -1746,21 +2127,34 @@ function kidWeek(i, recs){
     const stages = STAGES.filter(s => { const v = store.get(`stage:${i}:${s.id}`, false); return v && v >= since; }).map(s => STAGE_NAMES_EL[s.el]);
     const rk = recs.filter(r => r.kid === i && days.includes(r.date)); const amal = store.get(`amalLog:${i}`, []).filter(x => days.includes(x.date));
     const tri = triAll().filter(t => t.kid === i && days.includes(t.okDate || '')).length; const tests = store.get(`tests:${i}`, []).filter(t => t.date >= since);
-    const msh = msHistory(i), msl = msh[msh.length - 1], msp = msh[msh.length - 2];
-    return {k: kids[i], sec: secLine(i, since, kids[i]), ms: msl ? `${msl.ok}/${msl.n} (${msl.date})${msp ? `، وقبله ${msp.ok}/${msp.n}` : ''}` : '', active, answers, reviews, mastered, newMastered, weak: weak.sort((a, b) => b.m.wrong - a.m.wrong).slice(0, 5), stages, rec: rk.length, recOk: rk.filter(r => r.status === 'approved').length, gifts: store.get(`giftsSent:${i}`, 0), amal: amal.filter(x => x.confirmed).length, amalPend: amal.filter(x => !x.confirmed).length, tri, tests, due: dueCount(), streak: dayStreak(), stagesAll: stagesDoneCount()}; });
+    const msh = msHistory(i), msl = msh[msh.length - 1];
+    return {k: kids[i], sec: secLine(i, since, kids[i]), ms: msl ? `تذكّر ${msl.ok} من ${msl.n} مما تعلّمه من قبل (${msl.date})` : '', active, answers, reviews, mastered, newMastered, weak: weak.sort((a, b) => b.m.wrong - a.m.wrong).slice(0, 5), stages, rec: rk.length, recOk: rk.filter(r => r.status === 'approved').length, gifts: store.get(`giftsSent:${i}`, 0), amal: amal.filter(x => x.confirmed).length, amalPend: amal.filter(x => !x.confirmed).length, tri, tests, due: dueCount(), wn: weekPlayed(i), wks: weeksMet(i), stagesAll: stagesDoneCount()}; });
 }
-function weekText(rows){ const days = weekDays(); return `تقرير الجمعة — واحة اللسان العربي\nمن ${days[6]} إلى ${days[0]}\n\n` + rows.map(r => RG(`${r.k.name} (${r.k.age} سنوات)\n- أيام اللعب: ${r.active} من 7 (سلسلة: ${r.streak})\n- أسئلة أُجيبت: ${r.answers}، مراجعات: ${r.reviews}\n- متقَن جديد هذا الأسبوع: ${r.newMastered} (المجموع ${r.mastered})\n- مراحل فُتحت: ${r.stages.length ? r.stages.join('، ') : 'لا'} (المجموع ${r.stagesAll} من ${STAGES.length})\n- تسجيلات: ${r.rec} (معتمدة ${r.recOk})، هدايا مرسلة: ${r.gifts}\n- اعمل به: ${r.amal} مؤكَّدة${r.amalPend ? `، ${r.amalPend} بانتظارك` : ''}؛ كلمات بثلاث لغات: ${r.tri}\n- اختبارات القافلة: ${r.tests.length ? r.tests.map(t => `${t.score}/10${t.pass ? ' ✓' : ''}`).join('، ') : 'لا'}\n- ${r.k.gender === 'f' ? 'تتعثّر' : 'يتعثّر'} في: ${r.weak.length ? r.weak.map(w => describe(w.g, w.id)).join('؛ ') : 'لا شيء'}\n- مستحق للمراجعة الآن: ${r.due}${r.ms ? `\n- قياس الشهر: ${r.ms}` : ''}${r.sec ? `\n- ${r.sec.replace(/ · /g, '\n- ')}` : ''}`, r.k.gender === 'f')).join('\n\n'); }
+/* the Friday text is one child's, private: what went well first, and nothing of what he stumbles on (that stays on the parent's
+   board). Brothers and sisters are not set side by side in anything meant to be sent */
+function weekText(rows){ const days = weekDays(); return rows.map(r => weekOne(r, days)).join('\n\n— — —\n\n'); }
+function weekOne(r, days){ const f = r.k.gender === 'f';
+  const good = [`أيام اللعب: ${r.active} من 7، وأُنجزت «مهمة اليوم» في ${r.wn} من ${WEEK_GOAL} أيام هذا الأسبوع${r.wn >= WEEK_GOAL ? ' ✓' : ''} (أسابيع مكتملة: ${r.wks})`,
+    r.newMastered ? `ثبت هذا الأسبوع: ${r.newMastered} (أجاب عنه صحيحًا في يومين مختلفين؛ المجموع ${r.mastered})` : '',
+    r.stages.length ? `مراحل فُتحت: ${r.stages.join('، ')}` : '',
+    r.rec ? `تسجيلات: ${r.rec} (معتمدة ${r.recOk})${r.gifts ? `، وهدايا مرسلة: ${r.gifts}` : ''}` : '',
+    r.amal ? `اعمل به: ${r.amal} مؤكَّدة` : '', r.tri ? `كلمات بثلاث لغات: ${r.tri}` : '',
+    r.tests.filter(t => t.pass).length ? `اجتاز اختبار القافلة: ${r.tests.filter(t => t.pass).map(t => `${t.score}/10`).join('، ')}` : ''].filter(Boolean);
+  const more = [`أسئلة أُجيبت: ${r.answers}، ومراجعات: ${r.reviews}`, r.ms ? `قياس الشهر: ${r.ms}` : '', ...(r.sec ? r.sec.split(' · ') : [])].filter(Boolean);
+  return RG(`تقرير الجمعة — ${r.k.name} — واحة اللسان العربي\nمن ${days[6]} إلى ${days[0]}\n\nما ${f ? 'أحسنت' : 'أحسن'} فيه:\n${good.map(x => '- ' + x).join('\n')}\n\nوفي الأسبوع أيضًا:\n${more.map(x => '- ' + x).join('\n')}`, f); }
 async function renderWeekPanel(box){
   const recs = await recAll(); const rows = kids.map((k, i) => kidWeek(i, recs)); const days = weekDays();
-  box.innerHTML = `<p class="note">آخر سبعة أيام (${esc(days[6])} ← ${esc(days[0])}) لكل الأبناء. انسخ النص وأرسله في المجموعة العائلية أو احفظه.</p>
+  let who = Math.min(store.get('wkWho', 0), rows.length - 1);
+  box.innerHTML = `<p class="note">آخر سبعة أيام (${esc(days[6])} ← ${esc(days[0])}). الجدول وما يحتاج مراجعة لكم وحدكم. ونصّ التقرير لكل طفلٍ وحده، يبدأ بما أحسن فيه، ولا يدخله ما يتعثّر فيه.</p>
    <div class="tablewrap"><table class="dash"><tr><th></th>${rows.map(r => `<th>${esc(r.k.name)}</th>`).join('')}</tr>
    ${[['أيام اللعب', r => `${r.active}/7`], ['أسئلة', r => r.answers], ['مراجعات', r => r.reviews], ['متقَن جديد', r => r.newMastered], ['مراحل فُتحت', r => r.stages.length], ['تسجيلات (معتمدة)', r => `${r.rec} (${r.recOk})`], ['هدايا', r => r.gifts], ['اعمل به', r => r.amal], ['ثلاث لغات', r => r.tri], ['مستحق للمراجعة', r => r.due]].map(([l, f]) => `<tr><td>${l}</td>${rows.map(r => `<td>${f(r)}</td>`).join('')}</tr>`).join('')}</table></div>
-   ${rows.map(r => r.weak.length ? `<p class="lbl">${esc(r.k.name)} ${r.k.gender === 'f' ? 'تتعثّر' : 'يتعثّر'} في</p><ul style="margin:0;padding-right:1.2em">${r.weak.map(w => `<li>${esc(RG(describe(w.g, w.id), r.k.gender === 'f'))}</li>`).join('')}</ul>` : '').join('')}
-   <p class="lbl">نص التقرير</p><textarea class="f" id="wkText" rows="12" readonly style="width:100%;font-family:var(--f-ui);font-size:.95rem"></textarea>
-   <div class="btns" style="justify-content:flex-start"><button class="btn sm" type="button" id="wkCopy">انسخ النص</button><button class="btn ghost sm" type="button" id="wkSave">احفظ ملفًا</button></div><p class="fb" id="wkFb"></p>`;
-  const txt = weekText(rows); box.querySelector('#wkText').value = txt;
-  box.querySelector('#wkCopy').addEventListener('click', async () => { const fb = box.querySelector('#wkFb'); try { await navigator.clipboard.writeText(txt); fb.textContent = 'نُسخ.'; fb.className = 'fb ok'; } catch (e) { box.querySelector('#wkText').select(); fb.textContent = 'حدّد النص وانسخه.'; fb.className = 'fb bad'; } });
-  box.querySelector('#wkSave').addEventListener('click', () => saveFile(`taqrir-${days[0]}.md`, txt, box.querySelector('#wkFb')));
+   ${rows.some(r => r.weak.length) ? `<p class="lbl">لكم وحدكم: ما يحتاج مراجعة</p>` : ''}${rows.map(r => r.weak.length ? `<p class="note" style="margin:4px 0 0"><b>${esc(r.k.name)}</b></p><ul style="margin:0;padding-right:1.2em">${r.weak.map(w => `<li>${esc(RG(describe(w.g, w.id), r.k.gender === 'f'))}</li>`).join('')}</ul>` : '').join('')}
+   <p class="lbl">نص التقرير</p>${rows.length > 1 ? `<div class="chips" id="wkWho">${rows.map((r, i) => `<button class="chip2" type="button" data-i="${i}" aria-pressed="${i === who}">${esc(r.k.name)}</button>`).join('')}</div>` : ''}<textarea class="f" id="wkText" rows="12" readonly style="width:100%;font-family:var(--f-ui);font-size:.95rem"></textarea>
+   <div class="btns" style="justify-content:flex-start"><button class="btn sm" type="button" id="wkCopy">انسخوا النص</button><button class="btn ghost sm" type="button" id="wkSave">احفظوا ملفًا</button></div><p class="fb" id="wkFb"></p>`;
+  let txt = weekOne(rows[who], days); box.querySelector('#wkText').value = txt;
+  const wb = box.querySelector('#wkWho'); if (wb) wb.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; who = +b.dataset.i; store.set('wkWho', who); txt = weekOne(rows[who], days); box.querySelector('#wkText').value = txt; wb.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+  box.querySelector('#wkCopy').addEventListener('click', async () => { const fb = box.querySelector('#wkFb'); try { await navigator.clipboard.writeText(txt); fb.textContent = 'نُسخ.'; fb.className = 'fb ok'; } catch (e) { fb.textContent = 'لم يُنسخ شيء.'; fb.className = 'fb bad'; } });
+  box.querySelector('#wkSave').addEventListener('click', () => saveFile(`taqrir-${rows[who].k.name}-${days[0]}.md`, txt, box.querySelector('#wkFb')));
 }
 
 
@@ -1824,7 +2218,9 @@ async function voicePut(rec){ const d = await idb(); VX.cache[rec.id] = rec; ret
 async function voiceDel(id){ const d = await idb(); delete VX.cache[id]; return new Promise(res => { const t = d.transaction('voice', 'readwrite'); t.objectStore('voice').delete(id); t.oncomplete = res; t.onerror = res; }); }
 async function voiceAll(){ try { const d = await idb(); return await new Promise(res => { const q = d.transaction('voice').objectStore('voice').getAll(); q.onsuccess = () => res(q.result || []); q.onerror = () => res([]); }); } catch (e) { return []; } }
 /* القارئ الآلي: وقفٌ على آخر الكلمة، والتاء المربوطة هاءً، وحذف علامات الوقف القرآنية */
-function ttsText(text){ return String(text || '').replace(/[ۖ-ۭ]/g, '').replace(/[﴿﴾«»()\[\]]/g, ' ').replace(/([^\s.،؛؟!:…]+)(?=\s*(?:[.،؛؟!:…]|$))/gu, w => { const m = w.match(/^(.*?[ء-ي])([ً-ْٰ]*)$/u); if (!m) return w; let b = m[1]; const sh = m[2].includes('ّ') ? 'ّ' : ''; if (b.endsWith('ة')) b = b.slice(0, -1) + 'ه'; return b + sh; }).replace(/\s+/g, ' ').trim(); }
+/* the pause at the end of a phrase drops its last vowel, except the vowel of «you» (ـكَ ـكِ ـتَ ـتِ): without it «أحسنتِ» and «فيكِ»
+   reach the speech engine as «أحسنت» and «فيك», which it reads as said to a boy */
+function ttsText(text){ return String(text || '').replace(/[ۖ-ۭ]/g, '').replace(/[﴿﴾«»()\[\]]/g, ' ').replace(/([^\s.،؛؟!:…]+)(?=\s*(?:[.،؛؟!:…]|$))/gu, w => { if (/[كت]ّ?[َِ]$/u.test(w)) return w; const m = w.match(/^(.*?[ء-ي])([ً-ْٰ]*)$/u); if (!m) return w; let b = m[1]; const sh = m[2].includes('ّ') ? 'ّ' : ''; if (b.endsWith('ة')) b = b.slice(0, -1) + 'ه'; return b + sh; }).replace(/\s+/g, ' ').trim(); }
 let VOICE_AR = null;
 function pickVoice(){ if (!('speechSynthesis' in window)) return null; const vs = speechSynthesis.getVoices(); VOICE_AR = vs.find(v => /^ar/i.test(v.lang) && /female|zeina|hoda|salma|laila/i.test(v.name)) || vs.find(v => /^ar/i.test(v.lang)) || null; return VOICE_AR; }
 try { if ('speechSynthesis' in window){ pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; } } catch (e) {}
@@ -1833,16 +2229,19 @@ const SAY_T = [];
 function sayLater(parts, ms){ const t = setTimeout(() => { const i = SAY_T.indexOf(t); if (i >= 0) SAY_T.splice(i, 1); say(parts); }, ms || 150); SAY_T.push(t); return t; }
 /* إيقاف تسجيل جارٍ بلا حفظ (عند الخروج من البطاقة) حتى لا يبقى الميكروفون مفتوحًا والرفيق أخرس */
 function micAbort(){ const r = VX.rec; if (!r) return; VX.rec = null; r.aborted = true; try { r.rec.stop(); } catch (e) {} try { r.stream.getTracks().forEach(t => t.stop()); } catch (e) {} if (r.tick) clearInterval(r.tick); }
-function voiceStop(){ VX.token++; SAY_T.splice(0).forEach(clearTimeout); micAbort(); if (typeof companionTalk === 'function') companionTalk(false); try { if (VX.audio){ VX.audio.pause(); } } catch (e) {} VX.audio = null; try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch (e) {} document.querySelectorAll('audio').forEach(a => { try { if (!a.dataset.keep) a.pause(); } catch (e) {} }); }
+function voiceStop(){ if (typeof TL !== 'undefined' && TL && (TL.a || TL.o)) tlStop(); VX.token++; SAY_T.splice(0).forEach(clearTimeout); micAbort(); if (typeof companionTalk === 'function') companionTalk(false); try { if (VX.audio){ VX.audio.pause(); } } catch (e) {} VX.audio = null; try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch (e) {} document.querySelectorAll('audio').forEach(a => { try { if (!a.dataset.keep && !(a.parentElement && a.parentElement.dataset.keep)) a.pause(); } catch (e) {} }); }
 function ttsSay(text, tok){ return new Promise(res => { if (!('speechSynthesis' in window) || store.get('mute', false)){ res(); return; } try { const u = new SpeechSynthesisUtterance(ttsText(text)); u.lang = 'ar-SA'; if (VOICE_AR || pickVoice()) u.voice = VOICE_AR; u.rate = K() && K().age <= 8 ? 0.85 : 0.95; u.onend = u.onerror = () => res(); speechSynthesis.speak(u); setTimeout(res, 2500 + 160 * String(text).length); } catch (e) { res(); } }); }
 /* say(text | [parts]): كل جزء يُسمع بتسجيل ولي الأمر إن سُجّل، وإلا بالقارئ الآلي */
 async function say(parts, opts){
   if (VX.rec) return; voiceStop(); const tok = ++VX.token; parts = Array.isArray(parts) ? parts : [parts]; companionTalk(true);
-  for (const p of parts){ if (tok !== VX.token || !p) continue;
+  const onPart = opts && opts.onPart; let pi = -1;
+  for (const p of parts){ pi++; if (tok !== VX.token || !p) continue;
+    if (onPart) try { onPart(pi); } catch (e) {}
     const r = await voiceGet(lineKey(p));
     if (tok !== VX.token) break;
     if (r && r.blob){ await new Promise(res => { const u = URL.createObjectURL(r.blob); const a = new Audio(u); VX.audio = a; a.onended = a.onerror = () => { URL.revokeObjectURL(u); res(); }; const pp = a.play(); if (pp && pp.catch) pp.catch(() => res()); }); }
     else await ttsSay(p, tok); }
+  if (onPart) try { onPart(-1); } catch (e) {}
   if (tok === VX.token) companionTalk(false);
 }
 function companionTalk(on){ document.querySelectorAll('.cmp').forEach(e => e.classList.toggle('talk', !!on)); }
@@ -1901,17 +2300,20 @@ const CL = {
   ready: () => T('هيا نبدأ رحلة اليوم', 'هيا نبدأ رحلة اليوم'),
   greet: () => pick([T('مرحبًا! واحتك تنتظرك', 'مرحبًا! واحتكِ تنتظركِ'), T('اشتقتُ إليك! هيا نكمل الرحلة', 'اشتقتُ إليكِ! هيا نكمل الرحلة'), T('السلام عليكم! عندي لك رحلة جميلة اليوم', 'السلام عليكم! عندي لكِ رحلة جميلة اليوم')]),
   doneToday: () => T('أكملتَ رحلة اليوم! أحسنت', 'أكملتِ رحلة اليوم! أحسنتِ'),
-  right: () => pick([T('أحسنت!', 'أحسنتِ!'), 'ممتاز!', T('صحيح، بارك الله فيك', 'صحيح، بارك الله فيكِ'), T('رائع! أنت تتعلّم بسرعة', 'رائع! أنتِ تتعلّمين بسرعة')]),
+  right: () => pick([T('أحسنت!', 'أحسنتِ!'), 'ممتاز!', T('صحيح، بارك الله فيك', 'صحيح، بارك الله فيكِ'), T('رائع! تذكّرتَه جيدًا', 'رائع! تذكّرتِه جيدًا')]),
   near: () => T('قريب جدًّا! انظر إلى الصواب', 'قريب جدًّا! انظري إلى الصواب'),
   wrong: () => pick([T('لا بأس، انظر إلى الجواب الصحيح', 'لا بأس، انظري إلى الجواب الصحيح'), T('ليس هذا، لكنك ستتذكّره في المرة القادمة', 'ليس هذا، لكنكِ ستتذكّرينه في المرة القادمة')]),
-  recAsk: () => T('اقرأ هذا بصوتك، وسأحفظه لأبيك', 'اقرئي هذا بصوتكِ، وسأحفظه لأبيكِ'),
-  recDone: () => T('صوتك جميل! حفظتُه لأبيك', 'صوتكِ جميل! حفظتُه لأبيكِ'),
+  recAsk: () => T('اقرأ هذا بصوتك، وسأحفظه لأهلك', 'اقرئي هذا بصوتكِ، وسأحفظه لأهلكِ'),
+  recDone: () => T('صوتك جميل! حفظتُه لأهلك', 'صوتكِ جميل! حفظتُه لأهلكِ'),
   tripEnd: () => T('انتهت رحلة اليوم! انظر ماذا نبت في واحتك', 'انتهت رحلة اليوم! انظري ماذا نبت في واحتكِ'),
-  again: () => T('هل تريد رحلة أخرى؟', 'هل تريدين رحلة أخرى؟'),
+  again: () => '🔁 مراجعة إضافية', more: () => '✨ كلمات جديدة',
+  tellHome: w => T(`قبل أن تذهب: قل لأمّك أو لأبيك كلمةً تعلّمتها اليوم: «${w}»`, `قبل أن تذهبي: قولي لأمّكِ أو لأبيكِ كلمةً تعلّمتِها اليوم: «${w}»`),
+  untilTomorrow: () => T('انتهت رحلة اليوم. نلتقي غدًا إن شاء الله 🌙', 'انتهت رحلة اليوم. نلتقي غدًا إن شاء الله 🌙'),
   learn: () => T('تعلّم هذا معي', 'تعلّمي هذا معي'),
   listen: () => T('اسمع جيدًا، ثم أسألك', 'اسمعي جيدًا، ثم أسألكِ'),
   now: () => 'والآن:',
   remember: () => T('تذكُر هذا؟', 'تذكرين هذا؟'),
+  retry: () => T('لنجرّبه مرةً أخرى', 'لنجرّبه مرةً أخرى'),
   seeAnswer: () => T('انظر', 'انظري'),
 };
 /* كل صيغ جمل الرفيق (للمذكر والمؤنث) لاستوديو التسجيل */
@@ -1922,7 +2324,7 @@ let ACX = null;
 function chime(ok){ if (store.get('mute', false)) return; try { ACX = ACX || new (window.AudioContext || window.webkitAudioContext)(); const t = ACX.currentTime; (ok ? [523, 659, 784] : [330, 262]).forEach((f, i) => { const o = ACX.createOscillator(), g = ACX.createGain(); o.frequency.value = f; o.type = 'sine'; g.gain.setValueAtTime(0.0001, t + i * 0.11); g.gain.exponentialRampToValueAtTime(0.18, t + i * 0.11 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.11 + 0.28); o.connect(g).connect(ACX.destination); o.start(t + i * 0.11); o.stop(t + i * 0.11 + 0.3); }); if (navigator.vibrate) navigator.vibrate(ok ? 30 : [20, 40, 20]); } catch (e) {} }
 function cmpHappy(){ document.querySelectorAll('.cmp').forEach(e => { e.classList.remove('happy'); void e.offsetWidth; e.classList.add('happy'); }); }
 /* text: نص أو مصفوفة أجزاء (كل جزء يُبحث عن تسجيل الأب له على حدة، فالاسم والجملة جزءان) */
-function talkRow(text, opts){ const parts = Array.isArray(text) ? text.filter(Boolean) : [text]; const r = el('div','ktalk'); r.innerHTML = `<div class="cmp">${cmpSvg()}</div>`; const b = el('div','bubble'); b.innerHTML = esc(parts.reduce((acc, p, i) => i ? acc + (/[؟!.:،]$/.test(acc) ? ' ' : '، ') + p : p, '')); text = parts; const h = hearBtn(text); h.style.marginInlineStart = '8px'; b.appendChild(h); r.appendChild(b); if (!opts || opts.say !== false) sayLater(text, 150); return r; }
+function talkRow(text, opts){ const parts = Array.isArray(text) ? text.filter(Boolean) : [text]; const r = el('div','ktalk'); r.innerHTML = `<div class="cmp">${cmpSvg()}</div>`; const b = el('div','bubble'); b.innerHTML = esc(parts.reduce((acc, p, i) => i ? acc + (/[؟!.:،]$/.test(acc) ? ' ' : '، ') + p : p, '')); text = parts; const spoken = (opts && opts.hear) || text; const h = hearBtn(spoken); h.style.marginInlineStart = '8px'; b.appendChild(h); r.appendChild(b); if (!opts || opts.say !== false) sayLater(spoken, 150); return r; }
 const dates = () => store.get(`dates:${kid}`, 0);
 
 /* ---------------- أول لقاء ---------------- */
@@ -1954,7 +2356,7 @@ function renderHello(){
 function lastActiveDay(){ let best = null; store.keys().forEach(k => { const m = /^dailyDone:(\d+):(\d{4})-(\d\d)-(\d\d)$/.exec(k); if (m && +m[1] === kid){ const d = dayN(new Date(+m[2], +m[3] - 1, +m[4])); if (best == null || d > best) best = d; } }); return best; }
 function companionMemory(first){ const out = []; const last = lastActiveDay(); const gap = last == null ? 0 : dayN() - last - 1;   // أيام الغياب بين آخر رحلة واليوم
   if (last == null) out.push(T('مرحبًا! واحتك تنتظرك', 'مرحبًا! واحتكِ تنتظركِ'));
-  else if (first && gap >= 2) out.push(T(`غبتَ ${gap === 3 ? 'ثلاثة أيام' : gap <= 10 ? gap + ' أيام' : 'أيامًا كثيرة'}! اشتقتُ إليك`, `غبتِ ${gap === 3 ? 'ثلاثة أيام' : gap <= 10 ? gap + ' أيام' : 'أيامًا كثيرة'}! اشتقتُ إليكِ`));
+  else if (first && gap >= 2) out.push(T('أهلًا بعودتك! واحتك كما تركتها، هيا نكمل', 'أهلًا بعودتكِ! واحتكِ كما تركتِها، هيا نكمل'));   /* no count of days away: a missed day costs nothing */
   else out.push(CL.greet());
   const y = store.get(`bag:${kid}`, []).find(w => w.day === dayN() - 1 || w.day === dayN() - 2);
   if (first && y && Math.random() < .8){ const when = y.day === dayN() - 1 ? 'أمس' : 'قبل يومين'; out.push(T(`${when} تعلّمتَ كلمة «${y.w}». هل تذكر معناها؟`, `${when} تعلّمتِ كلمة «${y.w}». هل تذكرين معناها؟`)); }
@@ -1964,13 +2366,13 @@ function importMisses(){ const S = window.KZ_SECTIONS; if (!S || !S.misses) retu
   try { const seenAt = store.get(`missSeen:${kid}`, 0); const list = S.misses(kid, seenAt); const hsq = (DATA.hasaniya && DATA.hasaniya.quizzes) || [];
     list.forEach(x => { const ids = x.g === 'kz' ? [x.id] : hsq.filter(q => q.ref === x.id).map(q => q.id);
       ids.forEach(id => { if (!GEN[x.g] || !GEN[x.g](id)) return; const m = mget(x.g, id); if (m.lw != null && m.lw >= dayN(x.t)) return;
-        m.n++; m.wrong++; m.streak = 0; m.due = null; m.lw = dayN(x.t); m.t = Date.now(); store.set(MK(x.g, id), m);
+        m.n++; m.wrong++; m.streak = Math.max(0, m.streak - 1); m.due = dayN(x.t) + 1; m.lw = dayN(x.t); m.t = Date.now(); store.set(MK(x.g, id), m);
         const sn = seen(x.g); if (!sn.includes(id)){ sn.push(id); store.set(`seen:${kid}:${x.g}`, sn); } n++; }); });
     store.set(`missSeen:${kid}`, Date.now()); } catch (e) {}
   return n; }
 /* ما جمعه الطفل في القسمين الآخرين، في عدّاد مشهده: جواهر «كنوز البيان» (من الثامنة) ومحطات الحسنية */
 function secCounts(){ const S = window.KZ_SECTIONS; if (!S) return ''; let out = '';
-  try { if (K().age >= 8){ const z = S.kunuz(kid); if (z.gems) out += ` · 💎 ${z.gems}`; } const h = S.hasaniya(kid); if (h.stations) out += ` · 🐪 ${h.stations}`; } catch (e) {}
+  try { if (K().age >= 8){ const z = S.kunuz(kid); if (z.gems) out += `، 💎 ${z.gems}`; } const h = S.hasaniya(kid); if (h.stations) out += `، 🐪 ${h.stations}`; } catch (e) {}
   return out; }
 /* «سطر اليوم» و«تقرير الجمعة»: القسمان الآخران في سطر واحد لكل طفل */
 function secLine(i, since, k){ const S = window.KZ_SECTIONS; if (!S) return ''; const f = k.gender === 'f'; const parts = [];
@@ -1989,19 +2391,28 @@ async function renderKidHome(){ const tok = ++KH_TOK;
   const firstToday = !store.get(`greeted:${kid}:${today()}`, false);
   C.appendChild(talkRow(tripDone ? CL.doneToday() : [K().name, ...companionMemory(firstToday)], {say: firstToday})); store.set(`greeted:${kid}:${today()}`, true);
   /* رسالة من ولي الأمر لم تُسمع بعد */
-  try { const msgs = (await recAll()).filter(r => tok === KH_TOK && r.kind === 'من أبي' && r.to === kid && !r.heard).sort((a, b) => b.id.localeCompare(a.id)); if (msgs.length){ const m = msgs[0]; const box = el('div','kcard msg'); box.innerHTML = `<p class="kq" style="margin:0">💌 ${T('رسالة لك من أبيك', 'رسالة لكِ من أبيكِ')}${m.text ? `: ${esc(m.text)}` : ''}</p>`; const pl = el('button','bigplay','▶ ' + T('اسمعها', 'اسمعيها')); pl.type = 'button'; pl.style.marginTop = '6px';
-    pl.addEventListener('click', async () => { voiceStop(); if (m.blob){ const a = new Audio(URL.createObjectURL(m.blob)); a.dataset.keep = '1'; VX.audio = a; companionTalk(true); a.onended = () => companionTalk(false); a.play().catch(() => {}); } else if (m.text) say(m.text); m.heard = true; try { await recPut(m); } catch (e) {} pl.textContent = '✓ ' + T('سمعتَها', 'سمعتِها'); cmpHappy(); }); box.appendChild(pl); C.appendChild(box); } } catch (e) {}
+  try { const msgs = (await recAll()).filter(r => tok === KH_TOK && r.kind === 'من أبي' && r.to === kid && !r.heard).sort((a, b) => b.id.localeCompare(a.id)); if (msgs.length){ const m = msgs[0]; const box = el('div','kcard msg'); box.innerHTML = `<p class="kq" style="margin:0">💌 ${T('رسالة لك من أهلك', 'رسالة لكِ من أهلكِ')}${m.text ? `: ${esc(m.text)}` : ''}</p>`; const pl = el('button','bigplay','▶ ' + T('اسمعها', 'اسمعيها')); pl.type = 'button'; pl.style.marginTop = '6px';
+    pl.addEventListener('click', async () => { voiceStop(); if (m.blob){ const a = new Audio(URL.createObjectURL(m.blob)); a.dataset.keep = '1'; VX.audio = a; companionTalk(true); a.onended = () => companionTalk(false); a.play().catch(() => {}); } else if (m.text) say(m.text); m.heard = true; try { await recPut(m); } catch (e) {} pl.textContent = '✓ ' + T('سمعتَها', 'سمعتِها'); cmpHappy();
+      /* an answer to what the child said: the child answers back */
+      if (m.replyTo && !box.querySelector('.rpl')){ const rb = el('div','rpl'); box.appendChild(rb); micWidget(rb, {label: T('اضغط وأجب أهلك', 'اضغطي وأجيبي أهلكِ'), max: 60000, onSaved: async blob => { try { await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid, kidName: K().name, kind: 'أخبرني', ref: today(), text: 'جوابٌ على ردّ أهلي', date: today(), type: blob.type || 'audio/webm', blob, status: 'pending', notes: [], source: 'local', replyOf: m.id}); chime(true); cmpHappy(); say(T('شكرًا! سيسمعها أهلك', 'شكرًا! سيسمعها أهلكِ')); } catch (e) {} }}); } });
+    if (m.replyTo) box.querySelector('.kq').textContent = '💌 ' + T('أهلك يردّون على ما قلتَه', 'أهلكِ يردّون على ما قلتِه');
+    box.appendChild(pl); C.appendChild(box); } } catch (e) {}
   if (tok !== KH_TOK) return;
   { const y = store.get(`bag:${kid}`, []).find(w => w.day === dayN() - 1 || w.day === dayN() - 2); if (firstToday && y && !tripDone && C.firstChild && C.firstChild.textContent.includes(y.w)){ const rv = el('button','tiny', ((cmpGet() || {}).kind === 'owl' ? 'أريني المعنى' : 'أرني المعنى')); rv.type = 'button'; rv.addEventListener('click', () => { rv.replaceWith(el('p','lrn', `${y.w}: ${y.m}`)); say([y.w, y.m]); }); C.appendChild(rv); } }
-  const sc = el('div','kscene'); const ds = dayStreak(); sc.innerHTML = kidScene(u, '') + `<span class="cnt">🌴 ${tripsDone()} · 🟤 ${dates()}${secCounts()}${ds > 1 ? ` · 🔥 ${ds}` : ''}</span>` + (safePhoto(K().photo) ? `<span class="kav">${avatarHtml(K(), 44)}</span>` : ''); C.appendChild(sc);
+  const sc = el('div','kscene'); const wn = weekPlayed(); sc.innerHTML = kidScene(u, '') + `<span class="cnt">🌴 ${tripsDone()}، 🟤 ${dates()}${secCounts()}${wn ? (wn >= WEEK_GOAL ? '، ☀️ ' + T('أتممتَ الأسبوع', 'أتممتِ الأسبوع') : `، ☀️ ${wn} من ${WEEK_GOAL}`) : ''}</span>` + (safePhoto(K().photo) ? `<span class="kav">${avatarHtml(K(), 44)}</span>` : ''); C.appendChild(sc);
+  { const wr = weeklyReader(); if (wr){ const mine = wr.id === (window.KZ_IDS || [])[kid];
+      const line = mine ? T('🎙 أنتَ قارئ هذا الأسبوع! يسمع أهلك قراءتك.', '🎙 أنتِ قارئة هذا الأسبوع! يسمع أهلكِ قراءتكِ.') : `🎙 ${wr.g === 'f' ? 'قارئة' : 'قارئ'} هذا الأسبوع: ${wr.name}`;
+      const p = el('p','note', line); p.style.cssText = 'text-align:center;margin:0;font-weight:700'; p.appendChild(hearBtn(line)); C.appendChild(p); } }
   if (!tripDone){ const nx = el('p','note', T(`رحلة اليوم تكبر نخلتك وتأتيك بهدية جديدة`, `رحلة اليوم تكبر نخلتكِ وتأتيكِ بهدية جديدة`)); nx.style.cssText = 'text-align:center;margin:0'; C.appendChild(nx); }
   const t = store.get(`trip:${kid}:${today()}`, null);
-  const play = el('button', 'bigplay' + (tripDone ? ' done' : ''), tripDone ? '▶ رحلة إضافية' : t && t.i > 0 ? '▶ ⟨أكمل|أكملي⟩ رحلة اليوم' : '▶ رحلة اليوم'); play.type = 'button';
-  play.addEventListener('click', () => startTrip(tripDone)); C.appendChild(play);
-  if (tripDone && msDue()){ const mc = el('div','kcard'); mc.style.padding = '12px 14px'; mc.innerHTML = `<p class="lbl" style="margin:0">🧭 قياس الشهر</p><p style="margin:4px 0">${T('أسئلةٌ قليلة، ثلاث دقائق. لنعرف كم تعلّمت', 'أسئلةٌ قليلة، ثلاث دقائق. لنعرف كم تعلّمتِ')}</p>`; const mb = el('button','btn sm', '⟨ابدأ|ابدئي⟩'); mb.type = 'button'; mb.id = 'msGo'; mb.addEventListener('click', startMeasure); mc.appendChild(mb); C.appendChild(mc); }
+  const nd = tripDone ? dueCount() : 0;
+  if (tripDone){ const bye = el('p','ask', CL.untilTomorrow()); bye.style.cssText = 'text-align:center;margin:8px 0'; C.appendChild(bye); C.appendChild(moreRow()); }
+  else { const play = el('button', 'bigplay', t && t.i > 0 ? '▶ ⟨أكمل|أكملي⟩ رحلة اليوم' : '▶ رحلة اليوم'); play.type = 'button';
+    play.addEventListener('click', () => startTrip(false)); C.appendChild(play); }
+  if (tripDone && msDue()){ const mc = el('div','kcard'); mc.style.padding = '12px 14px'; mc.innerHTML = `<p class="lbl" style="margin:0">🧭 قياس الشهر</p><p style="margin:4px 0">${T('أسئلةٌ قليلة، ثلاث دقائق. لنعرف ما بقي معك', 'أسئلةٌ قليلة، ثلاث دقائق. لنعرف ما بقي معكِ')}</p>`; const mb = el('button','btn sm', '⟨ابدأ|ابدئي⟩'); mb.type = 'button'; mb.id = 'msGo'; mb.addEventListener('click', startMeasure); mc.appendChild(mb); C.appendChild(mc); }
   const row = el('div','krow');
   const all = await recAll(); const gifts = await dbAll('gift').catch(() => []); if (tok !== KH_TOK) return; const newGifts = gifts.filter(g => g.to === kid && g.status === 'sent').length;
-  const bagN = store.get(`bag:${kid}`, []).length;
+  const bagN = bagCounts().known;
   const tiles = [
     /* «كنوز البيان» مكتوبة لسنّ ٩–١٢: تظهر من الثامنة، أو لمن فتح له وليّ الأمر «كل الواحات» */
     ...(K().age >= 8 || store.get(`libOpen:${kid}`, false) ? [['💎', 'كنوز البيان', () => kunuzGo('kunuz'), 0]] : []),
@@ -2009,43 +2420,47 @@ async function renderKidHome(){ const tok = ++KH_TOK;
     ['👜', 'كلماتي', () => go('bag', 'kidBag'), bagN],
     ['🗣', '⟨قل|قولي⟩ الجملة', () => go('say', 'kidSay'), 0],
     ...(kids.length >= 2 ? [['👨‍👩‍👧‍👦', 'تحدّي العائلة', () => go('fam', 'kidFam'), 0]] : []),
+    ...(window.WAHA_AUDIO ? [['📖', 'التلاوة', () => go('rec', 'tilawa'), 0]] : []),
     ['🎙', 'صوتي', () => go('rec', 'recShelf'), 0],
     ['🎁', 'هداياي', () => go('rec', 'giftShelf'), newGifts],
     ['📻', 'الإذاعة', () => go('radio'), 0],
     ['🗺', 'كل الواحات', () => { LIB = true; go('home'); }, 0],
   ];
-  if (window.WAHA_APP) tiles.splice(2, 0, ['🐪', 'الحسنية', () => { location.href = 'hasaniya/index.html?kid=' + encodeURIComponent((window.KZ_IDS || [])[kid] || ''); }, 0]);
+  if (window.WAHA_APP) tiles.splice(2, 0, ['🐪', 'الحسنية', () => { kzLeave('hasaniya/index.html?kid=' + encodeURIComponent((window.KZ_IDS || [])[kid] || '')); }, 0]);
   if (K().age < 9 && !store.get(`libOpen:${kid}`, false)) tiles.splice(tiles.findIndex(t => t[1] === 'كل الواحات'), 1);
   tiles.forEach(([e, n, f, badge]) => { const b = el('button','ktile', `<span class="e">${e}</span>${n}${badge ? `<span class="n">${badge}</span>` : ''}`); b.type = 'button'; b.addEventListener('click', () => { voiceStop(); f(); }); row.appendChild(b); });
   C.appendChild(row);
   const amal = typeof amalToday === 'function' ? amalToday() : null;
   if (amal){ const log = store.get(`amalLog:${kid}`, []); const t = log.find(x => x.id === amal.id && x.date === today());
     const a = el('div','card'); a.style.padding = '12px 14px'; a.innerHTML = `<p class="lbl" style="margin:0">🌱 ⟨اعمل|اعملي⟩ به اليوم</p><p style="margin:4px 0;font-size:1.15rem;font-weight:700">${esc(amal.deed)}</p>`; const r = el('div','btns'); r.style.justifyContent = 'flex-start'; r.appendChild(hearBtn(amal.deed));
-    if (!t){ const b = el('button','btn sm','فعلتُها اليوم ✓'); b.type = 'button'; b.addEventListener('click', () => { log.push({id: amal.id, date: today(), confirmed: false}); store.set(`amalLog:${kid}`, log); chime(true); cmpHappy(); say(T('بارك الله فيك! سأخبر أباك', 'بارك الله فيكِ! سأخبر أباكِ')); renderKidHome(); }); r.appendChild(b); }
-    else r.appendChild(el('span', 'badge ' + (t.confirmed ? 'ok' : 'wait'), t.confirmed ? 'أكّدها أبوك ⭐' : 'سيراها أبوك'));
+    if (!t){ const b = el('button','btn sm','فعلتُها اليوم ✓'); b.type = 'button'; b.addEventListener('click', () => { log.push({id: amal.id, date: today(), confirmed: false}); store.set(`amalLog:${kid}`, log); chime(true); cmpHappy(); say(T('بارك الله فيك! سأخبر أهلك', 'بارك الله فيكِ! سأخبر أهلكِ')); renderKidHome(); }); r.appendChild(b); }
+    else r.appendChild(el('span', 'badge ' + (t.confirmed ? 'ok' : 'wait'), t.confirmed ? 'أكّدها أهلك ⭐' : 'سيراها أهلك'));
     a.appendChild(r); C.appendChild(a); }
 }
 
 /* ---------------- رحلة اليوم ---------------- */
 /* الألعاب بحسب العمر: الصغير (≤7) لا يرى الآجرومية ولا «من القائل» التصنيفي؛ القصص تُرشَّح بطولها وأسئلتها بنوعها */
-const G_AGE = { 7: ['hys', 'hyc', 'uk', 'gzd', 'gzw', 'hk', 'rl', 'nt', 'tri', 'hsq'], 9: ['hys', 'hyc', 'uk', 'gzd', 'gzw', 'hk', 'rl', 'nt', 'tri', 'wh', 'dct', 'ajc', 'hsq', 'kz'],
-  99: ['drv', 'cnj', 'irb', 'ajd', 'sha', 'shl', 'fill', 'pml', 'dct', 'gzw', 'gzf', 'ajc', 'nt', 'sfr', 'hk', 'wh', 'uk', 'tri', 'hsq', 'kz'] };
-/* رحلة واحدة من الأقسام كلها: في كل رحلة سؤال من المنظومة الحسنية، ومن الثامنة سؤال من «كنوز البيان» */
+/* 2.6: counting items in a poem (ajc) and naming a term from its definition (ajd) stay in «المتون», not in the trip */
+const G_AGE = { 7: ['hys', 'hyc', 'uk', 'gzd', 'gzw', 'hk', 'rl', 'nt', 'tri', 'hsq'], 9: ['hys', 'hyc', 'uk', 'gzd', 'gzw', 'hk', 'rl', 'nt', 'tri', 'wh', 'dct', 'hsq', 'kz'],
+  99: ['drv', 'cnj', 'irb', 'sha', 'shl', 'fill', 'pml', 'dct', 'gzw', 'gzf', 'nt', 'sfr', 'hk', 'wh', 'uk', 'tri', 'hsq', 'kz'] };
+/* رحلة واحدة من الأقسام كلها: في كل رحلة سؤال من المنظومة الحسنية، ومن الثامنة سؤال من «كنوز البيان»، كلاهما مما درسه الطفل هناك */
 const TRIP_ALWAYS = ['hsq', 'kz'];
 function gamesFor(age){ return G_AGE[age <= 7 ? 7 : age <= 9 ? 9 : 99]; }
 const SMALL_G = G_AGE[9], BIG_G = G_AGE[99];
-function genPick(g, avoid){ const ids = (POOL[g] ? POOL[g]() : []).filter(id => !avoid.has(g + '|' + id)); if (!ids.length) return null; const fresh = ids.filter(id => mget(g, id).n === 0), weak = ids.filter(id => { const m = mget(g, id); return m.n && m.streak < 2; }); const id = pick(weak.length && Math.random() < .6 ? weak : fresh.length ? fresh : ids); let q = null; try { q = GEN[g](id); } catch (e) {} return q && q.a && q.alts && q.alts.length ? {g, id, ...q} : null; }
+/* fresh: a new item first (the new words of a trip); otherwise a weak item now and then (the due ones come as reviews) */
+function genPick(g, avoid, fresh){ const ids = (POOL[g] ? POOL[g]() : []).filter(id => !avoid.has(g + '|' + id)); if (!ids.length) return null; const nw = ids.filter(id => mget(g, id).n === 0), weak = ids.filter(id => { const m = mget(g, id); return m.n && m.streak < 2 && !isDueM(m); }); const id = pick(fresh && nw.length ? nw : weak.length && Math.random() < .4 ? weak : nw.length ? nw : ids); let q = null; try { q = GEN[g](id); } catch (e) {} return q && q.a && q.alts && q.alts.length ? {g, id, ...q} : null; }
 /* علّم ثم اسأل: كل عنصر جديد تسبقه بطاقة «تعلّم» ثم بطاقة أخرى فاصلة ثم سؤاله (لا نسخ فوري)؛ الجواب بعد الدرس لا يُحتسب في سلسلة الإتقان.
    المنسي (خطأ بعد الدرس) يعود إليه درسه. القصة والمقالة تُقرآن كاملتين قبل أسئلتهما. الألغاز وحدها تحمل مادتها في سؤالها. */
 const SELF_G = new Set(['gzw', 'gzd', 'gzf']);
 const vtext = v => v ? `${v.text} (${v.name} ${v.a})` : '';
 const vsnip = v => v ? `${snip(v.text, v.word, 7)} (${v.name} ${v.a})` : '';
 const LEARN = {
+  /* the verse is never read by the device's voice: it is heard from the recitation pack (al-Husary), or not at all */
   kz: id => { const x = kzFind(id); if (!x) return null; const v = (x.L.verses || [])[0];
-    return {t: `كنوز البيان · ${KZD.axes[x.L.ax] || ''}`, big: v ? kzPlain(v.t) : x.L.title, body: [x.L.take, ...(x.L.secret || []).slice(0, 2)].map(kzPlain), quiet: v ? [`${v.n} ${v.a}`] : []}; },
+    return {t: `كنوز البيان · ${KZD.axes[x.L.ax] || ''}`, big: v ? kzPlain(v.t) : x.L.title, body: [x.L.take, ...(x.L.secret || []).slice(0, 2)].map(kzPlain), quiet: v ? [`${v.n} ${v.a}`, kzPlain(v.t)] : [], qv: v && v.s ? {s: v.s, a: v.a, b: v.a2 || v.a} : null}; },
   hys: id => { const x = HY.situations.find(q => q.id === id); return x && {t: 'ماذا نقول؟', big: x.options[0], body: [x.q, `في هذا الموقف نقول: ${x.options[0]}`]}; },
   hyc: id => { const t = HY.things.find(x => x.noun === id); const c = t && COLOR[t.color]; return c && {t: 'الألوان', big: `${t.noun} ${t.g === 'm' ? c.m : c.f}`, swatch: c.css, body: [`«${t.noun}» ${t.g === 'm' ? 'كلمة مذكّرة، فنقول: ' + c.m : 'كلمة مؤنّثة، فنقول: ' + c.f}`, `(مذكّر: ${c.m} · مؤنّث: ${c.f})`]}; },
-  uk: id => { const [k, l] = id.split('|'); const u = ALL[k] && ALL[k].unknown.find(x => x.lemma === l); return u && {t: 'كلمة جديدة', big: u.verse ? u.verse.word : u.lemma, bagWord: u.lemma, bagMeaning: u.meaning, body: [`${u.lemma}: ${u.meaning}`, u.verse ? `في القرآن: ${vsnip(u.verse)}` : ''], quiet: u.verse ? [vsnip(u.verse)] : []}; },
+  uk: id => { const [k, l] = id.split('|'); const u = ALL[k] && ALL[k].unknown.find(x => x.lemma === l); return u && {t: T('كلمة من جذرٍ تعرفه', 'كلمة من جذرٍ تعرفينه'), big: u.verse ? u.verse.word : u.lemma, bagWord: u.lemma, bagMeaning: u.meaning, body: [`${u.lemma}: ${u.meaning}`, u.verse ? `في القرآن: ${vsnip(u.verse)}` : ''], quiet: u.verse ? [vsnip(u.verse), u.verse.word] : [], qv: u.verse ? {s: u.verse.s, a: u.verse.a, b: u.verse.a} : null}; },
   hk: id => { const x = HIK.find(q => q.text === id); return x && {t: x.kind || 'مثل', big: x.text, body: [`معناه: ${x.meaning}`, x.when ? `نقوله ${x.when.replace(/^عندما/, 'عندما')}` : '']}; },
   rl: id => { const [k, q] = id.split('|'); const P = ALL[k]; const r = P && P.roles.find(x => x.q === q); if (!r) return null; const exact = P.family.filter(x => x.lemma === r.a), loose = P.family.filter(x => strip(x.lemma) === strip(r.a)); const f = exact[0] || (loose.length === 1 ? loose[0] : null); return {t: `من جذر ${P.root}`, big: r.a, bagWord: r.a, bagMeaning: f ? f.meaning : r.q.replace(/؟$/, ''), body: [`${r.q.replace(/؟$/, '')}؟ ← ${r.a}`, f ? `معناها: ${f.meaning}` : '', f && f.sentence ? f.sentence : '']}; },
   wh: id => { const x = HAD.items.find(q => q.id === id); return x && {t: x.catName || 'من القائل', big: x.focus, body: [`القائل: ${x.speaker || WHO_L[x.cat]}`, x.meaning ? `معناه: ${x.meaning}` : '', x.bookName ? `${x.bookName} ${x.ref || ''}` : ''], quiet: [x.bookName ? `${x.bookName} ${x.ref || ''}` : '']}; },
@@ -2058,26 +2473,43 @@ const LEARN = {
   irb: id => { const x = irbFind(id); return x && {t: 'الإعراب', big: x.s.sentence, body: [`«${x.w.w}»: ${x.w.i}`]}; },
   sha: id => { const x = SH.abyat.find(q => q.id === id); return x && {t: `بيت لـ${x.poet}`, big: x.verses.map(v => `${v.a} ۞ ${v.b}`).join('\n'), body: [x.meaning ? `معناه: ${x.meaning}` : '']}; },
   pml: id => { const [qid, li] = id.split('|'); const q = SH.qasaid.find(x => x.id === qid); const l = q && q.lines[+li]; return l && {t: `${q.title}، ${q.poet}`, big: l.text, body: [q.lesson || '']}; },
-  fill: id => { const [k, sa, w] = id.split('|'); let v = null; ALL[k] && ALL[k].family.forEach(f => f.verses.forEach(x => { if (`${x.s}:${x.a}` === sa && strip(x.word) === w) v = x; })); return v && {t: `سورة ${v.name}، الآية ${v.a}`, big: snip(v.text, v.word, 7), body: [`⟨انتبه|انتبهي⟩ للكلمة: ${v.word}`], quiet: [snip(v.text, v.word, 7)]}; },
+  fill: id => { const [k, sa, w] = id.split('|'); let v = null; ALL[k] && ALL[k].family.forEach(f => f.verses.forEach(x => { if (`${x.s}:${x.a}` === sa && strip(x.word) === w) v = x; })); return v && {t: `سورة ${v.name}، الآية ${v.a}`, big: snip(v.text, v.word, 7), body: [`⟨انتبه|انتبهي⟩ للكلمة: ${v.word}`], quiet: [snip(v.text, v.word, 7), `⟨انتبه|انتبهي⟩ للكلمة: ${v.word}`], qv: {s: v.s, a: v.a, b: v.a}}; },
   dct: id => { const x = DCT.find(y => strip(y.w) === id); return x && {t: 'كلمة', big: x.w, bagWord: x.w, bagMeaning: x.m, body: [`معناها: ${x.m}`]}; },
 };
 LEARN.shl = LEARN.sha;
 function learnCard(g, id){ let L = null; try { L = LEARN[g] && LEARN[g](id); } catch (e) {} if (!L) return null; L.body = (L.body || []).filter(Boolean); return {kind: 'learn', g: 'learn', id: g + '|' + id, ...L}; }
 /* يحتاج درسًا: لم يُعلَّم قط (ولم يُجب عنه صوابًا من قبل)، أو نُسي بعد الدرس (آخر خطأ بعد يوم الدرس وسلسلته صفر) */
-function needsLearn(c){ if (!c || SELF_G.has(c.g) || !LEARN[c.g]) return false; const m = mget(c.g, c.id); if (!m.lrn) return !m.ok; return m.streak === 0 && m.lw != null && m.lw > m.lrn; }
-function markLearned(g, id){ const m = mget(g, id); m.lrn = dayN(); store.set(MK(g, id), m); }
+function needsLearn(c){ if (!c || SELF_G.has(c.g) || !LEARN[c.g]) return false; const m = mget(c.g, c.id); if (!m.lrn) return (c.g === 'kz' || c.g === 'hsq') ? (m.wrong > 0 && !m.ok) : !m.ok; return m.streak === 0 && m.lw != null && m.lw > m.lrn; }
+function markLearned(g, id){ const m = mget(g, id); m.lrn = dayN(); if (m.f == null) m.f = dayN(); store.set(MK(g, id), m); }
 /* الجواب بعد الدرس مباشرة: يُسجَّل محاولةً، ولا يُحتسب في سلسلة الإتقان (الإتقان يُبنى على التذكّر لا على النسخ) */
-function awardAfter(g, id, ok){ const m = mget(g, id); m.n++; if (ok === true) m.ok++; else if (ok === false){ m.wrong++; m.streak = 0; m.due = null; m.lw = dayN(); } m.t = Date.now(); store.set(MK(g, id), m); const sn = seen(g); if (!sn.includes(id)){ sn.push(id); store.set(`seen:${kid}:${g}`, sn); }
+function awardAfter(g, id, ok){ const m = mget(g, id); m.n++; if (m.f == null) m.f = dayN(); if (ok === true){ m.ok++; if (m.due == null) m.due = dayN() + 1; } else if (ok === false){ m.wrong++; m.streak = Math.max(0, m.streak - 1); m.due = dayN() + 1; m.lw = dayN(); } m.t = Date.now(); store.set(MK(g, id), m); const sn = seen(g); if (!sn.includes(id)){ sn.push(id); store.set(`seen:${kid}:${g}`, sn); }
   /* the answers right after a lesson are a day of play too (the Friday report counts them) */
   const dk = `day:${kid}:${today()}`; const d = store.get(dk, {}); d[g] = (d[g] || 0) + 1; store.set(dk, d); refreshScores(); checkStages(); }
 /* القصة أو المقالة كاملة ثم سؤالان منها. للصغير: قصة قصيرة وأسئلة مباشرة فقط */
 const storyMinAge = x => { const n = (x.retell || '').split(/\s+/).length; return n <= 32 ? 6 : n <= 48 ? 8 : 10; };
 const qMinAge = q => /المغزى|جذر|مضحك|صورةً|صورة|قصد|الدرس|لماذا كلام|الأسماء|كم / .test(q.q) ? 10 : 6;
+/* the story of the week (idea 2): for the young, one story heard on up to four days of a week (repeated listening builds
+   understanding), its questions changing; a story the parents have recorded in their voice is chosen first */
+function weekKeyO(){ const d = new Date(); return ymd(new Date(d.getFullYear(), d.getMonth(), d.getDate() - (d.getDay() + 1) % 7)); }
+let NT_REC = new Set(); setTimeout(() => voiceAllSafe().then(a => { NT_REC = new Set(a.map(v => v.id)); }), 0);
+async function voiceAllSafe(){ try { return await voiceAll(); } catch (e) { return []; } }
 function storyPick(g, avoid){
+  if (g === 'nt' && K().age <= 8){ const wk = store.get(`ntWeek:${kid}`, null), now = weekKeyO();
+    if (wk && wk.w === now && wk.days.length < 4 && !wk.days.includes(today()) && !avoid.has('learn|nt|' + wk.id)){
+      const x = NT.stories.find(s => s.id === wk.id); if (x){ wk.days.push(today()); store.set(`ntWeek:${kid}`, wk); return storyGroup(g, x, avoid); } } }
+  return storyPickFresh(g, avoid);
+}
+function storyPickFresh(g, avoid){
   const age = K().age; const list = (g === 'nt' ? NT.stories : SF.articles).filter(x => g !== 'nt' || storyMinAge(x) <= age); const qs = x => (g === 'nt' ? x.questions.filter(q => qMinAge(q) <= age) : x.tf);
   const qIdx = x => (g === 'nt' ? x.questions : x.tf).map((q, i) => i).filter(i => g !== 'nt' || qMinAge(x.questions[i]) <= age);
   const fresh = x => qIdx(x).some(i => !mget(g, `${x.id}|${i}`).ok); const cand = list.filter(x => qIdx(x).length && !qIdx(x).some(i => avoid.has(g + '|' + x.id + '|' + i)) && !avoid.has('learn|' + g + '|' + x.id));   /* a story already in this trip (told or asked) is not picked again */
-  const x = pick(cand.filter(fresh).length ? cand.filter(fresh) : cand); if (!x) return [];
+  const pool = cand.filter(fresh).length ? cand.filter(fresh) : cand, mine = g === 'nt' ? pool.filter(x => NT_REC.has(lineKey(x.retell))) : [];
+  const x = pick(mine.length ? mine : pool); if (!x) return [];
+  if (g === 'nt' && age <= 8){ const wk = store.get(`ntWeek:${kid}`, null), now = weekKeyO(); if (!wk || wk.w !== now) store.set(`ntWeek:${kid}`, {w: now, id: x.id, days: [today()]}); }
+  return storyGroup(g, x, avoid);
+}
+function storyGroup(g, x, avoid){
+  const age = K().age; const qIdx = x => (g === 'nt' ? x.questions : x.tf).map((q, i) => i).filter(i => g !== 'nt' || qMinAge(x.questions[i]) <= age);
   const idx = shuffle(qIdx(x)).sort((a, b) => (mget(g, `${x.id}|${a}`).ok ? 1 : 0) - (mget(g, `${x.id}|${b}`).ok ? 1 : 0)).slice(0, 2);
   const gl = Object.entries(x.gloss || {}).map(([w, m]) => `${w}: ${m}`); const story = g === 'nt' ? {kind: 'learn', g: 'learn', id: 'nt|' + x.id, t: '⟨اسمع|اسمعي⟩ القصة', big: x.title, body: [x.retell], words: gl, story: true}
     : {kind: 'learn', g: 'learn', id: 'sfr|' + x.id, t: 'من صحيفة الواحة', big: x.title, body: [x.intro, ...(Array.isArray(x.body) ? x.body : [x.body])], words: gl, story: true};
@@ -2085,32 +2517,64 @@ function storyPick(g, avoid){
   return out.length > 1 ? out : [];
 }
 /* مراجعة القصة بعد أيام: سؤال واحد بلا إعادة القصة، مع سطر تذكير بها */
-function storyRecall(avoid){ const age = K().age; const cands = [];
-  NT.stories.forEach(x => { if (storyMinAge(x) > age) return; x.questions.forEach((q, i) => { if (qMinAge(q) > age) return; const id = `${x.id}|${i}`; const m = mget('nt', id); if (m.ok && m.streak < 2 && m.t && dayN() - dayN(m.t) >= 3 && !avoid.has('nt|' + id)) cands.push({x, i, id}); }); });
-  if (age >= 10) SF.articles.forEach(x => x.tf.forEach((q, i) => { const id = `${x.id}|${i}`; const m = mget('sfr', id); if (m.ok && m.streak < 2 && m.t && dayN() - dayN(m.t) >= 3 && !avoid.has('sfr|' + id)) cands.push({x, i, id, sfr: true}); }));
-  const c = pick(cands); if (!c) return null; const g = c.sfr ? 'sfr' : 'nt'; let q = null; try { q = GEN[g](c.id); } catch (e) {} if (!q) return null;
+/* a story question comes back when it is due (its review), or three days after it was first answered */
+function storyRecall(avoid){ const age = K().age; const cands = [], due = [];
+  const want = (g, id) => { const m = mget(g, id); if (avoid.has(g + '|' + id) || !m.ok) return 0; if (isDueM(m)) return 2; return m.streak < 2 && m.t && dayN() - dayN(m.t) >= 3 ? 1 : 0; };
+  NT.stories.forEach(x => { if (storyMinAge(x) > age) return; x.questions.forEach((q, i) => { if (qMinAge(q) > age) return; const id = `${x.id}|${i}`; const w = want('nt', id); if (w) (w === 2 ? due : cands).push({x, i, id}); }); });
+  if (age >= 10) SF.articles.forEach(x => x.tf.forEach((q, i) => { const id = `${x.id}|${i}`; const w = want('sfr', id); if (w) (w === 2 ? due : cands).push({x, i, id, sfr: true}); }));
+  const c = pick(due.length ? due : cands); if (!c) return null; const g = c.sfr ? 'sfr' : 'nt'; let q = null; try { q = GEN[g](c.id); } catch (e) {} if (!q) return null;
   q.q = q.q.replace(/^.+?:\s*(?=[^:]*$)/, ''); const first = c.sfr ? c.x.intro : (c.x.retell || '').split(/[.!؟]/)[0];
   return {g, id: c.id, ...q, kind: 'review', html: `<p class="note" style="margin:0 0 6px">${esc(c.sfr ? '⟨تذكّر|تذكّري⟩ مقالة' : '⟨تذكّر|تذكّري⟩ قصة')} «${esc(c.x.title)}»: ${esc(first)}.</p>` + (q.html || '')}; }
-const TRIP_V = 4;
-function buildTrip(extra){
+const TRIP_V = 5;
+/* 2.6: a fixed recipe instead of «always + weak + random».
+   1. reviews first, the oldest first: up to 10 words under nine and 15 from nine, with up to 3 other reviews (the family's rule);
+   2. under nine, a story heard and asked about;
+   3. two new words from the child's own memorised part, only once no word learnt waits for its review: the oasis exists for them;
+   4. one item of the next stage that a trip can reach;
+   5. the Hasaniya or «كنوز البيان»: one question at most, from what was studied there (under nine, every other day);
+   6. a story recall, then other games up to the day's number.
+   An extra trip, after the day's trip, is review only: nothing new, and it earns no dates. */
+const VOCAB_G = ['uk', 'rl', 'drv', 'fill', 'dct'];
+function nextStageFor(age){ return STAGES.find(s => !stageDone(s) && !stageLocked(s) && s.g && gamesFor(age).includes(s.g) && POOL[s.g] && POOL[s.g]().length) || null; }
+function buildTrip(extra, mode){
   importMisses();
   const age = K().age; const small = age <= 8; const want = age <= 7 ? 3 : small ? 4 : 5; const qs = [], avoid = new Set();
-  const add = c => { if (c && !avoid.has(c.g + '|' + c.id)){ qs.push([c]); avoid.add(c.g + '|' + c.id); } };
-  const due = dueList().filter(q => q.g !== 'nt' && q.g !== 'sfr'); due.slice(0, Math.max(2, Math.min(Math.ceil(due.length / 2), small ? 2 : 3))).forEach(q => add({...q, kind: 'review'}));
-  const ns = nextStage(); if (ns && ns.g && POOL[ns.g] && gamesFor(age).includes(ns.g)) for (let i = 0; i < 2; i++) add(genPick(ns.g, avoid));
-  for (const g of TRIP_ALWAYS) if (gamesFor(age).includes(g) && POOL[g]) add(genPick(g, avoid));
-  if (Math.random() < .7) add(storyRecall(avoid));
-  let storyDone = false; const pool = shuffle(gamesFor(age).filter(g => POOL[g]));
-  for (const g of pool){ if (qs.reduce((n, grp) => n + grp.filter(c => c.kind !== 'learn').length, 0) >= want) break;
-    if (g === 'nt' || g === 'sfr'){ if (storyDone) continue; const grp = storyPick(g, avoid); if (grp.length){ qs.push(grp); grp.forEach(c => avoid.add(c.g + '|' + c.id)); storyDone = true; } continue; }
-    add(genPick(g, avoid)); }
+  const add = c => { if (c && !avoid.has(c.g + '|' + c.id)){ qs.push([c]); avoid.add(c.g + '|' + c.id); return true; } return false; };
+  const ok = g => gamesFor(age).includes(g) && POOL[g] && POOL[g]().length > 0;
+  const due = dueList().filter(q => q.g !== 'nt' && q.g !== 'sfr');
+  /* the reviews (the family's rule): every word learnt comes back when it is due, the oldest first: up to 10 in a trip under nine
+     and 15 from nine (8 in an extra review), with up to 3 other reviews. And the safety valve: while some word learnt is still
+     waiting for its review, no new word comes in, so the reviews never pile up */
+  const vdue = due.filter(q => VOCAB_G.includes(q.g)), odue = due.filter(q => !VOCAB_G.includes(q.g));
+  const fresh = mode === 'new' && !vdue.length;
+  const vs = fresh ? 0 : Math.min(vdue.length, extra ? 8 : small ? 10 : 15), os = fresh ? 0 : Math.min(odue.length, extra ? 4 : 3);
+  const backlog = vdue.length - vs;
+  [...vdue.slice(0, vs), ...odue.slice(0, os)].forEach(q => add({...q, kind: 'review'}));
+  if (fresh){ const voc = shuffle(VOCAB_G.filter(ok)); let nv = 0; for (let round = 0; round < 2 && nv < 3; round++) for (const g of voc){ if (nv >= 3) break; if (add(genPick(g, avoid, true))) nv++; } }
+  let storyDone = false;
+  const story = g => { if (storyDone || !ok(g)) return; const grp = storyPick(g, avoid); if (grp.length){ qs.push(grp); grp.forEach(c => avoid.add(c.g + '|' + c.id)); storyDone = true; } };
+  if (!extra){
+    if (small) story('nt');
+    const voc = shuffle(VOCAB_G.filter(ok)); let nv = 0; const NEWN = backlog > 0 ? 0 : 2;
+    for (let round = 0; round < 2 && nv < NEWN; round++) for (const g of voc){ if (nv >= NEWN) break; if (add(genPick(g, avoid, true))) nv++; }
+    const ns = backlog > 0 ? null : nextStageFor(age); if (ns) add(genPick(ns.g, avoid));
+    /* one item from what was studied in the Hasaniya or «كنوز البيان»; for eight and under every other day, the two sections taking turns */
+    if (!small || dayN() % 2 === 0){ const ss = TRIP_ALWAYS.filter(ok); if (ss.length){ const turn = small ? Math.floor(dayN() / 2) : dayN(); const a = ss[turn % ss.length], b = ss[(turn + 1) % ss.length]; add(genPick(a, avoid)) || (b !== a && add(genPick(b, avoid))); } }
+  }
+  const sr = fresh ? null : storyRecall(avoid); if (sr && (extra || Math.random() < .7 || isDue(sr.g, sr.id))) add(sr);
+  if (!extra){ const pool = shuffle(gamesFor(age).filter(g => POOL[g] && !TRIP_ALWAYS.includes(g)));
+    for (const g of pool){ if (qs.reduce((n, grp) => n + grp.filter(c => c.kind !== 'learn').length, 0) >= want) break;
+      if (g === 'nt' || g === 'sfr'){ story(g); continue; }
+      add(genPick(g, avoid)); } }
   qs.forEach(grp => { if (grp.length === 1 && needsLearn(grp[0])){ const L = learnCard(grp[0].g, grp[0].id); if (L){ grp.unshift(L); grp[1].after = true; } } });
-  if (recCardDue()){ const rc = recCardPick(); if (rc) qs.splice(Math.min(qs.length, 2), 0, [rc]); }
+  if (!extra && recCardDue()){ const rc = recCardPick(); if (rc) qs.splice(Math.min(qs.length, 2), 0, [rc]); }
   /* الترتيب: الدرس، ثم بطاقة أخرى فاصلة، ثم سؤاله */
   const seq = []; let pending = null; const flush = () => { if (pending){ seq.push(pending); pending = null; } };
   qs.forEach(grp => { if (grp.length === 2 && grp[0].kind === 'learn' && !grp[0].story){ seq.push(grp[0]); flush(); pending = grp[1]; } else { seq.push(...grp); flush(); } });
   flush();
-  if (!extra){ if (tripsDone() % 2 === 1 && store.get(`bag:${kid}`, []).length) seq.push(seenCardPick()); seq.push({g: 'tell', id: 'tell', q: tellQuestion()}); }
+  /* the last lesson would be followed at once by its own question: put the card before it in between */
+  { const n = seq.length; if (n >= 3 && seq[n - 1].after && seq[n - 2].kind === 'learn' && seq[n - 3].kind !== 'learn' && !seq[n - 3].after){ const x = seq[n - 3]; seq[n - 3] = seq[n - 2]; seq[n - 2] = x; } }
+  if (!extra){ if (tripsDone() % 2 === 1 && store.get(`bag:${kid}`, []).length) seq.push(seenCardPick()); else if (small && store.get(`bag:${kid}`, []).length) seq.push(writeCardPick()); seq.push({g: 'tell', id: 'tell', q: tellQuestion()}); }
   return seq.filter(Boolean);
 }
 /* بطاقة التسجيل: كل رحلة للكبار، وكل ثالث رحلة للصغار */
@@ -2121,19 +2585,91 @@ function recCardPick(){
   const mt = MT[mtKey] || MT[MTK[0]]; if (mt && !small) { const v = pick(mt.verses.slice(0, 20)); c.push({kind:'متن', ref:`${mt.name} ${v.n}`, text:`${v.a} ۞ ${v.b}`}); }
   const h = pick(small ? HIK.filter(x => x.text.length <= 30) : HIK); if (h) c.push({kind:'مثل', ref:'الحكم والأمثال', text:h.text});
   const hd = pick(HAD.items.filter(i => i.cat === 'nabi' && (!small || i.focus.length <= 60))); if (hd) c.push({kind:'حديث', ref:`${hd.bookName} ${hd.ref}`, text:hd.focus});
+  /* a verse from the child's memorised part (idea 1, the revision of what is memorised): on every other recording card, heard first
+     from الحصري, then recited; the verse of the day turns through the memorised pages */
+  const mv = memoVerseOfDay(); if (mv && (small ? tripsDone() % 2 === 0 : dayN() % 3 === 0)) return {g: 'rec', id: 'rec', recItem: mv};
   const x = pick(c); return x ? {g: 'rec', id: 'rec', recItem: x} : null;
 }
+function memoVerseOfDay(){
+  const set = memoSet(), all = []; (DATA.quran && DATA.quran.pages || []).forEach(pg => pg.ayat.forEach(x => { if (set.has(`${x[0]}:${x[1]}`) && x[2] && x[2].split(/\s+/).length <= (K().age <= 8 ? 14 : 30)) all.push(x); }));
+  if (!all.length) return null; const x = all[(dayN() * 7 + kid) % all.length];
+  return {kind: 'آية', ref: `${SNAME(x[0])} ${AR_NUM(x[1])}`, text: x[2], quran: true, qv: hasH(x[0], x[1]) ? {s: x[0], a: x[1], b: x[1]} : null};
+}
 let TRIP = null;
-function startTrip(extra){
+/* «قارئ الأسبوع» chosen by the parents in the corner (the week runs from Saturday): every child's oasis shows it */
+function weeklyReader(){
+  try { const F = JSON.parse(localStorage.getItem('kb-family-v1') || 'null'); if (!F || !F.weekly) return null;
+    const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 1) % 7));
+    const wk = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const w = F.weekly[wk]; const k = w && (F.kids || []).find(x => x.id === w.kid); return k ? {id: k.id, name: k.name, g: k.g} : null; } catch (e) { return null; }
+}
+/* after the day's trip the child may go on, by choice: more review, or a short trip of new words with their lessons */
+function moreRow(){
+  const r = el('div','btns'); r.style.justifyContent = 'center';
+  const dl = dueList(), vd = dl.filter(q => VOCAB_G.includes(q.g)).length;
+  if (dl.length){ const a = el('button','btn ghost sm', CL.again()); a.type = 'button'; a.addEventListener('click', () => startTrip(true)); r.appendChild(a); }
+  /* new words wait until every word learnt has had its review */
+  if (!vd){ const b = el('button','btn ghost sm', CL.more()); b.type = 'button'; b.addEventListener('click', () => startTrip(true, 'new')); r.appendChild(b); }
+  else { const cn = vd === 1 ? 'كلمةٌ واحدة' : vd === 2 ? 'كلمتان' : `${AR_NUM(vd)} ${vd <= 10 ? 'كلمات' : 'كلمة'}`;
+    const n = el('p','note', T(`بقي من كلماتك ${cn} للمراجعة، وبعدها تأتيك كلمات جديدة.`, `بقي من كلماتكِ ${cn} للمراجعة، وبعدها تأتيكِ كلمات جديدة.`));
+    n.style.cssText = 'flex-basis:100%;text-align:center;margin:4px 0 0'; r.appendChild(n); }
+  return r;
+}
+function startTrip(extra, mode){
   const key = `trip:${kid}:${today()}`; let t = store.get(key, null);
-  if (!t || extra || t.done || t.v !== TRIP_V){ t = {v: TRIP_V, cards: buildTrip(!!extra), i: 0, res: [], done: false, extra: !!extra}; if (!extra) store.set(key, t); }
-  TRIP = {...t, key: extra ? null : key}; go('trip', 'kidTrip');
+  if (!t || extra || t.done || t.v !== TRIP_V){ t = {v: TRIP_V, cards: buildTrip(!!extra, mode), i: 0, res: [], done: false, extra: !!extra, d0: dates()}; if (!extra) store.set(key, t); }
+  TRIP = {...t, key: extra ? null : key}; { const p = partGet(); p.t = Date.now(); partSet(p); } go('trip', 'kidTrip');
 }
 /* a trip card whose recording is being saved (its skip button waits) */
 const SAVING = new WeakSet();
-function tripSave(){ if (TRIP.key) store.set(TRIP.key, {v: TRIP_V, cards: TRIP.cards, i: TRIP.i, res: TRIP.res, done: TRIP.done}); }
+function tripSave(){ if (TRIP.key) store.set(TRIP.key, {v: TRIP_V, cards: TRIP.cards, i: TRIP.i, res: TRIP.res, done: TRIP.done, d0: TRIP.d0}); }
+/* sittings (the parents' decision): play time is counted card by card (a card left open for long counts three minutes at most); after
+   20 minutes up to eight, or 30 minutes from nine to twelve, the trip pauses at the end of a card for a ten-minute break and keeps
+   its place. After the third sitting the child may stop for the day (the rest comes tomorrow) or go on after the break. Above twelve,
+   after half an hour the companion offers a break and the child chooses */
+const PART_MS = () => { const a = K().age; return a <= 8 ? 20 * 60000 : 30 * 60000; };
+const PART_FREE = () => K().age > 12;
+const BREAK_MS = 10 * 60000, PARTS_MAX = 3;
+function partGet(){ return store.get(`tripPart:${kid}:${today()}`, {n: 1, used: 0, until: 0, t: 0}); }
+function partSet(p){ store.set(`tripPart:${kid}:${today()}`, p); }
+function partTick(){ const p = partGet(), now = Date.now(); if (p.t && !p.until) p.used += Math.max(0, Math.min(now - p.t, 3 * 60000)); p.t = now; partSet(p); return p; }
+function tripStopToday(){ TRIP.cards = TRIP.cards.slice(0, TRIP.i); tripSave(); const q = partGet(); q.until = 0; q.used = 0; partSet(q); renderTrip(); }
+function tripOffer(C){
+  C.innerHTML = '';
+  C.appendChild(talkRow(T('مضت نصف ساعة. تستريح قليلًا أم تكمل؟', 'مضت نصف ساعة. تستريحين قليلًا أم تكملين؟')));
+  const go1 = el('button','bigplay','▶ ' + T('أكمل', 'أكمل')); go1.type = 'button';
+  const rest = el('button','btn ghost','☕ ' + T('أستريح، وأعود بعدها', 'أستريح، وأعود بعدها')); rest.type = 'button';
+  const next = () => { const q = partGet(); q.n++; q.used = 0; q.until = 0; q.t = Date.now(); partSet(q); };
+  go1.addEventListener('click', () => { next(); renderTrip(); });
+  rest.addEventListener('click', () => { next(); voiceStop(); go('kid'); });
+  C.append(go1, rest);
+}
+function tripBreak(C, p){
+  const left = () => Math.max(0, p.until - Date.now());
+  C.innerHTML = '';
+  const last = p.n >= PARTS_MAX;
+  C.appendChild(talkRow(last ? T('أحسنت! هذه ثالث جلسة اليوم. إن شئت أنهينا هنا، وما بقي يأتي غدًا، أو نكمل بعد الاستراحة.', 'أحسنتِ! هذه ثالث جلسة اليوم. إن شئتِ أنهينا هنا، وما بقي يأتي غدًا، أو نكمل بعد الاستراحة.')
+    : T('استراحة! العب وتحرّك قليلًا، ثم نكمل الرحلة.', 'استراحة! العبي وتحرّكي قليلًا، ثم نكمل الرحلة.')));
+  const box = el('div','kcard'); box.style.textAlign = 'center';
+  const clock = el('p','kq big'); clock.setAttribute('aria-live', 'polite'); box.appendChild(clock);
+  const on = el('button','bigplay','▶ نكمل الرحلة'); on.type = 'button'; on.disabled = true;
+  const home = el('button','tiny','🏠 واحتي'); home.type = 'button'; home.addEventListener('click', () => { voiceStop(); go('kid'); });
+  C.append(box, on);
+  if (last){ const stop = el('button','btn ghost','🌙 ' + T('أنهيتُ اليوم', 'أنهيتُ اليوم')); stop.type = 'button'; stop.addEventListener('click', () => { voiceStop(); tripStopToday(); }); C.appendChild(stop); }
+  C.appendChild(home);
+  const fmt = ms => { const s = Math.ceil(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+  const tick = () => { if (!document.body.contains(clock)){ clearInterval(iv); return; } const l = left(); clock.textContent = l ? `نكمل بعد ${fmt(l)}` : T('هيّا نكمل!', 'هيّا نكمل!'); on.disabled = l > 0; if (!l) clearInterval(iv); };
+  const iv = setInterval(tick, 1000); tick();
+  on.addEventListener('click', () => { if (left()) return; const q = partGet(); q.n++; q.used = 0; q.until = 0; q.t = Date.now(); partSet(q); renderTrip(); });
+}
 function renderTrip(){
   const C = $('kidTrip'); C.innerHTML = ''; if (!TRIP){ go('kid'); return; }
+  { const lim = PART_MS(); if (lim){ const p = partTick();
+      const rest = TRIP.cards.slice(TRIP.i).some(x => x && x.g !== 'tell' && x.g !== 'seen' && x.g !== 'write' && x.g !== 'rec');
+      if (p.until) return tripBreak(C, p);
+      if (rest && p.used >= lim){
+        if (PART_FREE()) return tripOffer(C);
+        p.until = Date.now() + BREAK_MS; partSet(p); chime(true); return tripBreak(C, p); } } }
   const top = el('div','row'); top.style.justifyContent = 'space-between';
   const x = el('button','tiny','✕ خروج'); x.type = 'button'; x.addEventListener('click', () => { voiceStop(); go('kid'); });
   const dots = el('div','dots'); TRIP.cards.forEach((c, i) => { const d = document.createElement('i'); if (c.kind === 'learn') d.className = 'learn' + (i < TRIP.res.length ? ' ok' : i === TRIP.i ? ' now' : ''); else if (i < TRIP.res.length) d.className = TRIP.res[i] === false && K().age > 8 ? 'bad' : 'ok'; else if (i === TRIP.i) d.className = 'now'; dots.appendChild(d); });
@@ -2142,38 +2678,56 @@ function renderTrip(){
   if (c.g === 'rec') return recCard(C, c);
   if (c.g === 'tell') return tellCard(C, c);
   if (c.g === 'seen') return seenCard(C, c);
+  if (c.g === 'write') return writeCard(C, c);
   if (c.kind === 'learn') return learnView(C, c);
   const prompt = c.q || '';
-  C.appendChild(talkRow(c.kind === 'review' ? [CL.remember(), prompt] : c.after ? [CL.now(), prompt] : prompt, {say: true}));
+  const lead = c.retry ? CL.retry() : c.kind === 'review' ? CL.remember() : c.after ? CL.now() : null, sp = c.qs || prompt;
+  C.appendChild(talkRow(lead ? [lead, prompt] : prompt, {say: true, hear: lead ? [lead, sp] : sp}));
   const card = el('div','kcard'); if (c.html) card.insertAdjacentHTML('beforeend', `<div class="kq">${c.html}</div>`);
-  const o = el('div','kopts'); const tb = el('div'); card.append(o, tb); const fb = el('p','fb'); card.appendChild(fb); C.appendChild(card);
+  if (c.qv && (() => { for (let a = c.qv.a; a <= c.qv.b; a++) if (!hasH(c.qv.s, a)) return false; return true; })()){ const rb = el('button','tiny', RES('▶ ⟨استمع|استمعي⟩ إلى الآية بصوت الحصري')); rb.type = 'button'; rb.addEventListener('click', () => recite(rb, c.qv)); card.appendChild(rb); }
+  const o = el('div','kopts'); const tb = el('div'); card.append(o, tb); const fb = el('p','fb'); fb.setAttribute('role', 'status'); card.appendChild(fb); C.appendChild(card);
   const next = el('button','bigplay','التالي ◀'); next.type = 'button'; next.hidden = true; C.appendChild(next);
   const done = st => { const ok = st === true || st === 'ok'; const near = st === 'near'; chime(ok); if (ok) cmpHappy();
-    if (c.after) awardAfter(c.g, c.id, ok ? true : near ? null : false); else { award(c.g, c.id, ok ? true : near ? null : false); if (!ok && !near){ const m = mget(c.g, c.id); m.lw = dayN(); store.set(MK(c.g, c.id), m); } }
-    TRIP.res.push(ok ? true : near ? 'near' : false); if (ok) store.set(`dates:${kid}`, dates() + 1);   /* «near» is almost right: shown kindly, not counted */
+    /* a date for a spaced success only (the item moved up a step), never in an extra trip or a second try */
+    const stepped = c.after ? (awardAfter(c.g, c.id, ok ? true : near ? null : false), false) : award(c.g, c.id, ok ? true : near ? null : false);
+    TRIP.res.push(ok ? true : near ? 'near' : false); if (ok && stepped && TRIP.key && !c.retry) store.set(`dates:${kid}`, dates() + 1);   /* «near» is almost right: shown kindly, not counted */
+    /* a review done in the trip counts as a review (the parent's report, the «الساقية» stage) */
+    if (c.kind === 'review' && !c.retry){ store.set(`rvDone:${kid}`, store.get(`rvDone:${kid}`, 0) + 1); store.set(`rvDay:${kid}:${today()}`, store.get(`rvDay:${kid}:${today()}`, 0) + 1); }
+    /* a wrong answer is asked again three cards later, after its correction has settled (it counts as an attempt, not a step) */
+    if (!ok && !near && !c.retry){ let at = Math.min(TRIP.i + 4, TRIP.cards.length); const end = TRIP.cards.findIndex((x, j) => j > TRIP.i && (x.g === 'tell' || x.g === 'seen')); if (end >= 0) at = Math.min(at, end);
+      TRIP.cards.splice(at, 0, {...c, retry: true, after: true});
+      /* a question from the Hasaniya or «كنوز البيان» was asked before its lesson: after a wrong answer the lesson comes next */
+      if ((c.g === 'kz' || c.g === 'hsq') && !c.after){ const L = learnCard(c.g, c.id); if (L) TRIP.cards.splice(TRIP.i + 1, 0, L); } }
     const line = ok ? CL.right() : near ? CL.near() : CL.wrong(); fb.textContent = ok ? line : `${line}: ${c.a}`; fb.className = 'fb ' + (ok ? 'ok' : near ? 'near' : 'bad'); say(ok ? line : [line, c.a]);
     if (c.why){ const w = el('p','lrn'); w.style.cssText = 'margin:6px 0 0;opacity:.85'; w.textContent = c.why; card.appendChild(w); }
-    else if (!ok && !near && K().age <= 9){ const L = learnCard(c.g, c.id); if (L && (L.big || L.body.length)){ const why = el('p','lrn'); why.style.cssText = 'margin:6px 0 0;opacity:.85'; why.textContent = [L.big, L.body[0]].filter(Boolean).join(' — ').slice(0, 160); card.appendChild(why); } }
+    else if (!ok && !near){ const L = learnCard(c.g, c.id);   /* every age: a wrong answer comes with its reason (the meaning, the pattern, the verse), not the answer alone */ if (L && (L.big || L.body.length)){ const why = el('p','lrn'); why.style.cssText = 'margin:6px 0 0;opacity:.85'; why.textContent = [L.big, L.body[0]].filter(Boolean).join(' — ').slice(0, 160); card.appendChild(why); } }
     TRIP.i++; tripSave(); next.hidden = false; next.focus(); };
-  if (c.type && tier() === 'big' && Math.random() < .5) typeBox(tb, c.a, {id:'ktIn', onDone: done});
+  /* a word missing from a verse is recalled, never chosen among other words dressed as the verse: from nine it is always typed */
+  if (c.type && tier() === 'big' && (c.g === 'fill' || Math.random() < .5)) typeBox(tb, c.a, {id:'ktIn', onDone: done});
   else mcq(o, optsOf(c.a, c.alts, K().age <= 7 ? 2 : 3), c.a, done, 'm');
   o.querySelectorAll('.opt').forEach(b => b.addEventListener('pointerdown', () => {}, {passive: true}));
   next.addEventListener('click', () => { voiceStop(); renderTrip(); window.scrollTo({top: 0}); });
 }
 /* حقيبة الكلمات: كل كلمة جديدة فهمها الطفل في درس تدخل حقيبته */
 const BAG_G = new Set(['uk', 'dct', 'drv', 'rl', 'tri']);
+/* a word of the bag is «known» once it was answered right on two different days (its step reached 2); until then it is being learnt */
+function bagKnown(it, i){ try { const p = String(it.id || '').split('|'); const g = p[0] === 'learn' ? p[1] : p[0], id = (p[0] === 'learn' ? p.slice(2) : p.slice(1)).join('|');
+  const raw = store.get(`m:${i == null ? kid : i}:${g}:${id}`, null); return !!(raw && raw.streak >= 2); } catch (e) { return false; } }
+function bagCounts(i){ const bag = store.get(`bag:${i == null ? kid : i}`, []); const k = bag.filter(x => bagKnown(x, i)).length; return {known: k, learning: bag.length - k}; }
 function bagAdd(c){ if (c.story) return; const [g] = c.id.split('|'); if (!BAG_G.has(g)) return; const w = c.bagWord || (c.big || '').split('\n')[0]; if (!w) return; const bag = store.get(`bag:${kid}`, []); if (bag.some(x => strip(x.w) === strip(w))) return; bag.unshift({w, m: c.bagMeaning || (c.body || [])[0] || '', g, id: c.id, day: dayN()}); store.set(`bag:${kid}`, bag.slice(0, 500)); }
 let KB_TOK = 0;
 async function renderKidBag(){ const tok = ++KB_TOK;
   const C = $('kidBag'); C.innerHTML = ''; const bag = store.get(`bag:${kid}`, []); const recs = (await recAll()).filter(r => r.kid === kid && r.kind === 'كلمة'); if (tok !== KB_TOK) return; C.innerHTML = ''; const recd = new Set(recs.map(r => r.text));
-  const top = el('div','row'); top.style.justifyContent = 'space-between'; const x = el('button','tiny','✕ خروج'); x.type = 'button'; x.addEventListener('click', () => { voiceStop(); go('kid'); }); top.append(el('span','chip', `👜 ${bag.length} ${bag.length === 1 ? 'كلمة' : bag.length === 2 ? 'كلمتان' : bag.length <= 10 ? 'كلمات' : 'كلمة'}`), x); C.appendChild(top);
+  const known = bag.filter(it => bagKnown(it)), learning = bag.filter(it => !bagKnown(it)), nW = n => n === 1 ? 'كلمة' : n === 2 ? 'كلمتان' : n >= 3 && n <= 10 ? 'كلمات' : 'كلمة';
+  const top = el('div','row'); top.style.justifyContent = 'space-between'; const x = el('button','tiny','✕ خروج'); x.type = 'button'; x.addEventListener('click', () => { voiceStop(); go('kid'); }); top.append(el('span','chip', `👜 ${known.length} ${nW(known.length)} ${T('عرفتَها', 'عرفتِها')}`), x); C.appendChild(top);
   C.appendChild(talkRow(bag.length ? T('هذه كلماتك. اسمعها، وقلها بصوتك', 'هذه كلماتكِ. اسمعيها، وقوليها بصوتكِ') : T('حقيبتك فارغة. كل كلمة تتعلّمها في الرحلة تدخل هنا', 'حقيبتكِ فارغة. كل كلمة تتعلّمينها في الرحلة تدخل هنا')));
   if (!bag.length) return;
   const list = el('div','kbag');
-  bag.forEach(it => { const d = el('div','kcard kw'); d.innerHTML = `<p class="kq" style="font-family:var(--f-q);margin:0">${esc(it.w)}</p>${it.m ? `<p class="lrn" style="margin:2px 0">${esc(it.m)}</p>` : ''}`; const row = el('div','row'); row.style.justifyContent = 'center'; row.appendChild(hearBtn([it.w, it.m].filter(Boolean)));
+  const head = (t, n) => { const h = el('p','lbl', `${t} (${n})`); h.style.cssText = 'grid-column:1/-1;margin:8px 0 0'; list.appendChild(h); };
+  [...(known.length ? [['كلماتٌ ' + T('عرفتُها', 'عرفتُها'), known]] : []), ...(learning.length ? [['كلماتٌ ' + T('أتعلّمها', 'أتعلّمها'), learning]] : [])].forEach(([t, arr]) => { head(t, arr.length); arr.forEach(it => { const d = el('div','kcard kw'); d.innerHTML = `${tier() === 'small' && picOf(it.w) ? `<p class="pic" aria-hidden="true">${picOf(it.w)}</p>` : ''}<p class="kq" style="font-family:var(--f-q);margin:0">${esc(it.w)}</p>${it.m ? `<p class="lrn" style="margin:2px 0">${esc(it.m)}</p>` : ''}`; const row = el('div','row'); row.style.justifyContent = 'center'; row.appendChild(hearBtn([it.w, it.m].filter(Boolean)));
     const mb = el('button','tiny', recd.has(it.w) ? '✓ ' + T('سجّلتَها', 'سجّلتِها') + ' · ⟨أعد|أعيدي⟩' : '🎙 ' + T('قلها بصوتك', 'قوليها بصوتكِ')); mb.type = 'button'; const box = el('div');
     mb.addEventListener('click', () => { if (box.childElementCount){ box.innerHTML = ''; return; } micWidget(box, {label: T('اضغط وقل الكلمة', 'اضغطي وقولي الكلمة'), max: 15000, onSaved: async blob => { try { await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid, kidName: K().name, kind: 'كلمة', ref: 'حقيبة الكلمات', text: it.w, date: today(), type: blob.type || 'audio/webm', blob, status: 'pending', notes: [], source: 'local'}); chime(true); cmpHappy(); mb.textContent = '✓ ' + T('سجّلتَها', 'سجّلتِها'); store.set(`dates:${kid}`, dates() + 1); } catch (e) {} }}); });
-    row.appendChild(mb); d.append(row, box); list.appendChild(d); });
+    row.appendChild(mb); d.append(row, box); list.appendChild(d); }); });
   C.appendChild(list);
 }
 INIT.kidBag = renderKidBag;
@@ -2185,7 +2739,7 @@ async function renderKidSay(){
   const top = el('div','row'); top.style.justifyContent = 'space-between'; const x = el('button','tiny','✕ خروج'); x.type = 'button'; x.addEventListener('click', () => { voiceStop(); SAY = null; go('kid'); });
   const dots = el('div','dots'); SAY.items.forEach((_, i) => { const d = document.createElement('i'); d.className = i < SAY.i ? 'ok' : i === SAY.i ? 'now' : ''; dots.appendChild(d); }); top.append(dots, x); C.appendChild(top);
   const it = SAY.items[SAY.i];
-  if (!it){ C.appendChild(talkRow(SAY.n ? T(`أحسنت! قلتَ ${SAY.n === 1 ? 'جملة' : SAY.n === 2 ? 'جملتين' : 'ثلاث جمل'} بصوتك، وسيسمعها أبوك`, `أحسنتِ! قلتِ ${SAY.n === 1 ? 'جملة' : SAY.n === 2 ? 'جملتين' : 'ثلاث جمل'} بصوتكِ، وسيسمعها أبوكِ`) : T('سمعتَ الجمل الثلاث. في المرة القادمة قلها بصوتك', 'سمعتِ الجمل الثلاث. في المرة القادمة قوليها بصوتكِ'))); cmpHappy(); chime(true); const h = el('button','bigplay','🏠 واحتي'); h.type = 'button'; h.addEventListener('click', () => { SAY = null; go('kid'); }); C.appendChild(h); return; }
+  if (!it){ C.appendChild(talkRow(SAY.n ? T(`أحسنت! قلتَ ${SAY.n === 1 ? 'جملة' : SAY.n === 2 ? 'جملتين' : 'ثلاث جمل'} بصوتك، وسيسمعها أهلك`, `أحسنتِ! قلتِ ${SAY.n === 1 ? 'جملة' : SAY.n === 2 ? 'جملتين' : 'ثلاث جمل'} بصوتكِ، وسيسمعها أهلكِ`) : T('سمعتَ الجمل الثلاث. في المرة القادمة قلها بصوتك', 'سمعتِ الجمل الثلاث. في المرة القادمة قوليها بصوتكِ'))); cmpHappy(); chime(true); const h = el('button','bigplay','🏠 واحتي'); h.type = 'button'; h.addEventListener('click', () => { SAY = null; go('kid'); }); C.appendChild(h); return; }
   C.appendChild(talkRow([it.q, T('ماذا تقول؟ قلها بصوتك', 'ماذا تقولين؟ قوليها بصوتكِ')]));
   const card = el('div','kcard'); const mb = el('div'); const rev = el('div'); rev.hidden = true; rev.innerHTML = `<p class="lrn">${T('نقول', 'نقول')}: <b>${esc(it.options[0])}</b></p>`; rev.appendChild(hearBtn(it.options[0])); card.append(mb, rev); C.appendChild(card);
   const next = el('button','bigplay','التالي ◀'); next.type = 'button'; next.hidden = true; C.appendChild(next);
@@ -2224,15 +2778,37 @@ function renderKidFam(){
   next.addEventListener('click', () => { voiceStop(); FAM.i++; renderKidFam(); window.scrollTo({top: 0}); });
 }
 INIT.kidFam = renderKidFam;
+/* the home languages (the parents' decision): Traditional Chinese with pinyin, and English, under a new word on its lesson card.
+   Off until the parents turn it on for a child in «واجهة الطفل» */
+const GLOSS = DATA.glosses || {}; let GLOSS_L = null;
+function glossOn(){ return !!store.get(`gloss:${kid}`, false); }
+function glossOf(c){
+  if (!glossOn() || !c || !c.bagWord) return null; const p = String(c.id || '').split('|');
+  let gl = GLOSS[`${p[1]}|${c.bagWord}`];
+  if (!gl){ if (!GLOSS_L){ GLOSS_L = {}; Object.keys(GLOSS).forEach(k => { GLOSS_L[strip(k.split('|').slice(1).join('|'))] = GLOSS[k]; }); } gl = GLOSS_L[strip(c.bagWord)]; }
+  return gl || null;
+}
+/* a picture for the concrete words (idea 10), on the lesson card and in the bag of eight and under: the word without reading */
+const PIC = {'كتاب':'📖','كاتب':'✍️','كتب':'✍️','مكتوب':'📝','سماء':'🌌','نار':'🔥','نور':'💡','منير':'💡','ظلمة':'🌑','ولد':'👦','ابن':'👦','بنون':'👦👦','والد':'👨','والدة':'👩','والدان':'👨‍👩','وليد':'👶','مولود':'👶',
+  'هدية':'🎁','رسالة':'✉️','قدور':'🍲','أنعام':'🐪🐄🐑','بناء':'🧱','بنى':'🧱','مبنية':'🏠','قرأ':'📖','قرآن':'📖','سمع':'👂','استمع':'👂','مستمع':'👂','سميع':'👂','بصر':'👁️','أبصر':'👁️','رأى':'👁️','مبصر':'👁️',
+  'أعلام':'⛰️','علامات':'🪧','قام':'🧍','خرج':'🚪','مخرج':'🚪','دعاء':'🤲','صدقة':'🪙','تنفس':'🌬️','قال':'🗣️','قائل':'🗣️','سأل':'🙋','سائل':'🙋','مسلم':'🕌','سلام':'👋','رحمة':'🤗','قريب':'🤏'};
+function picOf(w){ return w ? PIC[strip(w)] || '' : ''; }
+function glossHtml(gl){ return `<p class="hgloss"><span lang="zh-Hant">${esc(gl.zh)}</span> <span lang="zh-Latn" class="py">${esc(gl.py)}</span> <span lang="en">${esc(gl.en)}</span></p>`; }
+/* «٦ سنوات» but «١١ سنةً»: the counted noun agrees with the number */
+function ageWords(n){ return n >= 3 && n <= 10 ? `${n} سنوات` : `${n} سنة`; }
 function learnView(C, c){
   C.appendChild(talkRow(c.story ? CL.listen() : CL.learn(), {say: false}));
   const card = el('div','kcard learn'); card.innerHTML = `<span class="chip" style="align-self:center">📖 ${esc(c.t || '')}</span>${c.swatch ? `<span style="align-self:center;width:56px;height:56px;border-radius:50%;background:${c.swatch};border:2px solid var(--line)"></span>` : ''}${c.big ? `<p class="kq big" style="font-family:var(--f-q)">${esc(c.big).replace(/ ۞ /g, '<br>').replace(/\n/g, '<br><br>')}</p>` : ''}${c.body.map(b => `<p class="lrn">${esc(b)}</p>`).join('')}${c.words && c.words.length ? `<div class="kwords">${c.words.map(w => `<span>${esc(w)}</span>`).join('')}</div>` : ''}`;
+  { const pc = tier() === 'small' ? picOf(c.bagWord) : ''; if (pc){ const big = card.querySelector('.kq.big'); const p = el('p','pic', pc); p.setAttribute('aria-hidden', 'true'); (big ? big : card.firstChild).insertAdjacentElement('beforebegin', p); } }
+  { const gl = glossOf(c); if (gl){ const big = card.querySelector('.kq.big'); (big || card.firstChild).insertAdjacentHTML('afterend', glossHtml(gl)); } }
   const quiet = new Set((c.quiet || []).concat(c.body.filter(b => /^في القرآن:/.test(b))));
   const all = [c.big, ...c.body].filter(Boolean).filter(x => !quiet.has(x) && !/^(صحيح|سنن|الأربعون)/.test(x)).map(x => x.replace(/ ۞ /g, '، '));
-  const hb = hearBtn(all); hb.style.alignSelf = 'center'; card.appendChild(hb); C.appendChild(card);
+  const hb = hearBtn(all); hb.style.alignSelf = 'center'; card.appendChild(hb);
+  if (c.qv && (() => { for (let a = c.qv.a; a <= c.qv.b; a++) if (!hasH(c.qv.s, a)) return false; return true; })()){ const rb = el('button','tiny', RES('▶ ⟨استمع|استمعي⟩ إلى الآية بصوت الحصري')); rb.type = 'button'; rb.style.alignSelf = 'center'; rb.addEventListener('click', () => recite(rb, c.qv)); card.appendChild(rb); }
+  C.appendChild(card);
   sayLater(all, 250); if (!c.story){ const [g, ...rest] = c.id.split('|'); markLearned(g, rest.join('|')); }
   const ok = el('button','bigplay', T('فهمتُ ◀', 'فهمتُ ◀')); ok.type = 'button'; C.appendChild(ok);
-  ok.addEventListener('click', () => { voiceStop(); if (TRIP.cards[TRIP.i] !== c) return; if (!c.story) store.set(`dates:${kid}`, dates() + 1); bagAdd(c); TRIP.res.push(null); TRIP.i++; tripSave(); renderTrip(); window.scrollTo({top: 0}); });
+  ok.addEventListener('click', () => { voiceStop(); if (TRIP.cards[TRIP.i] !== c) return; bagAdd(c); TRIP.res.push(null); TRIP.i++; tripSave(); renderTrip(); window.scrollTo({top: 0}); });
 }
 /* «أخبرني»: سؤال مفتوح عن يوم الطفل يجيب عنه بصوته؛ يصل إلى الأب في «سطر اليوم» */
 const TELL_Q = [
@@ -2244,35 +2820,65 @@ const TELL_Q = [
   ['ما آخر شيء اشتريتموه للبيت؟', 'ما آخر شيء اشتريتموه للبيت؟'], ['ماذا تفعل أمك الآن؟', 'ماذا تفعل أمكِ الآن؟'], ['أي سورة تحب أن تقرأ؟ ولماذا؟', 'أي سورة تحبين أن تقرئي؟ ولماذا؟'],
   ['صف لي الطريق من بيتك إلى المدرسة.', 'صفي لي الطريق من بيتكِ إلى المدرسة.'], ['ما الذي تعلّمته اليوم ولم تكن تعرفه؟', 'ما الذي تعلّمتِه اليوم ولم تكوني تعرفينه؟'],
 ];
+/* a frame to start the answer, for eight and under (idea 3): said after the question, and shown under it */
+const TELL_F = ['أكلتُ اليومَ … ثمّ …', 'في الصباحِ … ثمّ …', 'لعبَ معي … ولعبنا …', 'أجملُ شيءٍ رأيتُه …', 'أحبُّ أن آكلَ غدًا …', 'في غرفتي … و…', 'قرأتُ اليومَ … وحفظتُ …', 'أضحكني …', 'بعدَ ذلك …', 'الآنَ …', 'الطقسُ اليومَ …', 'لوني المفضّلُ … لأنّ …', 'أريدُ أن ⟨أكونَ|أكونَ⟩ …', '⟨صديقي اسمُه|صديقتي اسمُها⟩ … ونحبُّ …', 'في حقيبتي …', 'اشترينا …', 'أمّي الآنَ …', 'أحبُّ أن أقرأَ سورةَ … لأنّ …', 'أخرجُ من البيتِ، ثمّ …', 'تعلّمتُ اليومَ …'];
+function tellFrame(q){ const i = TELL_Q.findIndex(p => p[0] === q || p[1] === q); return i >= 0 && TELL_F[i] ? RES(TELL_F[i]) : ''; }
 function tellQuestion(){ const asked = store.get(`tellAsked:${kid}`, []); const idx = TELL_Q.map((_, i) => i).filter(i => !asked.includes(i)); const i = pick(idx.length ? idx : TELL_Q.map((_, j) => j)); asked.push(i); store.set(`tellAsked:${kid}`, asked.slice(-15)); return T(TELL_Q[i][0], TELL_Q[i][1]); }
 function tellCard(C, c){
-  C.appendChild(talkRow([T('قبل أن نختم، أخبرني بالعربية', 'قبل أن نختم، أخبريني بالعربية'), c.q]));
-  const card = el('div','kcard'); card.innerHTML = `<p class="kq" style="margin:0">${esc(c.q)}</p><p class="lrn">${T('قل جملة أو جملتين بصوتك، وسيسمعها أبوك', 'قولي جملة أو جملتين بصوتكِ، وسيسمعها أبوكِ')}</p>`; const mb = el('div'); card.appendChild(mb); C.appendChild(card);
+  /* the question is said with the companion's line (a child who does not read yet must know what she is asked), and has its own 🔊 */
+  const lead = T('قبل أن نختم، أخبرني بالعربية', 'قبل أن نختم، أخبريني بالعربية'), fr = tier() === 'small' ? tellFrame(c.q) : '';
+  C.appendChild(talkRow(lead, {say: false})); sayLater([lead, c.q, fr ? T('ابدأ هكذا: ', 'ابدئي هكذا: ') + fr.replace(/…/g, '') : ''], 150);
+  const card = el('div','kcard'); card.innerHTML = `<p class="kq" style="margin:0">${esc(c.q)}</p><p class="lrn">${T('قل جملة أو جملتين بصوتك، وسيسمعها أهلك', 'قولي جملة أو جملتين بصوتكِ، وسيسمعها أهلكِ')}</p>`; card.querySelector('.kq').appendChild(hearBtn(c.q)); if (fr){ const f = el('p','lrn', `${T('ابدأ هكذا', 'ابدئي هكذا')}: «${fr}»`); card.insertBefore(f, card.querySelector('.lrn')); } const mb = el('div'); card.appendChild(mb); C.appendChild(card);
   const next = el('button','bigplay','التالي ◀'); next.type = 'button'; next.hidden = true; C.appendChild(next);
   const skip = el('button','tiny', T('ليس الآن', 'ليس الآن')); skip.type = 'button'; C.appendChild(skip);
   micWidget(mb, {label: T('اضغط وأخبرني', 'اضغطي وأخبريني'), max: 60000, onSaved: async blob => { if (!document.body.contains(mb)) return;
     SAVING.add(c); try { await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid, kidName: K().name, kind: 'أخبرني', ref: today(), text: c.q, date: today(), type: blob.type || 'audio/webm', blob, status: 'pending', notes: [], source: 'local'}); } catch (e) { mb.appendChild(el('p','fb bad','تعذّر حفظ التسجيل.')); return; } finally { SAVING.delete(c); }
-    if (TRIP.cards[TRIP.i] !== c) return; chime(true); cmpHappy(); say(T('شكرًا! سأحفظها لأبيك', 'شكرًا! سأحفظها لأبيكِ')); if (!next.hidden) return; store.set(`dates:${kid}`, dates() + 2); TRIP.res.push(true); TRIP.i++; tripSave(); next.hidden = false; skip.remove(); }});
+    if (TRIP.cards[TRIP.i] !== c) return; chime(true); cmpHappy(); say(T('شكرًا! سأحفظها لأهلك', 'شكرًا! سأحفظها لأهلكِ')); if (!next.hidden) return; store.set(`dates:${kid}`, dates() + 2); TRIP.res.push(true); TRIP.i++; tripSave(); next.hidden = false; skip.remove(); }});
   const adv = () => { voiceStop(); renderTrip(); window.scrollTo({top: 0}); };
   next.addEventListener('click', adv); skip.addEventListener('click', () => { if (TRIP.cards[TRIP.i] !== c || SAVING.has(c)) return; TRIP.res.push(null); TRIP.i++; tripSave(); adv(); });
 }
 /* «رأيتُها اليوم»: كلمة من حقيبته يربطها ببيته: جملة بصوته، أو صورة من الجهاز */
 function seenCardPick(){ const bag = store.get(`bag:${kid}`, []); const done = store.get(`seenDone:${kid}`, []); const w = bag.find(x => !done.includes(x.w)) || bag[0]; return w ? {g: 'seen', id: 'seen|' + w.w, word: w.w, meaning: w.m} : null; }
+/* handwriting for eight and under (idea 7), every other trip: today's word written in the child's notebook and photographed.
+   Writing by hand fixes the letters and the spelling; the photo goes to the parents like a recording */
+function writeCardPick(){ const bag = store.get(`bag:${kid}`, []); const w = bag.find(x => x.day === dayN()) || bag[0]; return w ? {g: 'write', id: 'write|' + w.w, word: w.w, meaning: w.m} : null; }
+function writeCard(C, c){
+  const line = T(`اكتب كلمة «${c.word}» في دفترك بخطّك، ثم صوّرها`, `اكتبي كلمة «${c.word}» في دفتركِ بخطّكِ، ثم صوّريها`);
+  C.appendChild(talkRow(line));
+  const card = el('div','kcard'); card.innerHTML = `<p class="kq big" style="font-family:var(--f-q);margin:0">${esc(c.word)}</p>${c.meaning ? `<p class="lrn">${esc(c.meaning)}</p>` : ''}`; C.appendChild(card);
+  const shot = el('button','bigplay','📷 ' + T('صوّر ما كتبت', 'صوّري ما كتبتِ')); shot.type = 'button'; C.appendChild(shot);
+  const fb = el('p','fb'); fb.setAttribute('role', 'status'); C.appendChild(fb);
+  const next = el('button','bigplay','التالي ◀'); next.type = 'button'; next.hidden = true; C.appendChild(next);
+  const skip = el('button','tiny','ليس الآن'); skip.type = 'button'; C.appendChild(skip);
+  const adv = () => { voiceStop(); renderTrip(); window.scrollTo({top: 0}); };
+  shot.addEventListener('click', () => { const f = document.createElement('input'); f.type = 'file'; f.accept = 'image/*'; f.setAttribute('capture', 'environment');
+    f.onchange = () => { const file = f.files[0]; if (!file) return; const img = new Image(), url = URL.createObjectURL(file);
+      img.onload = () => { const cv = document.createElement('canvas'), n = 720, r = Math.min(1, n / Math.max(img.width, img.height)); cv.width = Math.round(img.width * r); cv.height = Math.round(img.height * r); cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); URL.revokeObjectURL(url);
+        cv.toBlob(async blob => { if (!blob || TRIP.cards[TRIP.i] !== c) return; SAVING.add(c);
+          try { await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid, kidName: K().name, kind: 'كتابتي', ref: c.word, text: c.word, date: today(), type: 'image/jpeg', blob, status: 'pending', notes: [], source: 'local'}); } catch (e) { fb.textContent = 'تعذّر حفظ الصورة.'; fb.className = 'fb bad'; return; } finally { SAVING.delete(c); }
+          chime(true); cmpHappy(); say(T('جميل! سيراها أهلك', 'جميل! سيراها أهلكِ')); store.set(`dates:${kid}`, dates() + 2); TRIP.res.push(true); TRIP.i++; tripSave(); shot.remove(); skip.remove(); next.hidden = false; }, 'image/jpeg', .8); };
+      img.onerror = () => URL.revokeObjectURL(url); img.src = url; };
+    f.click(); });
+  next.addEventListener('click', adv); skip.addEventListener('click', () => { if (TRIP.cards[TRIP.i] !== c || SAVING.has(c)) return; TRIP.res.push(null); TRIP.i++; tripSave(); adv(); });
+}
 function seenCard(C, c){
   C.appendChild(talkRow([T('تذكر كلمة', 'تذكرين كلمة') + ` «${c.word}»؟`, T('ابحث في بيتك عن شيء يشبهها أو يذكّرك بها، وقل جملة عنها', 'ابحثي في بيتكِ عن شيء يشبهها أو يذكّركِ بها، وقولي جملة عنها')]));
   const card = el('div','kcard'); card.innerHTML = `<p class="kq big" style="font-family:var(--f-q);margin:0">${esc(c.word)}</p>${c.meaning ? `<p class="lrn">${esc(c.meaning)}</p>` : ''}`; const mb = el('div'); const ph = el('div'); card.append(mb, ph); C.appendChild(card);
   const next = el('button','bigplay','التالي ◀'); next.type = 'button'; next.hidden = true; C.appendChild(next);
   const skip = el('button','tiny', 'ليس الآن'); skip.type = 'button'; C.appendChild(skip);
   const finish = () => { if (!next.hidden || TRIP.cards[TRIP.i] !== c) return; const d = store.get(`seenDone:${kid}`, []); d.push(c.word); store.set(`seenDone:${kid}`, d.slice(-200)); chime(true); cmpHappy(); store.set(`dates:${kid}`, dates() + 2); TRIP.res.push(true); TRIP.i++; tripSave(); next.hidden = false; skip.remove(); };
-  micWidget(mb, {label: T('اضغط وقل الجملة', 'اضغطي وقولي الجملة'), max: 30000, onSaved: async blob => { if (!document.body.contains(mb)) return; SAVING.add(c); try { await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid, kidName: K().name, kind: 'رأيتُها اليوم', ref: c.word, text: c.word, date: today(), type: blob.type || 'audio/webm', blob, status: 'pending', notes: [], source: 'local'}); } catch (e) { mb.appendChild(el('p','fb bad','تعذّر حفظ التسجيل.')); return; } finally { SAVING.delete(c); } if (TRIP.cards[TRIP.i] !== c) return; say(T('جميل! سيراها أبوك', 'جميل! سيراها أبوكِ')); finish(); }});
+  micWidget(mb, {label: T('اضغط وقل الجملة', 'اضغطي وقولي الجملة'), max: 30000, onSaved: async blob => { if (!document.body.contains(mb)) return; SAVING.add(c); try { await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid, kidName: K().name, kind: 'رأيتُها اليوم', ref: c.word, text: c.word, date: today(), type: blob.type || 'audio/webm', blob, status: 'pending', notes: [], source: 'local'}); } catch (e) { mb.appendChild(el('p','fb bad','تعذّر حفظ التسجيل.')); return; } finally { SAVING.delete(c); } if (TRIP.cards[TRIP.i] !== c) return; say(T('جميل! سيراها أهلك', 'جميل! سيراها أهلكِ')); finish(); }});
   const pb = el('button','tiny','📷 ' + T('أو صوّرها', 'أو صوّريها')); pb.type = 'button'; ph.appendChild(pb);
-  pb.addEventListener('click', () => { const f = document.createElement('input'); f.type = 'file'; f.accept = 'image/*'; f.setAttribute('capture', 'environment'); f.onchange = async () => { const file = f.files[0]; if (!file) return; const img = new Image(); const url = URL.createObjectURL(file); img.onload = async () => { const cv = document.createElement('canvas'); const n = 480; const r = Math.min(1, n / Math.max(img.width, img.height)); cv.width = Math.round(img.width * r); cv.height = Math.round(img.height * r); cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); URL.revokeObjectURL(url); cv.toBlob(async blob => { try { await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid, kidName: K().name, kind: 'رأيتُها اليوم', ref: c.word, text: c.word, date: today(), type: 'image/jpeg', blob, status: 'pending', notes: [], source: 'local'}); const im = document.createElement('img'); im.src = URL.createObjectURL(blob); im.style.cssText = 'max-width:60%;border-radius:12px;display:block;margin:6px auto'; ph.appendChild(im); say(T('صورة جميلة! سيراها أبوك', 'صورة جميلة! سيراها أبوكِ')); finish(); } catch (e) { ph.appendChild(el('p','fb bad','تعذّر حفظ الصورة.')); } }, 'image/jpeg', .8); }; img.src = url; }; f.click(); });
+  pb.addEventListener('click', () => { const f = document.createElement('input'); f.type = 'file'; f.accept = 'image/*'; f.setAttribute('capture', 'environment'); f.onchange = async () => { const file = f.files[0]; if (!file) return; const img = new Image(); const url = URL.createObjectURL(file); img.onload = async () => { const cv = document.createElement('canvas'); const n = 480; const r = Math.min(1, n / Math.max(img.width, img.height)); cv.width = Math.round(img.width * r); cv.height = Math.round(img.height * r); cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); URL.revokeObjectURL(url); cv.toBlob(async blob => { try { await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid, kidName: K().name, kind: 'رأيتُها اليوم', ref: c.word, text: c.word, date: today(), type: 'image/jpeg', blob, status: 'pending', notes: [], source: 'local'}); const im = document.createElement('img'); im.src = URL.createObjectURL(blob); im.style.cssText = 'max-width:60%;border-radius:12px;display:block;margin:6px auto'; ph.appendChild(im); say(T('صورة جميلة! سيراها أهلك', 'صورة جميلة! سيراها أهلكِ')); finish(); } catch (e) { ph.appendChild(el('p','fb bad','تعذّر حفظ الصورة.')); } }, 'image/jpeg', .8); }; img.src = url; }; f.click(); });
   const adv = () => { voiceStop(); renderTrip(); window.scrollTo({top: 0}); };
   next.addEventListener('click', adv); skip.addEventListener('click', () => { if (TRIP.cards[TRIP.i] !== c || SAVING.has(c)) return; TRIP.res.push(null); TRIP.i++; tripSave(); adv(); });
 }
 function recCard(C, c){
   const it = c.recItem; C.appendChild(talkRow(CL.recAsk()));
-  const card = el('div','kcard'); card.innerHTML = `<span class="chip" style="align-self:center">${esc(it.kind)} · ${esc(it.ref)}</span><p class="kq" style="font-family:var(--f-q)">${esc(it.text).replace(' ۞ ', '<br>')}</p>`; card.querySelector('.kq').appendChild(hearBtn(it.text)); C.appendChild(card);
+  const card = el('div','kcard'); card.innerHTML = `<span class="chip" style="align-self:center">${esc(it.kind)} · ${esc(it.ref)}</span><p class="kq" style="font-family:var(--f-q)">${esc(it.text).replace(' ۞ ', '<br>')}</p>`;
+  if (it.qv){ const rb = el('button','tiny', RES('▶ ⟨استمع|استمعي⟩ إليها بصوت الحصري أولًا')); rb.type = 'button'; rb.addEventListener('click', () => recite(rb, it.qv)); card.appendChild(rb); }
+  else if (!it.quran) card.querySelector('.kq').appendChild(hearBtn(it.text));   /* a verse is never read by the speech engine */
+  C.appendChild(card);
   const mb = el('div'); C.appendChild(mb); const next = el('button','bigplay','التالي ◀'); next.type = 'button'; next.hidden = true; C.appendChild(next);
   const skip = el('button','tiny', T('تخطَّ هذه المرة', 'تخطَّي هذه المرة')); skip.type = 'button'; C.appendChild(skip);
   micWidget(mb, {label: T('اضغط وسجّل', 'اضغطي وسجّلي'), onSaved: async blob => { if (!document.body.contains(mb) || TRIP.cards[TRIP.i] !== c && next.hidden) return;
@@ -2295,12 +2901,15 @@ function tripEnd(){
   if (first && !TRIP.gotDeco && TRIP.key){ const n = tripsDone() + 1; store.set(`tripsDone:${kid}`, n); const owned = store.get(`deco:${kid}`, []); const k = DECO_ORDER[(n - 1) % DECO_ORDER.length]; owned.push({k, slot: n - 1}); store.set(`deco:${kid}`, owned); TRIP.gotDeco = k; }
   if (TRIP.key){ store.set(`dailyDone:${kid}:${TRIP.key.split(':')[2]}`, true); }
   if (first){ tripLogSave(); }
-  C.innerHTML = ''; C.appendChild(talkRow(`${CL.tripEnd()}`)); cmpHappy(); chime(true);
+  const w = store.get(`bag:${kid}`, []).find(x => x.day === dayN());
+  C.innerHTML = ''; C.appendChild(talkRow(`${CL.tripEnd()}`, {say: false})); sayLater([CL.tripEnd(), TRIP.key && w ? CL.tellHome(w.w) : ''], 150); cmpHappy(); chime(true);
   const u = unlockedSet(); if (store.get(`planted:${kid}`, false)) u.add('seed');
-  const sc = el('div','kscene'); sc.innerHTML = kidScene(u, TRIP.gotDeco || '') + `<span class="cnt">🟤 +${ok} · ${dates()}</span>`; C.appendChild(sc);
+  const sc = el('div','kscene'); sc.innerHTML = kidScene(u, TRIP.gotDeco || '') + `<span class="cnt" aria-label="تمرات السلّة ${dates()}">🟤 ${dates()}${(() => { const g = TRIP.d0 != null ? dates() - TRIP.d0 : 0; return g > 0 ? ` (+${g} اليوم)` : ''; })()}</span>`; C.appendChild(sc);
   if (TRIP.gotDeco){ const g = el('p','ask', `${T('هديتك من الرحلة', 'هديتكِ من الرحلة')}: ${DECO[TRIP.gotDeco].name} ${DECO[TRIP.gotDeco].e}`); g.style.cssText = 'text-align:center;font-weight:800;margin:0'; C.appendChild(g); }
   const home = el('button','bigplay','🏠 واحتي'); home.type = 'button'; home.addEventListener('click', () => { TRIP = null; go('kid'); }); C.appendChild(home);
-  const more = el('button','tiny', CL.again()); more.type = 'button'; more.addEventListener('click', () => startTrip(true)); C.appendChild(more);
+  /* the day closes here: a word to say at home, and no invitation to another trip; only reviews still due may follow */
+  if (TRIP.key && w){ const t = el('p','note', CL.tellHome(w.w)); t.style.cssText = 'text-align:center;margin:6px 0'; t.appendChild(hearBtn(CL.tellHome(w.w))); C.appendChild(t); }
+  C.appendChild(moreRow());
   checkStages();
 }
 /* واحة الطفل: نخلته التي تكبر مع كل رحلة + هدية زينة لكل رحلة مكتملة، فوق مشهد المراحل */
@@ -2321,7 +2930,10 @@ DECO.pot = {name:'جَرّة', e:'🏺', svg: (x, y) => `<path d="M${x - 5} ${y 
 DECO.ladybug = {name:'دعسوقة', e:'🐞', svg: (x, y) => `<g transform="translate(${x} ${y - 5})"><ellipse rx="6" ry="4.5" fill="#c8352b"/><path d="M0 -4.5 v9" stroke="#2b2416" stroke-width="1"/><circle cx="-3" cy="-1" r="1.1" fill="#2b2416"/><circle cx="3" cy="1" r="1.1" fill="#2b2416"/><circle cx="-6" cy="0" r="2" fill="#2b2416"/></g>`};
 DECO.star = {name:'نجمة', e:'⭐', svg: (x, y) => `<path d="M${x} ${y - 20} l2.4 5 5.5 .6 -4 3.8 1 5.4 -4.9 -2.7 -4.9 2.7 1 -5.4 -4 -3.8 5.5 -.6 Z" fill="#f6c453" stroke="#c9a46a" stroke-width=".8"/>`};
 const DECO_SLOTS = [[150,262],[560,266],[300,276],[470,272],[90,272],[640,262],[240,284],[400,288],[520,286],[40,286],[340,262],[600,284],[180,286],[440,262],[680,282],[120,262]];
-function kidPalm(){ const n = tripsDone(); if (!store.get(`planted:${kid}`, false)) return ''; if (n < 1) return SC.seed(); const s = Math.min(2.3, 0.8 + n * 0.07); return svgPalm(360, 252, s); }
+/* the palm grows with what the child knows, not with the number of trips: each item right on two different days, and
+   again for each one still right at a later review */
+function learnedN(){ let n = 0; Object.keys(GNAME).forEach(g => seen(g).forEach(id => { const st = mget(g, id).streak; if (st >= 2) n++; if (st >= 3) n++; })); return n; }
+function kidPalm(){ const n = tripsDone(); if (!store.get(`planted:${kid}`, false)) return ''; if (n < 1) return SC.seed(); const s = Math.min(2.3, 0.8 + learnedN() * 0.04); return svgPalm(360, 252, s); }
 function kidScene(u, newDeco){ const base = sceneSvg(new Set([...u].filter(k => k !== 'seed')), ''); const owned = store.get(`deco:${kid}`, []);
   const extra = kidPalm() + owned.map((d, i) => { const [x, y] = DECO_SLOTS[d.slot % DECO_SLOTS.length]; const yy = y - Math.floor(d.slot / DECO_SLOTS.length) * 6; return `<g transform="translate(${x} ${yy}) scale(2.4) translate(${-x} ${-yy})"><g class="${d.k === newDeco && i === owned.length - 1 ? 'new' : ''}" style="transform-origin:${x}px ${yy}px">${DECO[d.k].svg(x, yy)}</g></g>`; }).join('');
   const hint = owned.length || tripsDone() || store.get(`planted:${kid}`, false) ? '' : '';
@@ -2333,14 +2945,23 @@ SOLO_BOX.seed = [330, 200, 60];
 /* ---------------- استوديو صوت الرفيق (لولي الأمر) ---------------- */
 async function renderVoiceStudio(box){
   const lines = clVariants(); const have = new Set((await voiceAll()).map(v => v.id));
-  box.innerHTML = `<p class="note">سجّل جمل الرفيق بصوتك؛ ما سجّلتَه يسمعه الأطفال بصوتك، وما لم تسجّله يقرؤه الجهاز آليًّا. التسجيل لكل جملة بصيغتها (للولد والبنت). سجّلتَ ${lines.filter(l => have.has(lineKey(l))).length} من ${lines.length}.</p><div class="queue" id="vsList"></div>`;
+  box.innerHTML = `<p class="note">سجّلوا جمل الرفيق بصوتكم؛ ما سجّلتموه يسمعه الأطفال بصوتكم، وما لم تسجّلوه يقرؤه الجهاز آليًّا. التسجيل لكل جملة بصيغتها (للولد والبنت). سجّلتم ${lines.filter(l => have.has(lineKey(l))).length} من ${lines.length}.</p><div class="queue" id="vsList"></div>`;
   const L = box.querySelector('#vsList');
-  lines.forEach(l => { const id = lineKey(l); const d = el('div','qi'); d.innerHTML = `<div class="row" style="justify-content:space-between"><span style="font-weight:700">${esc(l)}</span>${have.has(id) ? '<span class="badge ok">بصوتك</span>' : '<span class="badge wait">آلي</span>'}</div>`;
+  lines.forEach(l => { const id = lineKey(l); const d = el('div','qi'); d.innerHTML = `<div class="row" style="justify-content:space-between"><span style="font-weight:700">${esc(l)}</span>${have.has(id) ? '<span class="badge ok">بصوتكم</span>' : '<span class="badge wait">آلي</span>'}</div>`;
     const row = el('div','btns'); row.style.justifyContent = 'flex-start';
-    const hb = el('button','btn ghost sm','▶ اسمع'); hb.type = 'button'; hb.addEventListener('click', () => say(l)); row.appendChild(hb);
-    const rb = el('button','btn sm', have.has(id) ? '🎙 أعد التسجيل' : '🎙 سجّل'); rb.type = 'button'; rb.addEventListener('click', () => { rb.remove(); const m = el('div'); d.appendChild(m); micWidget(m, {label: 'اضغط وقل الجملة', onSaved: async blob => { await voicePut({id, text: l, blob, type: blob.type, date: today()}); renderVoiceStudio(box); }}); }); row.appendChild(rb);
+    const hb = el('button','btn ghost sm','▶ اسمعوا'); hb.type = 'button'; hb.addEventListener('click', () => say(l)); row.appendChild(hb);
+    const rb = el('button','btn sm', have.has(id) ? '🎙 أعيدوا التسجيل' : '🎙 سجّلوا'); rb.type = 'button'; rb.addEventListener('click', () => { rb.remove(); const m = el('div'); d.appendChild(m); micWidget(m, {label: 'اضغطوا وقولوا الجملة', onSaved: async blob => { await voicePut({id, text: l, blob, type: blob.type, date: today()}); renderVoiceStudio(box); }}); }); row.appendChild(rb);
     if (have.has(id)){ const db = el('button','btn ghost sm','🗑'); db.type = 'button'; db.addEventListener('click', async () => { await voiceDel(id); renderVoiceStudio(box); }); row.appendChild(db); }
     d.appendChild(row); L.appendChild(d); });
+  /* the stories of the trip (idea 2): read in a parent's voice, a story is heard as told at home, and it is chosen first */
+  const ST = el('div'); ST.innerHTML = `<p class="lbl" style="margin-top:14px">الحكايات بصوتكم</p><p class="note">اقرؤوا الحكاية كما تُروى لطفل. ما سجّلتموه يأتي في رحلة الصغار قبل غيره، وتُسمع حكاية الأسبوع في أربعة أيام منه.</p>`; box.appendChild(ST);
+  NT.stories.forEach(x => { const id = lineKey(x.retell); const d = el('div','qi'); d.innerHTML = `<div class="row" style="justify-content:space-between"><span style="font-weight:700">${esc(x.title)}</span>${have.has(id) ? '<span class="badge ok">بصوتكم</span>' : '<span class="badge wait">آلي</span>'}</div><p class="note" style="margin:4px 0">${esc(x.retell)}</p>`;
+    const row = el('div','btns'); row.style.justifyContent = 'flex-start';
+    const rb = el('button','btn sm', have.has(id) ? '🎙 أعيدوا التسجيل' : '🎙 سجّلوا الحكاية'); rb.type = 'button';
+    rb.addEventListener('click', () => { rb.remove(); const m = el('div'); d.appendChild(m); micWidget(m, {label: 'اضغطوا واقرؤوا الحكاية', max: 180000, onSaved: async blob => { await voicePut({id, text: x.retell, blob, type: blob.type, date: today()}); NT_REC.add(id); renderVoiceStudio(box); }}); });
+    row.appendChild(rb);
+    if (have.has(id)){ const pb = el('button','btn ghost sm','▶ اسمعوا'); pb.type = 'button'; pb.addEventListener('click', () => say(x.retell)); row.appendChild(pb); const db = el('button','btn ghost sm','🗑'); db.type = 'button'; db.addEventListener('click', async () => { await voiceDel(id); NT_REC.delete(id); renderVoiceStudio(box); }); row.appendChild(db); }
+    d.appendChild(row); ST.appendChild(d); });
 }
 
 /* ---------------- التوجيه ---------------- */
@@ -2356,20 +2977,20 @@ INIT.kidTrip = () => renderTrip();
 /* ================= قياس الشهر: أسئلة ثابتة لكل طفل من الأقسام كلها، تُعاد كل ثلاثين يومًا =================
    لا درس قبلها ولا تمور ولا أثر لها في الإتقان: هي مقياس فقط، فيرى وليّ الأمر أين كان طفله وأين صار.
    الأسئلة نفسها كل شهر (تُختار مرة واحدة بمعرّف الطفل وتُحفظ)، فالفرق بين قياسين هو ما تعلّمه فعلًا. */
-const MS_PLAN = {7: ['hys', 'hyc', 'uk', 'hk', 'hsq'], 9: ['uk', 'hk', 'wh', 'dct', 'hsq', 'kz'], 99: ['uk', 'drv', 'dct', 'ajd', 'hsq', 'kz']};
-const MS_PER = 2, MS_DAYS = 30;
+/* «قياس الشهر» (2.6): a check of what stays. Ten questions (twelve from nine) drawn afresh each month from what the child met two
+   weeks ago or more, without feedback, hints or dates. It says how much of what was learned is still known; a fixed form of
+   ten questions from pools of hundreds could not show a month's learning, and repeating it taught its own answers. */
+const MS_DAYS = 30, MS_AGE = 14, MS_SKIP = new Set(['rc', 'gift', 'tri', 'kq', 'mtn', 'gzr', 'nto', 'sfo']);
 let MS = null;
-function msHash(s){ let h = 2166136261; for (const c of String(s)){ h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
-function msRand(seed){ let x = seed || 1; return () => { x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0; return x / 4294967296; }; }
-function msForm(){
-  const f = store.get(`msForm:${kid}`, null); if (f && f.v === 1 && f.items.length) return f.items;
-  const age = K().age, plan = MS_PLAN[age <= 7 ? 7 : age <= 9 ? 9 : 99], rnd = msRand(msHash((window.KZ_IDS || [])[kid] || K().name)); const items = [];
-  plan.forEach(g => { if (!POOL[g]) return; const ids = POOL[g]().slice().sort();
-    for (let i = ids.length - 1; i > 0; i--){ const j = Math.floor(rnd() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
-    let k = 0; for (const id of ids){ if (k >= MS_PER) break; let q = null; try { q = GEN[g](id); } catch (e) {} if (q && q.a && q.alts && q.alts.length){ items.push({g, id}); k++; } } });
-  store.set(`msForm:${kid}`, {v: 1, items, age}); return items; }
+/* «what stayed» asks only about words (no riddles that carry their own clue, no story questions), and only about what the child once
+   answered right, two weeks ago or more: it measures what stayed of what was learnt, not what was tried */
+const MS_G = ['uk', 'rl', 'drv', 'fill', 'dct'];
+function msPool(){ const out = []; MS_G.forEach(g => { if (!GEN[g]) return; seen(g).forEach(id => { const m = mget(g, id); const f = m.f != null ? m.f : m.lrn != null ? m.lrn : (m.t ? dayN(m.t) : null); if (f != null && m.ok > 0 && dayN() - f >= MS_AGE) out.push({g, id}); }); }); return out; }
+function msForm(){ const n = K().age <= 7 ? 10 : 12, items = [];
+  for (const it of shuffle(msPool())){ if (items.length >= n) break; let q = null; try { q = GEN[it.g](it.id); } catch (e) {} if (q && q.a && q.alts && q.alts.length) items.push(it); }
+  return items; }
 function msHistory(i){ return store.get(`ms:${i == null ? kid : i}`, []); }
-function msDue(){ const h = msHistory(); return tripsDone() > 0 && (!h.length || dayN() - h[h.length - 1].day >= MS_DAYS); }
+function msDue(){ const h = msHistory(); return tripsDone() > 0 && (!h.length || dayN() - h[h.length - 1].day >= MS_DAYS) && msPool().length >= 10; }
 function startMeasure(){ MS = {items: msForm(), i: 0, res: []}; go('msr', 'kidMs'); }
 function renderMeasure(){
   const C = $('kidMs'); C.innerHTML = ''; if (!MS){ go('kid'); return; }
@@ -2379,34 +3000,33 @@ function renderMeasure(){
   const it = MS.items[MS.i]; if (!it) return measureEnd(C);
   let q = null; try { q = GEN[it.g](it.id); } catch (e) {}
   if (!q || !q.a){ MS.res.push(null); MS.i++; return renderMeasure(); }
-  C.appendChild(talkRow(MS.i === 0 ? [T('قياس الشهر: أسئلةٌ قليلة نعرف بها ما تعلّمتَ. أجب بما تعرف، ولا بأس إن لم تعرف', 'قياس الشهر: أسئلةٌ قليلة نعرف بها ما تعلّمتِ. أجيبي بما تعرفين، ولا بأس إن لم تعرفي'), q.q] : q.q, {say: true}));
+  C.appendChild(talkRow(MS.i === 0 ? [T('قياس الشهر: أسئلةٌ مما تعلّمتَه من قبل، لنعرف ما بقي معك. أجب بما تعرف، ولا بأس إن لم تعرف', 'قياس الشهر: أسئلةٌ مما تعلّمتِه من قبل، لنعرف ما بقي معكِ. أجيبي بما تعرفين، ولا بأس إن لم تعرفي'), q.q] : q.q, {say: true}));
   const card = el('div','kcard'); if (q.html) card.insertAdjacentHTML('beforeend', `<div class="kq">${q.html}</div>`);
   const o = el('div','kopts'); card.appendChild(o); C.appendChild(card);
   /* one answer per question: the first tap (an option or «لا أعرف») is kept, anything during the pause is ignored */
   const idx = MS.i; let taken = false;
   const answer = v => { if (taken || MS.i !== idx || MS.res.length !== idx) return; taken = true; skip.disabled = true; MS.res.push(v); MS.i++; setTimeout(() => { voiceStop(); renderMeasure(); window.scrollTo({top: 0}); }, 450); };
-  mcq(o, optsOf(q.a, q.alts, K().age <= 7 ? 2 : 3), q.a, ok => answer(!!ok), 'm');
+  mcq(o, optsOf(q.a, q.alts, K().age <= 7 ? 2 : 3), q.a, ok => answer(!!ok), 'm', true);
   const skip = el('button','tiny', 'لا أعرف'); skip.type = 'button'; skip.addEventListener('click', () => { for (const b of o.children) b.disabled = true; answer(false); }); C.appendChild(skip);
 }
 function measureEnd(C){
   const n = MS.items.length, ok = MS.res.filter(Boolean).length, byG = {};
   MS.items.forEach((it, i) => { const b = byG[it.g] || (byG[it.g] = [0, 0]); b[1]++; if (MS.res[i]) b[0]++; });
-  const h = msHistory(), prev = h[h.length - 1]; h.push({day: dayN(), date: today(), ok, n, byG}); store.set(`ms:${kid}`, h.slice(-24)); MS = null;
-  const up = prev && ok > prev.ok;
-  C.appendChild(talkRow(up ? T(`أحسنت! أجبتَ ${ok} من ${n}، أكثر من المرة الماضية`, `أحسنتِ! أجبتِ ${ok} من ${n}، أكثر من المرة الماضية`) : T(`شكرًا لك! أجبتَ ${ok} من ${n}. سنعيد القياس بعد شهر لنرى كم تعلّمت`, `شكرًا لكِ! أجبتِ ${ok} من ${n}. سنعيد القياس بعد شهر لنرى كم تعلّمتِ`), {say: true}));
-  if (up){ chime(true); cmpHappy(); }
+  const h = msHistory(); h.push({day: dayN(), date: today(), ok, n, byG, kind: 'ret', k: K().age <= 7 ? 3 : 4}); store.set(`ms:${kid}`, h.slice(-24)); MS = null;
+  /* no «more than last time»: a difference of a question or two is chance */
+  C.appendChild(talkRow(T(`شكرًا لك! تذكّرتَ ${ok} من ${n} مما تعلّمتَه من قبل. بارك الله فيك`, `شكرًا لكِ! تذكّرتِ ${ok} من ${n} مما تعلّمتِه من قبل. بارك الله فيكِ`), {say: true}));
   const b = el('button','bigplay','◀ واحتي'); b.type = 'button'; b.addEventListener('click', () => go('kid')); C.appendChild(b);
 }
 INIT.kidMs = renderMeasure;
 /* لوليّ الأمر: القياسات كلها لطفلٍ واحد، وأقسامها */
 function measureHTML(i){
-  const h = msHistory(i); if (!h.length) return '<p class="lbl">قياس الشهر</p><p class="note">لم يُجرَ بعد. يظهر للطفل بعد أول رحلة، ثم كل ثلاثين يومًا: أسئلةٌ ثابتة من الأقسام كلها، بلا تعليمٍ ولا تمور، فالفرق بين قياسين هو ما تعلّمه فعلًا.</p>';
+  const h = msHistory(i); if (!h.length) return '<p class="lbl">قياس الشهر: ما بقي مما تعلّمه</p><p class="note">لم يُجرَ بعد. يظهر للطفل بعد أن يمضي أسبوعان على ما تعلّمه، ثم كل ثلاثين يومًا: عشرة أسئلة (واثنا عشر من التاسعة) تُختار كل مرة من جديد مما تعلّمه قبل أسبوعين أو أكثر، بلا تصحيحٍ ولا تلميحٍ ولا تمور.</p>';
   const max = Math.max(...h.map(x => x.n), 1);
   const bars = h.map(x => `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:34px"><div style="height:${Math.round(70 * x.ok / max)}px;width:22px;border-radius:5px 5px 0 0;background:var(--palm)" title="${x.ok}/${x.n}"></div><span class="ref" style="font-size:.75rem">${x.ok}/${x.n}</span><span class="ref" style="font-size:.7rem">${esc(String(x.date).slice(5))}</span></div>`).join('');
-  const last = h[h.length - 1], first = h[0];
-  const rows = Object.keys(last.byG).map(g => `<tr><td>${GNAME[g] || g}</td><td>${first.byG[g] ? first.byG[g].join('/') : '—'}</td><td>${last.byG[g].join('/')}</td></tr>`).join('');
-  return `<p class="lbl">قياس الشهر</p><div style="display:flex;align-items:flex-end;gap:6px;overflow-x:auto;padding:6px 0;border-bottom:1px solid var(--line)">${bars}</div>` +
-    (h.length > 1 ? `<div class="tablewrap"><table class="dash"><tr><th></th><th>أول قياس (${esc(first.date)})</th><th>آخر قياس (${esc(last.date)})</th></tr>${rows}</table></div>` : `<p class="note">القياس التالي بعد ${Math.max(0, MS_DAYS - (dayN() - last.day))} يومًا.</p>`); }
+  const last = h[h.length - 1];
+  return `<p class="lbl">قياس الشهر: ما بقي مما تعلّمه</p><div style="display:flex;align-items:flex-end;gap:6px;overflow-x:auto;padding:6px 0;border-bottom:1px solid var(--line)">${bars}</div>` +
+    `<p class="note">${(() => { const k = last.k || 4; return `من يخمّن دون أن يعرف ينال نحو ${Math.round(last.n / k)} من ${last.n} (الخيارات ${k === 3 ? 'ثلاثة' : 'أربعة'})؛ فما زاد على ذلك هو ما بقي فعلًا.`; })()}</p>` +
+    `<p class="note">كل عمودٍ: كم تذكّر من كلماتٍ عرفها قبل أسبوعين أو أكثر. الأسئلة تتغيّر كل مرة، والفرق بين مرتين بسؤالٍ أو اثنين قد يكون مصادفة؛ انظروا إلى اتجاه الأعمدة على أشهر. القياس التالي بعد ${Math.max(0, MS_DAYS - (dayN() - last.day))} يومًا.</p>`; }
 
 /* زر الرجوع في أندرويد: يغلق ما فوق الشاشة، ثم يعود خطوة نحو «واحتي»؛ يُرجع false عند الواحة نفسها فيخرج التطبيق */
 function appBack(){
@@ -2425,7 +3045,17 @@ function appBack(){
 
 /* ---- start ---- */
 try { pruneStore(); } catch (e) {}
+/* records from before 2.6 counted several right answers of one afternoon as steps: such an item (no «last correct day») starts again
+   at the first step, due tomorrow, so «متقن» means right on two different days for every item. Once per device */
+try { if (!store.get('mig:steps26', false)){ store.keys().filter(k => /^m:\d+:/.test(k)).forEach(k => { const m = store.get(k, null); if (m && m.lc == null && m.streak > 1){ m.streak = 1; m.due = dayN() + 1; store.set(k, m); } }); store.set('mig:steps26', true); } } catch (e) {}
 renderWho(); renderGrove(); renderPalm(); renderHome();
 const loc = store.get('loc', {o:'home'}); go(['dad','trip','hello'].includes(loc.o) ? 'home' : loc.o, loc.t);
+/* the back of a browser, or of the web app installed on Android, steps back inside this section as the Android app's button does:
+   one guard entry in the history catches it; where there is nowhere left to go back to, the browser is let go */
+(function(){ if (window.AndroidBridge || !window.history || !history.pushState) return;
+  const guard = () => { if (window.__kzLeaving) return; try { history.pushState({wahaBack: 1}, '', location.href); } catch (e) {} };
+  if (!(history.state && history.state.wahaBack)) guard();
+  window.addEventListener('popstate', () => { if (window.__kzLeaving) return; let done = false; try { done = appBack(); } catch (e) {} if (done) guard(); });
+})();
 /* أول تشغيل: ولي الأمر يضبط رقمه السري ثم أسماء الأطفال وأعمارهم (يتكرر الطلب حتى يُضبط) */
 if (typeof pinSet === 'function' && !pinSet() && typeof store.get('pin', null) !== 'string') setTimeout(() => pinGate(() => kidsSheet()), 500);

@@ -35,10 +35,10 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .wrap{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
 /* sticky bar: always a way home, always the current place */
 .bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--bg);display:flex;align-items:center;gap:10px;padding:10px 0 8px;border-bottom:1px solid var(--line)}
-.bar .home{display:flex;align-items:center;gap:8px;border:1.5px solid var(--line);background:var(--paper);color:var(--palm-deep);border-radius:999px;padding:4px 12px 4px 8px;font:inherit;font-weight:800;cursor:pointer}
+.bar .home{display:flex;align-items:center;gap:8px;min-height:48px;border:1.5px solid var(--line);background:var(--paper);color:var(--palm-deep);border-radius:999px;padding:4px 12px 4px 8px;font:inherit;font-weight:800;cursor:pointer}
 .bar .home svg{width:26px;height:26px}
 .bar .where{flex:1;min-width:0;font-family:var(--f-d);font-size:1.35rem;color:var(--palm-deep);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
-.bar .who{border:1.5px solid var(--line);background:var(--paper);color:var(--ink);border-radius:999px;padding:4px 12px;font:inherit;font-weight:700;cursor:pointer;white-space:nowrap}
+.bar .who{min-height:48px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);border-radius:999px;padding:4px 12px;font:inherit;font-weight:700;cursor:pointer;white-space:nowrap}
 h1{font-family:var(--f-d);font-weight:700;font-size:2.2rem;margin:0;line-height:1.1;color:var(--palm-deep);text-wrap:balance}
 h1 small{display:block;font-family:var(--f-ui);font-size:.95rem;font-weight:500;color:var(--muted)}
 /* scene */
@@ -102,7 +102,7 @@ section{display:flex;flex-direction:column;gap:12px}
 .sheet .top{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .sheet h2{font-family:var(--f-q);font-size:2.2rem;margin:0;line-height:1.2}
 .chip{display:inline-block;background:var(--date-soft);color:var(--ink);border-radius:999px;padding:2px 12px;font-size:.9rem;font-weight:700}
-.x{border:0;background:var(--bg);color:var(--ink);width:38px;height:38px;border-radius:50%;font-size:1.3rem;cursor:pointer}
+.x{border:0;background:var(--bg);color:var(--ink);width:44px;height:44px;border-radius:50%;font-size:1.3rem;cursor:pointer}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:baseline}
 .lbl{font-size:.8rem;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
 .q{font-family:var(--f-q);font-size:1.5rem;line-height:2;background:var(--bg);border-radius:10px;padding:10px 14px;margin:0}
@@ -140,12 +140,19 @@ mark{background:var(--date-soft);color:inherit;padding:0 3px;border-radius:4px}
 .opt.v{font-family:var(--f-q);font-size:1.25rem;line-height:1.7}
 .opt[data-s="ok"]{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 15%,var(--bg))}
 .opt[data-s="bad"]{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 15%,var(--bg))}
+.opt[data-s="arm"],.opt.saying{border-color:var(--sky);box-shadow:0 0 0 3px color-mix(in srgb,var(--sky) 35%,transparent);background:color-mix(in srgb,var(--sky) 10%,var(--bg))}
+.optip{font-size:.9rem;margin:.3rem 0 0;text-align:center}
+.aplay{display:flex;align-items:center;gap:8px;width:100%;direction:rtl}.aplay audio{display:none}.aplay-b{flex:none;width:44px;height:44px;border-radius:50%;border:none;background:var(--palm);color:#fff;font-size:1.1rem;cursor:pointer}.aplay-bar{flex:1;height:8px;border-radius:4px;background:var(--line);cursor:pointer;position:relative;overflow:hidden}.aplay-bar i{position:absolute;inset-block:0;inset-inline-start:0;width:0;background:var(--palm)}.aplay-t{flex:none;font-size:.85rem;color:var(--muted);min-width:4.5em;text-align:center}
+.pic{font-size:3rem;line-height:1.1;margin:0;text-align:center}
+.orf-text{font-family:var(--f-q);font-size:1.55rem;line-height:2.4;margin:10px 0;text-align:justify}.otok{cursor:pointer;border-radius:6px;padding:0 2px}.otok.err{background:color-mix(in srgb,var(--bad) 26%,var(--bg));text-decoration:underline wavy var(--bad)}.otok.last{outline:2px solid var(--ink);outline-offset:2px}.otok.after{opacity:.4}
+.hgloss{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 12px;margin:0;font-size:1.05rem;color:var(--muted)}.hgloss [lang=zh-Hant]{font-size:1.25rem;color:var(--ink)}.hgloss .py{font-style:italic}
+.opt[data-s="pick"]{border-color:var(--ink);box-shadow:inset 0 0 0 2px var(--line)}
 .opt:disabled{cursor:default}
 .btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
 .btn{border:0;background:var(--palm);color:#fff;font:inherit;font-weight:700;border-radius:10px;padding:10px 18px;cursor:pointer}
 .btn.ghost{background:var(--bg);color:var(--ink);border:1.5px solid var(--line)}
 .btn.warm{background:var(--date)}
-.btn.sm{padding:6px 12px;font-size:.9rem}
+.btn.sm{padding:6px 12px;font-size:.9rem;min-height:44px}
 .btn:disabled{opacity:.45;cursor:default}
 .btn:focus-visible,.opt:focus-visible,nav button:focus-visible,.chip2:focus-visible,.back:focus-visible,.tok:focus-visible,.otile:focus-visible,.bar button:focus-visible{outline:3px solid var(--date);outline-offset:2px}
 .fb{min-height:1.6em;text-align:center;font-weight:700;margin:0}
@@ -265,7 +272,7 @@ mark.cn{background:var(--sky-soft);color:var(--sky);font-weight:700}
 @keyframes cmpHop{50%{transform:translateY(-14px) scale(1.06)}}
 .bubble{position:relative;flex:1;background:var(--paper);border:2px solid var(--line);border-radius:20px;padding:12px 14px;font-size:1.2rem;line-height:1.7;font-weight:700}
 .bubble:after{content:'';position:absolute;bottom:14px;inset-inline-start:-10px;border:9px solid transparent;border-inline-end-color:var(--line)}
-.hear{border:none;background:var(--date-soft);border-radius:50%;width:38px;height:38px;font-size:1.1rem;cursor:pointer;flex:none}
+.hear{border:none;background:var(--date-soft);border-radius:50%;width:48px;height:48px;font-size:1.1rem;cursor:pointer;flex:none}
 .bigplay{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;min-height:86px;border:none;border-radius:26px;background:var(--palm-deep);color:var(--paper);font:inherit;font-size:1.7rem;font-weight:800;cursor:pointer;box-shadow:0 5px 0 rgba(0,0,0,.18)}
 .bigplay:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.18)}
 .bigplay.done{background:var(--date)}
@@ -293,7 +300,25 @@ mark.cn{background:var(--sky-soft);color:var(--sky);font-weight:700}
 .pickc svg{width:100%;height:110px}
 .sand{border-radius:22px;overflow:hidden;cursor:pointer;position:relative}.sand .tap{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:var(--paper);color:var(--ink);border-radius:999px;padding:6px 14px;font-weight:800;box-shadow:0 2px 8px rgba(0,0,0,.15);animation:tapPulse 1.4s infinite}@keyframes tapPulse{50%{transform:translateX(-50%) scale(1.08)}}
 .sand svg{display:block;width:100%}
-.tiny{font-size:.85rem;color:var(--muted);background:none;border:none;cursor:pointer;font:inherit;text-decoration:underline}
+.tiny{font-size:.85rem;color:var(--muted);background:none;border:none;cursor:pointer;font:inherit;text-decoration:underline;min-height:44px;padding:8px 10px}
+/* للوالدين: مدخلٌ واحد */
+.hub{display:flex;flex-direction:column;gap:8px}
+.hubi{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:start;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);border-radius:14px;padding:12px 14px;font:inherit;cursor:pointer;min-height:56px}
+.hubi b{font-size:1.05rem}.hubi span{font-size:.85rem;color:var(--muted)}
+/* التلاوة */
+.tl-seg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 10px}
+.tl-seg button{border:1.5px solid var(--line);background:var(--paper);color:var(--ink);border-radius:14px;padding:10px 8px;font:inherit;font-weight:700;cursor:pointer;min-height:56px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.tl-seg button small{font-weight:400;font-size:.8rem;color:var(--muted)}
+.tl-seg button[aria-pressed="true"]{border-color:var(--palm,#2f6b3a);background:var(--bg);box-shadow:0 0 0 2px color-mix(in srgb,var(--palm,#2f6b3a) 25%,transparent)}
+.tl-text{font-family:var(--f-q);font-size:1.45rem;line-height:2.2;text-align:justify;margin-top:6px;max-height:60vh;overflow:auto;padding:4px 2px}
+.tl-ay{cursor:pointer;border-radius:8px;padding:0 2px;transition:background .2s}
+.tl-ay.tl-on{background:color-mix(in srgb,var(--date,#c98a2b) 30%,transparent);-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.tl-nav{display:flex;align-items:center;gap:8px;margin:4px 0}
+.tl-pick{flex:1;display:flex;flex-direction:column;gap:2px}
+.tl-pick select{font:inherit;font-size:1.05rem;padding:8px 10px;border:1.5px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink);min-height:44px}
+.tl-b{text-align:center;margin:0}
+.tl-sn{text-align:center;margin:8px 0 2px}
+.tl-gapl{display:inline-flex;align-items:center;gap:6px;margin:0}
 </style>
 
 <div class="wrap">
@@ -812,10 +837,18 @@ mark.cn{background:var(--sky-soft);color:var(--sky);font-weight:700}
       <div class="btns"><button class="btn" id="rsNew">🎙 تسجيل جديد</button><button class="btn ghost" id="rsExport">⟨صدّر|صدّري⟩ تسجيلاتي للمعلم</button><button class="btn ghost" id="rsImport">⟨استورد|استوردي⟩ ردّ المعلم</button></div>
       <input type="file" id="rsImportFile" accept=".json,application/json" hidden>
       <p class="fb" id="rsFb"></p>
-      <p class="note" id="rsNote">التسجيل يكون بمسجّل الجهاز ثم ⟨تُرفق|تُرفقين⟩ الملف هنا. تُحفظ التسجيلات على هذا الجهاز فقط، ويراجعها ولي الأمر من لوحته أو المعلم بعد التصدير.</p>
+      <p class="note" id="rsNote">⟨اضغط|اضغطي⟩ 🎙 ⟨وسجّل|وسجّلي⟩ بصوتك، أو ⟨أرفق|أرفقي⟩ تسجيلًا من الجهاز. تُحفظ التسجيلات على هذا الجهاز فقط، ويراجعها وليّ الأمر من لوحته، أو المعلّم بعد أن يرسلها إليه وليّ الأمر.</p>
     </div>
   </section>
 
+  <section id="tilawa" hidden>
+    <div class="card">
+      <p class="lbl" style="margin:0">التلاوة</p>
+      <p class="note" style="margin:4px 0 8px">للتعلّم: الشيخ محمود خليل الحصري (المصحف المعلّم) آيةً آية. وللاستماع: الشيخ عبد الرحمن العوسي، السورة كاملة. ⟨اختر|اختاري⟩ أحدهما، ⟨وبدّل|وبدّلي⟩ متى ⟨شئت|شئتِ⟩.</p>
+      <div class="tl-nav" id="tlSurahs"></div>
+      <div id="tlTab" class="tl"></div>
+    </div>
+  </section>
   <section id="mushaf" hidden>
     <div class="card">
       <p class="lbl" style="margin:0">مصحفي بصوتي</p>
