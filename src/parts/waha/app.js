@@ -2328,9 +2328,10 @@ function renderTrip(){
       TRIP.cards.splice(at, 0, {...c, retry: true, after: true}); }
     const line = ok ? CL.right() : near ? CL.near() : CL.wrong(); fb.textContent = ok ? line : `${line}: ${c.a}`; fb.className = 'fb ' + (ok ? 'ok' : near ? 'near' : 'bad'); say(ok ? line : [line, c.a]);
     if (c.why){ const w = el('p','lrn'); w.style.cssText = 'margin:6px 0 0;opacity:.85'; w.textContent = c.why; card.appendChild(w); }
-    else if (!ok && !near && K().age <= 9){ const L = learnCard(c.g, c.id); if (L && (L.big || L.body.length)){ const why = el('p','lrn'); why.style.cssText = 'margin:6px 0 0;opacity:.85'; why.textContent = [L.big, L.body[0]].filter(Boolean).join(' — ').slice(0, 160); card.appendChild(why); } }
+    else if (!ok && !near){ const L = learnCard(c.g, c.id);   /* every age: a wrong answer comes with its reason (the meaning, the pattern, the verse), not the answer alone */ if (L && (L.big || L.body.length)){ const why = el('p','lrn'); why.style.cssText = 'margin:6px 0 0;opacity:.85'; why.textContent = [L.big, L.body[0]].filter(Boolean).join(' — ').slice(0, 160); card.appendChild(why); } }
     TRIP.i++; tripSave(); next.hidden = false; next.focus(); };
-  if (c.type && tier() === 'big' && Math.random() < .5) typeBox(tb, c.a, {id:'ktIn', onDone: done});
+  /* a word missing from a verse is recalled, never chosen among other words dressed as the verse: from nine it is always typed */
+  if (c.type && tier() === 'big' && (c.g === 'fill' || Math.random() < .5)) typeBox(tb, c.a, {id:'ktIn', onDone: done});
   else mcq(o, optsOf(c.a, c.alts, K().age <= 7 ? 2 : 3), c.a, done, 'm');
   o.querySelectorAll('.opt').forEach(b => b.addEventListener('pointerdown', () => {}, {passive: true}));
   next.addEventListener('click', () => { voiceStop(); renderTrip(); window.scrollTo({top: 0}); });
