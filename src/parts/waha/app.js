@@ -2345,17 +2345,22 @@ function buildTrip(extra, mode){
   const add = c => { if (c && !avoid.has(c.g + '|' + c.id)){ qs.push([c]); avoid.add(c.g + '|' + c.id); return true; } return false; };
   const ok = g => gamesFor(age).includes(g) && POOL[g] && POOL[g]().length > 0;
   const due = dueList().filter(q => q.g !== 'nt' && q.g !== 'sfr');
-  const fresh = mode === 'new';
-  const slots = fresh ? 0 : extra ? Math.min(due.length, small ? 5 : 8) : Math.min(due.length, Math.max(2, Math.min(small ? 3 : 5, Math.ceil(due.length / 3))));
-  due.slice(0, slots).forEach(q => add({...q, kind: 'review'}));
+  /* the reviews (the family's rule): every word learnt comes back when it is due, the oldest first: up to 10 in a trip under nine
+     and 15 from nine (8 in an extra review), with up to 3 other reviews. And the safety valve: while some word learnt is still
+     waiting for its review, no new word comes in, so the reviews never pile up */
+  const vdue = due.filter(q => VOCAB_G.includes(q.g)), odue = due.filter(q => !VOCAB_G.includes(q.g));
+  const fresh = mode === 'new' && !vdue.length;
+  const vs = fresh ? 0 : Math.min(vdue.length, extra ? 8 : small ? 10 : 15), os = fresh ? 0 : Math.min(odue.length, extra ? 4 : 3);
+  const backlog = vdue.length - vs;
+  [...vdue.slice(0, vs), ...odue.slice(0, os)].forEach(q => add({...q, kind: 'review'}));
   if (fresh){ const voc = shuffle(VOCAB_G.filter(ok)); let nv = 0; for (let round = 0; round < 2 && nv < 3; round++) for (const g of voc){ if (nv >= 3) break; if (add(genPick(g, avoid, true))) nv++; } }
   let storyDone = false;
   const story = g => { if (storyDone || !ok(g)) return; const grp = storyPick(g, avoid); if (grp.length){ qs.push(grp); grp.forEach(c => avoid.add(c.g + '|' + c.id)); storyDone = true; } };
   if (!extra){
     if (small) story('nt');
-    const voc = shuffle(VOCAB_G.filter(ok)); let nv = 0;
-    for (let round = 0; round < 2 && nv < 2; round++) for (const g of voc){ if (nv >= 2) break; if (add(genPick(g, avoid, true))) nv++; }
-    const ns = nextStageFor(age); if (ns) add(genPick(ns.g, avoid));
+    const voc = shuffle(VOCAB_G.filter(ok)); let nv = 0; const NEWN = backlog > 0 ? 0 : 2;
+    for (let round = 0; round < 2 && nv < NEWN; round++) for (const g of voc){ if (nv >= NEWN) break; if (add(genPick(g, avoid, true))) nv++; }
+    const ns = backlog > 0 ? null : nextStageFor(age); if (ns) add(genPick(ns.g, avoid));
     /* one item from what was studied in the Hasaniya or «كنوز البيان»; for eight and under every other day, the two sections taking turns */
     if (!small || dayN() % 2 === 0){ const ss = TRIP_ALWAYS.filter(ok); if (ss.length){ const turn = small ? Math.floor(dayN() / 2) : dayN(); const a = ss[turn % ss.length], b = ss[(turn + 1) % ss.length]; add(genPick(a, avoid)) || (b !== a && add(genPick(b, avoid))); } }
   }
@@ -2396,8 +2401,13 @@ function weeklyReader(){
 /* after the day's trip the child may go on, by choice: more review, or a short trip of new words with their lessons */
 function moreRow(){
   const r = el('div','btns'); r.style.justifyContent = 'center';
-  if (dueCount()){ const a = el('button','btn ghost sm', CL.again()); a.type = 'button'; a.addEventListener('click', () => startTrip(true)); r.appendChild(a); }
-  const b = el('button','btn ghost sm', CL.more()); b.type = 'button'; b.addEventListener('click', () => startTrip(true, 'new')); r.appendChild(b);
+  const dl = dueList(), vd = dl.filter(q => VOCAB_G.includes(q.g)).length;
+  if (dl.length){ const a = el('button','btn ghost sm', CL.again()); a.type = 'button'; a.addEventListener('click', () => startTrip(true)); r.appendChild(a); }
+  /* new words wait until every word learnt has had its review */
+  if (!vd){ const b = el('button','btn ghost sm', CL.more()); b.type = 'button'; b.addEventListener('click', () => startTrip(true, 'new')); r.appendChild(b); }
+  else { const cn = vd === 1 ? 'كلمةٌ واحدة' : vd === 2 ? 'كلمتان' : `${AR_NUM(vd)} ${vd <= 10 ? 'كلمات' : 'كلمة'}`;
+    const n = el('p','note', T(`بقي من كلماتك ${cn} للمراجعة، وبعدها تأتيك كلمات جديدة.`, `بقي من كلماتكِ ${cn} للمراجعة، وبعدها تأتيكِ كلمات جديدة.`));
+    n.style.cssText = 'flex-basis:100%;text-align:center;margin:4px 0 0'; r.appendChild(n); }
   return r;
 }
 function startTrip(extra, mode){

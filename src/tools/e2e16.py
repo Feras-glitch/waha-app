@@ -165,6 +165,34 @@ async def main():
         r = await p.evaluate("ttsText('أحسنتِ يا مريم، بارك الله فيكِ')")
         ok(r.endswith('فيكِ'), 'the Hasaniya\'s speech keeps the kasra of «فيكِ» too: ' + r)
 
+        # ---- the reviews: up to 10 a trip at six and 15 from nine, the oldest first; no new word while words learnt wait for their review
+        SEED = """(n) => { const ids = POOL.drv().slice(0, n); store.set('seen:' + kid + ':drv', ids);
+            ids.forEach((id, i) => store.set(MK('drv', id), {n: 2, ok: 2, streak: 2, wrong: 0, t: Date.now() - 9 * 864e5, due: dayN() - 1 - (i % 7)}));
+            ['uk', 'rl', 'fill', 'dct'].forEach(g => store.set('seen:' + kid + ':' + g, [])); store.set('tripPart:' + kid + ':' + today(), {n: 1, used: 0, until: 0, t: 0}); return ids; }"""
+        CHECK = """(ids) => { const S = new Set(ids); const seq = buildTrip(false); const rv = seq.filter(c => c.kind === 'review' && VOCAB_G.includes(c.g));
+            const fresh = seq.filter(c => VOCAB_G.includes(c.g) && c.kind !== 'review' && c.kind !== 'learn' && !S.has(c.id)).length;
+            const ch = new Set(rv.map(c => c.id)), d = id => mget('drv', id).due, out = ids.filter(i => !ch.has(i));
+            const oldest = !out.length || Math.max(...rv.map(c => d(c.id))) <= Math.min(...out.map(d));
+            const box = moreRow(); return [rv.length, fresh, oldest, !![...box.querySelectorAll('button')].find(b => b.textContent.includes('كلمات جديدة')), box.textContent]; }"""
+        await as_kid(p, 'مريم')
+        ids = await p.evaluate(SEED, 24)
+        r = await p.evaluate(CHECK, ids)
+        ok(len(ids) == 24 and r[0] == 10 and r[2], 'مريم (6) has 24 words due: the trip reviews the 10 oldest (%s)' % r[:3])
+        ok(r[1] == 0 and not r[3] and 'بقي من كلماتكِ' in r[4], '…no new word comes in, and «كلمات جديدة» waits until her words are reviewed: ' + r[4])
+        r = await p.evaluate("""() => { const seq = buildTrip(true); return seq.filter(c => c.kind === 'review' && VOCAB_G.includes(c.g)).length; }""")
+        ok(r == 8, 'an extra review takes 8 more of her words (%s)' % r)
+        ids = await p.evaluate(SEED, 6)
+        r = await p.evaluate(CHECK, ids)
+        ok(r[0] == 6 and r[1] >= 1, 'with 6 words due all six are reviewed and new words come in (%s)' % r[:2])
+        await p.evaluate(SEED, 0)
+        r = await p.evaluate(CHECK, [])
+        ok(r[3], 'once nothing waits, «✨ كلمات جديدة» is offered again')
+        await as_kid(p, 'يوسف')
+        ids = await p.evaluate(SEED, 24)
+        r = await p.evaluate(CHECK, ids)
+        ok(r[0] == 15 and r[1] == 0 and r[2], 'يوسف (9) reviews 15 a trip, the oldest first, and no new word while 9 more wait (%s)' % r[:3])
+        await p.evaluate(SEED, 0)
+
         # ---- a dot beside a number is not read as a zero
         await p.goto('about:blank'); await p.goto(URL); await p.wait_for_selector('#whoBtn'); await p.wait_for_timeout(300)
         await p.evaluate("""() => { const d = document.createElement('p'); d.id = 'tDot'; d.textContent = 'الكلّ · 1'; document.body.appendChild(d); }"""); await p.wait_for_timeout(200)
