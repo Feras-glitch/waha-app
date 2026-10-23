@@ -66,6 +66,15 @@ for p_ in js_parts:
             if m_.group(1) in seen:
                 raise SystemExit('duplicate function %s: %s and %s:%d' % (m_.group(1), seen[m_.group(1)], p_, n_))
             seen[m_.group(1)] = '%s:%d' % (p_, n_)
+# the recordings the oasis keeps between the child and the parent must stay out of the radio here too
+_pk = re.search(r"const PRIVATE_K = new Set\((\[[^\]]*\])\)", rd('parts/waha/app.js'))
+_op = re.search(r"var OA_PRIVATE=(\[[^\]]*\])", rd('parts/f_waha.js'))
+assert _pk and _op and sorted(json.loads(_pk.group(1).replace("'", '"'))) == sorted(json.loads(_op.group(1).replace("'", '"'))), \
+    'OA_PRIVATE in f_waha.js must list the same kinds as PRIVATE_K in waha/app.js'
+# the Hasaniya verses (from the oasis data), so a recording brought into the radio carries its text
+_hs = json.loads(rd('parts/waha/data.json'))['hasaniya']['verses']
+assert js.count('/*@HS_VERSES@*/{}') == 1
+js = js.replace('/*@HS_VERSES@*/{}', json.dumps({v['id']: [v['text'], v.get('stationTitle', '')] for v in _hs}, ensure_ascii=False, separators=(',', ':')))
 assert js.count("/*@EXPORT_CSS@*/''") == 1
 js = js.replace("/*@EXPORT_CSS@*/''", json.dumps(export_css, ensure_ascii=False))
 assert '</script' not in js.lower().replace('<\\/script', ''), 'raw </script> inside JS'

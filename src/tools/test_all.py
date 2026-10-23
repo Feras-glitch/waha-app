@@ -4,7 +4,7 @@
 import os, re, subprocess, sys, tempfile, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SUITES = ['e2e', 'e2e2', 'e2e3', 'e2e4', 'e2e5', 'e2e6', 'e2e7', 'e2e8']
+SUITES = ['e2e', 'e2e2', 'e2e3', 'e2e4', 'e2e5', 'e2e6', 'e2e7', 'e2e8', 'e2e9']
 
 
 def main(names):

@@ -467,3 +467,14 @@ body.guest .foot,body.guest #kidChip,body.guest #tray{display:none!important}
 .check-row input{width:20px;height:20px}
 .reset-banner{margin-bottom:14px}
 .btn:disabled,.btn[disabled]{opacity:.45;cursor:not-allowed}
+/* recordings brought in from the oasis and the Hasaniya */
+.from-list{list-style:none;margin:0 0 18px;padding:0;display:flex;flex-direction:column;gap:12px}
+.from-row{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:var(--surface);display:flex;flex-direction:column;gap:6px;min-width:0}
+.from-h{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.from-tag{font-family:var(--font-display);font-size:.82rem;padding:0 10px;border-radius:999px;background:color-mix(in srgb,var(--ax) 14%,var(--surface));color:var(--ax);line-height:1.8}
+.from-note{white-space:normal}
+.from-t{margin:0;font-size:1.05rem;overflow-wrap:anywhere}
+.from-row audio{width:100%;max-width:100%}
+.from-row .actions{margin-top:2px}
+.ax-page h2 .av{vertical-align:middle}
+.from-v{margin:0;font-family:var(--font-quran,inherit);font-size:1.15rem;line-height:2}

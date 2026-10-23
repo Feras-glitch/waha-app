@@ -192,7 +192,7 @@ var RFILTER='all';
 function radioList(){
   return WORKS.filter(function(w){return w.audio&&w.status==='approved'&&(!w.pub||w.pub.fam!==false)&&(RFILTER==='all'||w.kid===RFILTER);})
     .sort(function(a,b){return (b.approvedAt||b.updated)-(a.approvedAt||a.updated);})
-    .map(function(w){var k=kidById(w.kid);return {key:w.audio,t:titleOf(w),by:k?k.name:'',ty:typeOf(w).n,c:typeOf(w).c,k:k};});
+    .map(function(w){var k=kidById(w.kid);return {key:w.audio,t:titleOf(w),by:k?k.name:'',ty:w.from?(w.from.src==='oasis'?'من الواحة':'من الحسنية'):typeOf(w).n,c:typeOf(w).c,k:k};});
 }
 function radioView(f){
   L=null; if(f) RFILTER=f; RADIO.list=radioList(); RADIO.i=-1; RADIO.mag=null;
