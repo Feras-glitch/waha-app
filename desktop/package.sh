@@ -11,7 +11,7 @@ for P in win32 linux; do
   rm -f "$D/resources/default_app.asar"
   mkdir -p "$D/resources/app/app"
   cp desktop/main.js desktop/package.json "$D/resources/app/"
-  cp -r web/index.html web/sw.js web/manifest.json web/js web/fonts web/kunuz web/hasaniya "$D/resources/app/app/"
+  cp -r web/index.html web/sw.js web/manifest.json web/js web/fonts web/kunuz web/hasaniya $( [ -d web/audio ] && echo web/audio ) "$D/resources/app/app/"
   cp desktop/README.txt "$D/"
   if [ $P = win32 ]; then mv "$D/electron.exe" "$D/Waha.exe"; else mv "$D/electron" "$D/Waha"; chmod +x "$D/Waha"; fi
   test -f "$D/resources/app/app/index.html"

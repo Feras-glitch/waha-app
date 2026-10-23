@@ -7,7 +7,7 @@ function doneCount(list){return (list||LESSONS).filter(function(l){return prog[l
 var hasTTS='speechSynthesis' in window, arVoice=null, voicesReady=false;
 function loadVoices(){try{var vs=speechSynthesis.getVoices();if(vs&&vs.length){voicesReady=true;arVoice=vs.filter(function(v){return /^ar/i.test(v.lang);})[0]||null;}}catch(e){}}
 if(hasTTS){loadVoices();try{speechSynthesis.onvoiceschanged=loadVoices;}catch(e){}}
-function stopSpeak(){narStop();if(hasTTS){try{speechSynthesis.cancel();}catch(e){}}}
+function stopSpeak(){if(typeof vStop==='function') vStop(); narStop();if(hasTTS){try{speechSynthesis.cancel();}catch(e){}}}
 function speak(btn){
   if(!hasTTS||!L) return;
   try{
@@ -25,12 +25,13 @@ function speak(btn){
 var view=document.getElementById('view'), tray=document.getElementById('tray');
 function renderTray(){
   tray.innerHTML='<span class="tray-gems">'+LESSONS.map(function(l){
-    return '<span class="tg'+(prog[l.id]?' on':'')+'" style="--ax:var(--'+axById[l.ax].c+'-band)" title="'+l.title+'">'+STAR+'</span>';
+    return '<span class="tg'+(prog[l.id]?' on':'')+'" style="--ax:var(--'+axById[l.ax].c+'-band)" title="'+escA(plain(G(l.title)))+'">'+STAR+'</span>';
   }).join('')+'</span><span class="tray-n">'+n2a(doneCount())+' / '+n2a(LESSONS.length)+'</span>';
   tray.setAttribute('aria-label',G('⟨جمعتَ|جمعتِ⟩ ')+''+n2a(doneCount())+' من '+n2a(LESSONS.length)+' جوهرة');
 }
 function go(html){
   stopSpeak(); recAbort(); radioStop(); closeModal(); presentClose(); if(DR.dirty) drawSave();
+  if(typeof brandAsApp==='function'&&typeof FAM!=='undefined'&&FAM) brandAsApp(!FAM.pin||!FAM.kids.length);
   view.innerHTML=G(html);
   hydrate(view);
   renderKidChip();
@@ -39,11 +40,31 @@ function go(html){
   if(h){h.setAttribute('tabindex','-1');try{h.focus({preventScroll:true});}catch(e){}}
   renderTray();
 }
-function verse(v){
+/* the recitation of a verse: in the app, from the recitation pack it carries (../audio, the teaching voice of al-Husary), so
+   nothing is fetched from a website; a file that leaves the app (magazine, card) links to quran.com instead.
+   The Android app opens no website, so there a verse the pack lacks has no listening link at all. */
+/* the Android app and the desktop app open no website (the parents' decision): their links are shown as names only */
+var NO_WEB=!!window.AndroidBridge||location.protocol==='file:';
+function vAud(v){var A=window.WAHA_AUDIO,r=A&&A.h&&A.h[v.s],b=v.a2||v.a,x; if(!r) return false;
+  for(x=v.a;x<=b;x++){ if(!r.some(function(p){return x>=p[0]&&x<=p[1];})) return false; } return true;}
+function verse(v,o){
+  var out=!!(o&&o.out), link='<a href="https://quran.com/'+v.s+'/'+v.a+(v.a2?'-'+v.a2:'')+'" target="_blank" rel="noopener">⟨استمع|استمعي⟩ للتلاوة ↗</a>';
   return '<figure class="verse"><blockquote><span class="orn">﴿</span> '+fmt(v.t)+' <span class="orn">﴾</span></blockquote>'+
     '<figcaption><span>'+(v.p?'من ':'')+'سورة '+v.n+' · '+(v.a2?((v.a2-v.a===1?'الآيتان ':'الآيات ')+n2a(v.a)+'–'+n2a(v.a2)):'الآية '+n2a(v.a))+'</span>'+
-    (v.nolink?'':'<a href="https://quran.com/'+v.s+'/'+v.a+(v.a2?'-'+v.a2:'')+'" target="_blank" rel="noopener">⟨استمع|استمعي⟩ للتلاوة ↗</a>')+'</figcaption></figure>';
+    (v.nolink?'':(!out&&vAud(v)?'<button class="vplay" type="button" data-act="vplay" data-s="'+v.s+'" data-a="'+v.a+'" data-b="'+(v.a2||v.a)+'">▶ ⟨استمع|استمعي⟩ للتلاوة</button>':
+      (out||!NO_WEB?link:'')))+'</figcaption></figure>';
 }
+var VP={a:null,b:null,h:'',q:[],i:0,s:0};
+function p3(n){return ('00'+n).slice(-3);}
+function vStop(){ var a=VP.a; VP.a=null; if(a){a.onended=a.onerror=null; try{a.pause();}catch(e){}} if(VP.b){VP.b.classList.remove('on'); VP.b.innerHTML=VP.h;} VP.b=null; }
+function vStep(){ var au=VP.a; if(!au) return; if(VP.i>=VP.q.length){ vStop(); return; }
+  au.src='../audio/h/'+p3(VP.s)+p3(VP.q[VP.i])+'.mp3';
+  au.onended=function(){ if(VP.a!==au) return; VP.i++; vStep(); };
+  au.onerror=function(){ if(VP.a!==au) return; vStop(); toast('تعذّر تشغيل التلاوة على هذا الجهاز.'); };
+  au.play().catch(function(){ if(VP.a===au) vStop(); }); }
+function vPlay(btn){ var same=VP.b===btn; stopSpeak(); if(same) return;
+  var a=+btn.dataset.a, b=+btn.dataset.b, x; VP.q=[]; for(x=a;x<=b;x++) VP.q.push(x);
+  VP.s=+btn.dataset.s; VP.i=0; VP.b=btn; VP.h=btn.innerHTML; btn.classList.add('on'); btn.innerHTML=G('■ ⟨أوقف|أوقفي⟩ التلاوة'); VP.a=new Audio(); vStep(); }
 function block(b){
   if(typeof b==='string') return '<p>'+fmt(b)+'</p>';
   if(b.v) return verse(b.v);
@@ -244,11 +265,11 @@ function shelf(){
   go('<div class="ax-page" style="--ax:var(--teal)">'+
     '<button class="back" type="button" data-home>'+BACK+' الخزائن</button>'+
     '<header class="page-head"><h1 class="h1">رفّ الكنوز</h1>'+
-      '<p class="lead">للوالدين: مصادر تُكمل هذه الخزانة. الروابط تفتح خارج التطبيق، ويحسُن أن تشاهدوها أولًا، ثم تختاروا لأطفالكم ما يناسب أعمارهم.</p></header>'+
+      '<p class="lead">للوالدين: مصادر تُكمل هذه الخزانة. '+(NO_WEB?'هذه النسخة لا تفتح المواقع، فابحثوا عن هذه الأسماء في متصفّحكم، وشاهدوها أولًا، ثم اختاروا لأطفالكم ما يناسب أعمارهم.':'الروابط تفتح خارج التطبيق، ويحسُن أن تشاهدوها أولًا، ثم تختاروا لأطفالكم ما يناسب أعمارهم.')+'</p></header>'+
     '<ul class="shelf">'+SHELF.map(function(r){
       return '<li class="res" style="--ax:var(--'+r.c+')"><div class="res-top"><span class="res-name">'+r.name+'</span><span class="res-kind">'+r.kind+'</span></div>'+
         '<p>'+r.d+'</p>'+(r.note?'<p class="res-note">'+r.note+'</p>':'')+
-        (r.links.length?'<div class="res-links">'+r.links.map(function(k){return '<a href="'+k[1]+'" target="_blank" rel="noopener">'+k[0]+' ↗</a>';}).join('')+'</div>':'')+
+        (r.links.length?'<div class="res-links">'+r.links.map(function(k){return NO_WEB?'<span>'+k[0]+'</span>':'<a href="'+k[1]+'" target="_blank" rel="noopener">'+k[0]+' ↗</a>';}).join('')+'</div>':'')+
       '</li>';
     }).join('')+'</ul></div>');
 }
@@ -332,13 +353,18 @@ var bankById={};
 BANK.forEach(function(b){if(!b.ax&&b.l) b.ax=lessonById[b.l].ax; bankById[b.id]=b;});
 
 /* ---------- records (per device) ---------- */
-function freshST(){return {items:{},tests:[],daily:{last:'',streak:0,best:0}};}
+function freshST(){return {items:{},tests:[],daily:{last:'',days:[],wk:0}};}
 var ST=freshST();
 function saveST(){kidSave();}
 function pad(n){return ('0'+n).slice(-2);}
 function dstr(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
 function today(){return dstr(new Date());}
 function addDays(s,n){var p=s.split('-');return dstr(new Date(+p[0],+p[1]-1,+p[2]+n));}
+/* the week runs from Saturday to Friday. Four days of «جوهرة اليوم» fill it, chosen as the child likes; a missed day takes nothing away */
+var WEEK_GOAL=4;
+function weekOf(s){var p=s.split('-');return addDays(s,-((new Date(+p[0],+p[1]-1,+p[2]).getDay()+1)%7));}
+function weekDaysN(D,s){var w=weekOf(s||today());return ((D&&D.days)||[]).filter(function(x){return weekOf(x)===w;}).length;}
+function weekLine(n){return n>=WEEK_GOAL?'⟨أتممتَ|أتممتِ⟩ أسبوعك ✓':'هذا الأسبوع: '+n2a(n)+' من '+n2a(WEEK_GOAL)+' أيام';}
 var GAPS=[1,2,4,7,14];
 function record(id,sc){
   var r=ST.items[id]||{n:0,c:0,w:0,box:0,due:'',last:0};
@@ -351,7 +377,6 @@ function dueList(){var t=today();return BANK.filter(function(b){var r=ST.items[b
 function norm(s){return String(s||'').replace(/[ً-ْٰـ]/g,'').replace(/[\s،,.\-]/g,'').replace(/ى/g,'ي').replace(/[أإآ]/g,'ا');}
 function hashStr(s){var h=0;for(var i=0;i<s.length;i++){h=(h*31+s.charCodeAt(i))>>>0;}return h;}
 function escA(s){return esc(s).replace(/"/g,'&quot;');}
-function daysWord(n){return n===0?'⟨لم تبدأ|لم تبدئي⟩ بعد':n===1?'يومٌ واحد':n===2?'يومان':(n<=10?n2a(n)+' أيام':n2a(n)+' يومًا');}
 function qWord(n){return n===1?'سؤالٌ واحد':n===2?'سؤالان':(n<=10?n2a(n)+' أسئلة':n2a(n)+' سؤالًا');}
 function numA(x){return n2a(Math.round(x*10)/10).replace('.','٫');}
 var KIND={mcq:'سؤال',verse:'المحقّق البياني',two:'سؤالٌ وسببه',match:'⟨صِل|صِلي⟩ بين العمودين',type:'⟨اكتب|اكتبي⟩ الإجابة'};
@@ -472,6 +497,8 @@ function ansType(){
 }
 function finishItem(sc){
   var A=AS,b=A.items[A.i],s=A.s; s.done=true; s.sc=sc; A.scores[A.i]=sc;
+  /* the periodic diagnostic measures, it does not teach: no right or wrong shown, nothing goes to the spaced review */
+  if(A.mode==='diag'){ var st=document.getElementById('asItem'); if(st){ st.style.opacity='.55'; [].forEach.call(st.querySelectorAll('button,input'),function(x){x.disabled=true;}); } setTimeout(function(){ if(AS===A&&A.items[A.i]===b) nextItem(); },300); return; }
   if(A.mode==='majlis'){ if(sc>=1) A.pts[A.turn]++; } else record(b.id,sc);
   if(A.mode==='daily') markDaily();
   renderItem();
@@ -534,16 +561,17 @@ function detective(){startAssess('det',shuffle(BANK.filter(function(b){return !!
 function review(){startAssess('review',shuffle(dueList()).slice(0,10));}
 function markDaily(){
   var t=today(),D=ST.daily; if(D.last===t) return;
-  D.streak=(D.last===addDays(t,-1))?(D.streak||0)+1:1; D.last=t; D.best=Math.max(D.best||0,D.streak); saveST();
+  D.days=(D.days||[]).filter(function(x){return x>=addDays(t,-70)&&x!==t;}); D.days.push(t); D.last=t;
+  if(weekDaysN(D,t)===WEEK_GOAL) D.wk=(D.wk||0)+1; saveST();
 }
-function streakNow(){var D=ST.daily,t=today();return (D.last===t||D.last===addDays(t,-1))?(D.streak||0):0;}
+function weekNow(){return weekDaysN(ST.daily);}
 function dailyItem(){var el=BANK.filter(function(b){return b.k!=='match';});return el[hashStr(today())%el.length];}
 function daily(){ if(ST.daily.last===today()) return dailyDone(); startAssess('daily',[dailyItem()]); }
 function dailyDone(){
-  L=null; var due=dueList().length, sk=streakNow();
+  L=null; var due=dueList().length, wn=weekNow();
   go('<div class="ax-page" style="--ax:var(--gold)"><button class="back" type="button" data-home>'+BACK+' الخزائن</button>'+
-    '<header class="page-head"><h1 class="h1">جوهرة اليوم</h1><p class="lead">⟨أجبتَ عن سؤال اليوم. عُد غدًا لجوهرةٍ جديدة، ولا تقطع|أجبتِ عن سؤال اليوم. عودي غدًا لجوهرةٍ جديدة، ولا تقطعي⟩ السلسلة!</p></header>'+
-    '<div class="tiles"><div class="tile"><b>'+n2a(sk)+'</b><span>سلسلتك بالأيام</span></div><div class="tile"><b>'+n2a(ST.daily.best||0)+'</b><span>أطول سلسلة</span></div>'+
+    '<header class="page-head"><h1 class="h1">جوهرة اليوم</h1><p class="lead">⟨أجبتَ عن سؤال اليوم. عُد|أجبتِ عن سؤال اليوم. عودي⟩ غدًا لجوهرةٍ جديدة. '+(wn>=WEEK_GOAL?'⟨أتممتَ|أتممتِ⟩ أسبوعك، وما زاد فهو خير.':'أربعة أيامٍ في الأسبوع ⟨تُتمّ|تُتمّين⟩ بها أسبوعك، ⟨تختارها|تختارينها⟩ كما ⟨تشاء|تشائين⟩.')+'</p></header>'+
+    '<div class="tiles"><div class="tile"><b>'+n2a(wn)+' من '+n2a(WEEK_GOAL)+'</b><span>أيام هذا الأسبوع</span></div><div class="tile"><b>'+n2a(ST.daily.wk||0)+'</b><span>أسابيع ⟨أتممتها|أتممتِها⟩</span></div>'+
     '<div class="tile"><b>'+n2a(due)+'</b><span>تنتظر المراجعة</span></div><div class="tile"><b>'+n2a(doneCount())+'</b><span>جواهر الدروس</span></div></div>'+
     '<div class="actions">'+(due?'<button class="btn" type="button" data-go="review">المراجعة الذكية</button>':'<button class="btn" type="button" data-go="det">المحقّق البياني</button>')+
     '<button class="btn ghost" type="button" data-home>الخزائن</button></div></div>');
@@ -576,10 +604,10 @@ function majlisEnd(){
 
 /* ---------- home block ---------- */
 function toolsHTML(){
-  var due=dueList().length, dn=ST.daily.last===today(), sk=streakNow();
+  var due=dueList().length, dn=ST.daily.last===today(), wn=weekNow();
   return '<section><h2 class="h2">⟨تمرّن واختبر|تمرّني واختبري⟩ نفسك</h2><div class="tools">'+
     '<button class="tool hi" type="button" data-go="daily" style="--ax:var(--gold)"><span class="tool-t">جوهرة اليوم</span>'+
-      '<span class="tool-d">'+(dn?'⟨أجبتَ عن سؤال اليوم. عُد|أجبتِ عن سؤال اليوم. عودي⟩ غدًا لجوهرةٍ جديدة.':'سؤالٌ واحد كل يوم من الخزائن كلها.')+'</span><span class="tool-n">سلسلتك: '+daysWord(sk)+'</span></button>'+
+      '<span class="tool-d">'+(dn?'⟨أجبتَ عن سؤال اليوم. عُد|أجبتِ عن سؤال اليوم. عودي⟩ غدًا لجوهرةٍ جديدة.':'سؤالٌ واحد كل يوم من الخزائن كلها.')+'</span><span class="tool-n">'+weekLine(wn)+'</span></button>'+
     '<button class="tool" type="button" data-go="det" style="--ax:var(--lapis)"><span class="tool-t">المحقّق البياني</span><span class="tool-d">آياتٌ لم تمرّ بك في الدروس: ⟨اكتشف|اكتشفي⟩ الكلمة المناسبة بما ⟨تعلّمته|تعلّمتِه⟩.</span></button>'+
     '<button class="tool" type="button" data-go="full" style="--ax:var(--teal)"><span class="tool-t">الاختبار الشامل</span><span class="tool-d">'+qTotalWord(AXES.length*3)+' من الخزائن '+axWord()+' بأنواعٍ مختلفة، والدرجة من المحاولة الأولى.</span></button>'+
     '<button class="tool" type="button" data-go="review" style="--ax:var(--rose)"><span class="tool-t">المراجعة الذكية</span><span class="tool-d">ما ⟨أخطأتَ|أخطأتِ⟩ فيه يعود إليك في أيامٍ متباعدة حتى ⟨تتقنه|تتقنيه⟩.</span><span class="tool-n">'+(due?qWord(due)+' تنتظرك اليوم':'لا شيء ينتظرك اليوم')+'</span></button>'+

@@ -31,7 +31,7 @@ function typeOf(w){return TYPES[w&&w.type]||TYPES.story;}
 function titleOf(w){var l=w.lesson&&lessonById[w.lesson];if(w.type==='read'&&w.src==='pair'&&pairById[w.pair]) return 'مختبر الحروف: '+pairById[w.pair].t;return w.title||(w.type==='twins'&&w.w1&&w.w2?w.w1+' و'+w.w2:'')||(w.type==='lamsa'&&l?plain(Gx(l.title,0)):'')||(w.type==='read'&&w.src!=='text'&&l?'قراءة «'+plain(Gx(l.title,0))+'»':'')||(w.type==='gift'&&w.to?'إلى '+w.to:'')||typeOf(w).n;}
 function readWord(n){return n===2?'قراءتان':(n<=10?n2a(n)+' قراءات':n2a(n)+' قراءة');}
 
-var ST_LBL={draft:'مسوّدة',sent:'عند وليّ أمرك',returned:'عاد بملاحظة',approved:'معتمَد'};
+var ST_LBL={draft:'مسوّدة',sent:'عند وليّ الأمر',returned:'عاد بملاحظة',approved:'معتمَد'};
 var ST_CLS={draft:'st-none',sent:'st-mid',returned:'st-low',approved:'st-ok'};
 function statusChip(w,parent){
   var t=parent?{draft:'مسوّدة',sent:'بانتظار مراجعتكم',returned:'أُعيد بملاحظة',approved:'معتمَد'}[w.status]:ST_LBL[w.status];
@@ -47,7 +47,7 @@ function newWork(type,extra){
   WORKS.unshift(w); saveWorks(); return w;
 }
 function isEmptyWork(w){return w.status==='draft'&&!w.audio&&!w.image&&!(w.text||'').trim()&&!(w.title||'').trim()&&!(w.w1||w.w2||w.q||w.ans||w.to||'').trim()&&!(w.type==='lamsa'&&w.lesson);}
-function pruneEmpty(){var n=WORKS.length;WORKS=WORKS.filter(function(w){return !(isEmptyWork(w)&&Date.now()-w.created>2000&&(!CUR||CUR.id!==w.id));});if(WORKS.length!==n) saveWorks();}
+function pruneEmpty(){var n=WORKS.length;WORKS=WORKS.filter(function(w){return !(isEmptyWork(w)&&Date.now()-w.created>2000&&(!CUR||CUR.id!==w.id)&&!(REC.mr&&REC.wid===w.id));});if(WORKS.length!==n) saveWorks();}
 async function deleteWork(w){
   if(w.audio) await blobDel(w.audio); if(w.image) await blobDel(w.image);
   WORKS=WORKS.filter(function(x){return x.id!==w.id;});
@@ -73,7 +73,7 @@ var WFILTER='all';
 function worksView(f){
   L=null; CUR=null; if(f) WFILTER=f; pruneEmpty();
   var mine=WORKS.filter(function(w){return w.kid===KID.id;});
-  var tabs=[['all','الكلّ'],['draft','مسوّدات'],['sent','عند وليّ أمري'],['returned','عادت بملاحظة'],['approved','معتمدة']];
+  var tabs=[['all','الكلّ'],['draft','مسوّدات'],['sent','عند وليّ الأمر'],['returned','عادت بملاحظة'],['approved','معتمدة']];
   var list=mine.filter(function(w){return WFILTER==='all'||w.status===WFILTER;});
   var ba=baGroups(KID.id);
   go('<div class="ax-page" style="--ax:var(--teal)"><button class="back" type="button" data-home>'+BACK+' الخزائن</button>'+
@@ -138,9 +138,9 @@ function workEdit(id){
     '<div class="form" id="wform">'+fieldsHTML(w)+'</div>'+
     '<p class="saved" id="wSaved" aria-live="polite"></p>'+
     '<p class="form-err" id="wErr" role="alert"></p>'+
-    '<div class="actions sticky-actions"><button class="btn" type="button" data-act="submitWork">'+ICON.check+' ⟨أرسله|أرسليه⟩ إلى وليّ أمري</button>'+
-      '<button class="btn ghost" type="button" data-act="works">احفظه مسوّدة</button>'+
-      '<button class="btn ghost danger-ghost" type="button" data-act="delWork">'+ICON.trash+' احذف</button></div></div>');
+    '<div class="actions sticky-actions"><button class="btn" type="button" data-act="submitWork">'+ICON.check+' ⟨أرسله|أرسليه⟩ إلى وليّ ⟨أمرك|أمركِ⟩</button>'+
+      '<button class="btn ghost" type="button" data-act="works">⟨احفظه|احفظيه⟩ مسوّدة</button>'+
+      '<button class="btn ghost danger-ghost" type="button" data-act="delWork">'+ICON.trash+' ⟨احذف|احذفي⟩</button></div></div>');
   if(w.type==='draw') drawInit(w);
 }
 function noteHTML(n){
@@ -148,8 +148,8 @@ function noteHTML(n){
     (n.t?'<p>'+esc(n.t).replace(/\n/g,'<br>')+'</p>':'')+(n.r?'<p class="rub-line">'+rubStars(n.r)+'</p>':'')+'</div>';
 }
 function fld(id,label,html){return '<label for="'+id+'">'+label+'</label>'+html;}
-function inp(w,k,ph,max){return '<input id="f-'+k+'" data-wf="'+k+'" maxlength="'+(max||80)+'" value="'+escA(w[k]||'')+'" placeholder="'+escA(ph||'')+'">';}
-function txa(w,k,ph,rows){return '<textarea id="f-'+k+'" data-wf="'+k+'" rows="'+(rows||5)+'" maxlength="4000" placeholder="'+escA(ph||'')+'">'+esc(w[k]||'')+'</textarea>';}
+function inp(w,k,ph,max){return '<input id="f-'+k+'" data-wf="'+k+'" maxlength="'+(max||80)+'" value="'+escA(w[k]||'')+'" placeholder="'+escA(G(ph||''))+'">';}
+function txa(w,k,ph,rows){return '<textarea id="f-'+k+'" data-wf="'+k+'" rows="'+(rows||5)+'" maxlength="4000" placeholder="'+escA(G(ph||''))+'">'+esc(w[k]||'')+'</textarea>';}
 function lessonSelect(w){
   return '<select id="f-lesson" data-wf="lesson"><option value="">— ⟨اختر|اختاري⟩ درسًا —</option>'+AXES.map(function(a){
     return '<optgroup label="'+escA(a.name)+'">'+LESSONS.filter(function(l){return l.ax===a.id;}).map(function(l){
@@ -215,14 +215,16 @@ async function submitWork(){
   if(w.type==='draw'&&DR.dirty) await drawSave();
   var m=missingFor(w), e=document.getElementById('wErr');
   if(m){ if(e) e.textContent=G(m); return; }
-  w.status='sent'; w.sentAt=Date.now(); w.updated=Date.now(); w.seen=false; saveWorks();
-  toast('⟨أرسلتَ|أرسلتِ⟩ «'+clip(titleOf(w),30)+'» إلى وليّ أمرك.');
+  var was=w.status; w.status='sent'; w.sentAt=Date.now(); w.updated=Date.now(); w.seen=false;
+  /* a full storage keeps nothing: say so, and keep the work open, rather than «sent» */
+  if(!saveWorks()){ w.status=was; delete w.sentAt; if(e) e.textContent=G('لم يُحفظ العمل: مساحة الجهاز ممتلئة. ⟨أخبر|أخبري⟩ وليّ ⟨أمرك|أمركِ⟩.'); return; }
+  toast('⟨أرسلتَ|أرسلتِ⟩ «'+clip(titleOf(w),30)+'» إلى وليّ ⟨أمرك|أمركِ⟩.');
   CUR=null; worksView('sent');
 }
 async function delWork(){
   var w=CUR; if(!w) return;
   var ok=await ask({title:'حذف هذا العمل؟',c:'rose',ok:'احذفه',danger:1,html:'<p>سيُحذف «'+esc(titleOf(w))+'» وتسجيله ورسمته من هذا الجهاز.</p>'});
-  if(!ok) return; recAbort(); await deleteWork(w); CUR=null; toast('حُذف العمل.'); worksView();
+  if(!ok) return; recDiscard(); await deleteWork(w); CUR=null; toast('حُذف العمل.'); worksView();
 }
 
 /* ---------- read-only view (child) ---------- */
@@ -246,13 +248,13 @@ function pickMime(){var c=['audio/mp4;codecs=mp4a.40.2','audio/webm;codecs=opus'
 function recBlock(w,label){REC.label=label;return '<span class="lbl">'+label+'</span><div class="rec" id="recBox">'+recInner(w)+'</div>';}
 function recInner(w){
   var rec=REC.mr&&REC.wid===w.id;
-  if(rec) return '<div class="rec-on"><button class="rec-btn on" type="button" data-act="recStop" aria-label="أوقف التسجيل">'+ICON.stop+'</button>'+
+  if(rec) return '<div class="rec-on"><button class="rec-btn on" type="button" data-act="recStop" aria-label="⟨أوقف|أوقفي⟩ التسجيل">'+ICON.stop+'</button>'+
     '<div class="rec-mid"><span class="rec-live"><i></i>يسجّل الآن</span><span class="rec-t" id="recT">٠:٠٠</span><span class="meter" id="recMeter">'+new Array(16).join('<i></i>')+'</span></div></div>'+
     '<p class="rec-hint">'+'⟨تكلّم|تكلّمي⟩ بوضوح. ⟨اضغط|اضغطي⟩ المربّع حين ⟨تنتهي|تنتهين⟩.'+'</p>';
   var h='';
   if(w.audio) h+='<div class="rec-done"><audio controls preload="metadata" data-src="'+w.audio+'"></audio><span class="rec-d">'+fmtDur(w.dur)+'</span></div>'+
-    '<div class="actions"><button class="btn ghost" type="button" data-act="recStart">'+ICON.mic+' ⟨أعِد|أعيدي⟩ التسجيل</button><button class="btn ghost danger-ghost" type="button" data-act="recDel">'+ICON.trash+' احذف التسجيل</button></div>';
-  else if(canRecord()) h+='<div class="rec-idle"><button class="rec-btn" type="button" data-act="recStart" aria-label="ابدأ التسجيل">'+ICON.mic+'</button><span class="rec-cta">⟨اضغط|اضغطي⟩ ⟨لتبدأ|لتبدئي⟩ التسجيل</span></div>';
+    '<div class="actions"><button class="btn ghost" type="button" data-act="recStart">'+ICON.mic+' ⟨أعِد|أعيدي⟩ التسجيل</button><button class="btn ghost danger-ghost" type="button" data-act="recDel">'+ICON.trash+' ⟨احذف|احذفي⟩ التسجيل</button></div>';
+  else if(canRecord()) h+='<div class="rec-idle"><button class="rec-btn" type="button" data-act="recStart" aria-label="⟨ابدأ|ابدئي⟩ التسجيل">'+ICON.mic+'</button><span class="rec-cta">⟨اضغط|اضغطي⟩ ⟨لتبدأ|لتبدئي⟩ التسجيل</span></div>';
   if(!canRecord()) h+='<p class="rec-hint">'+(window.isSecureContext===false?'التسجيل المباشر يحتاج فتح التطبيق من رابطه الآمن (https). ':'هذا المتصفح لا يدعم التسجيل المباشر. ')+'⟨استعمل|استعملي⟩ تطبيق التسجيل في الجهاز:</p>';
   h+='<label class="link small file-link">'+(canRecord()?'أو ⟨سجّل|سجّلي⟩ بتطبيق الجهاز / ⟨اختر|اختاري⟩ ملفًّا صوتيًّا':'⟨سجّل|سجّلي⟩ بتطبيق الجهاز')+'<input type="file" accept="audio/*" capture data-file="audio" hidden></label>';
   h+='<p class="rec-msg" id="recMsg" role="alert"></p>';
@@ -305,22 +307,26 @@ function recCleanup(){
   REC.stream=null; REC.ctx=null;
 }
 async function recDone(){
-  var dur=(Date.now()-REC.t0)/1000, type=(REC.mr&&REC.mr.mimeType)||'audio/webm', wid=REC.wid, discard=REC.discard, sink=REC.sink;
+  var dur=(Date.now()-REC.t0)/1000, type=(REC.mr&&REC.mr.mimeType)||'audio/webm', wid=REC.wid, discard=REC.discard, sink=REC.sink, left=REC.left; REC.left=false;
   var blob=new Blob(REC.chunks,{type:type.split(';')[0]==='audio/mp4'?'audio/mp4':type});
   recCleanup(); REC.mr=null; REC.chunks=[]; REC.sink=null; REC.narId=null;
   if(discard){ if(sink&&sink.after) sink.after(); return; }
-  if(blob.size<800||dur<1){ if(sink){toast('التسجيل قصيرٌ جدًّا.'); if(sink.after) sink.after(); return;} renderRec(); return recMsg('التسجيل قصيرٌ جدًّا. ⟨أعِد|أعيدي⟩ المحاولة.'); }
+  if(blob.size<800||dur<1){ if(left) return; if(sink){toast('التسجيل قصيرٌ جدًّا.'); if(sink.after) sink.after(); return;} renderRec(); return recMsg('التسجيل قصيرٌ جدًّا. ⟨أعِد|أعيدي⟩ المحاولة.'); }
   if(sink) return sink.save(blob,dur);
-  await setWorkAudio(wid,blob,dur);
+  await setWorkAudio(wid,blob,dur,left);
 }
-function recAbort(){ if(REC.mr){REC.discard=true;recStop();} }
-async function setWorkAudio(wid,blob,dur){
+function recDiscard(){ if(REC.mr){REC.discard=true;recStop();} }
+/* leaving the page (back, home, another child) stops a work's recording and keeps it: a long story is not lost to one tap.
+   A recording made for something else (the narrator's voice) is dropped, as its page is gone. */
+function recAbort(){ if(REC.mr){ if(REC.sink) REC.discard=true; else REC.left=true; recStop(); } }
+async function setWorkAudio(wid,blob,dur,left){
   var w=workById(wid); if(!w) return;
   var key='a-'+w.id+'-'+Date.now().toString(36);
   try{await blobPut(key,blob);}catch(e){return recMsg('تعذّر حفظ التسجيل: قد تكون مساحة الجهاز ممتلئة.');}
   if(w.audio) await blobDel(w.audio);
   w.audio=key; w.dur=dur; w.updated=Date.now(); saveWorks();
-  if(CUR&&CUR.id===w.id){ renderRec(); toast('حُفظ تسجيلك.'); }
+  if(CUR&&CUR.id===w.id&&!left){ renderRec(); toast('حُفظ تسجيلك.'); }
+  else toast('حُفظ التسجيل في «'+clip(titleOf(w),30)+'».');
 }
 async function recDel(){
   var w=CUR; if(!w||!w.audio) return;
@@ -349,7 +355,7 @@ function drawHTML(w){
       '<div class="canvas-wrap"><canvas id="drawCanvas" width="1200" height="900" aria-label="لوحة الرسم"></canvas></div>'+
       '<div class="palette" role="group" aria-label="الألوان">'+PAL.map(function(c){return '<button type="button" class="pc'+(DR.color===c?' on':'')+'" style="--pc:'+c+'" data-act="drawColor" data-v="'+c+'" aria-label="'+(c==='#FFFFFF'?'ممحاة':'لون')+'">'+(c==='#FFFFFF'?'<span>ممحاة</span>':'')+'</button>';}).join('')+'</div>'+
       '<div class="draw-tools"><div class="seg">'+SIZES.map(function(s){return '<button type="button" data-act="drawSize" data-v="'+s[0]+'" class="'+(DR.size===s[0]?'on':'')+'"><i class="dot" style="--d:'+Math.round(s[0]/2+4)+'px"></i>'+s[1]+'</button>';}).join('')+'</div>'+
-      '<button type="button" class="btn ghost" data-act="drawUndo">'+ICON.undo+' تراجع</button><button type="button" class="btn ghost danger-ghost" data-act="drawClear">'+ICON.trash+' امسح</button></div>'+
+      '<button type="button" class="btn ghost" data-act="drawUndo">'+ICON.undo+' تراجع</button><button type="button" class="btn ghost danger-ghost" data-act="drawClear">'+ICON.trash+' ⟨امسح|امسحي⟩</button></div>'+
       '<p class="saved" id="drawSaved"></p>');
 }
 function drawInit(w){

@@ -9,7 +9,7 @@ function itemBody(w,o){
   function src(k){ if(!k) return ''; if(o.media==='pkg') return ' data-pkg="'+k+'"'; if(o.media==='data') return o.map&&o.map[k]?' src="'+o.map[k]+'"':null; return ' data-src="'+k+'"'; }
   function aud(k,lbl){var s=src(k); if(!k||s===null) return ''; return '<div class="mz-aud">'+(lbl?'<span class="mz-lbl">'+lbl+'</span>':'')+'<audio controls preload="none"'+s+'></audio>'+(w.dur?'<span class="mz-dur">'+fmtDur(w.dur)+'</span>':'')+'</div>';}
   function img(k,alt){var s=src(k); if(!k||s===null) return ''; return '<img class="mz-img" alt="'+escA(alt||'')+'"'+s+'>';}
-  function vs(id){var l=lessonById[id]; return l?l.verses.map(verse).join('').replace(/\u27e8استمع\|استمعي\u27e9 للتلاوة/g,'الاستماع للتلاوة'):'';}
+  function vs(id){var l=lessonById[id]; return l?l.verses.map(function(v){return verse(v,{out:!!o.media});}).join('').replace(/\u27e8استمع\|استمعي\u27e9 للتلاوة/g,'الاستماع للتلاوة'):'';}
   if(t==='kalima') h=nl2p(w.text)+aud(w.audio,'⟨بصوت الكاتب|بصوت الكاتبة⟩');
   else if(t==='lamsa') h=vs(w.lesson)+aud(w.audio,'⟨التلاوة بصوت القارئ|التلاوة بصوت القارئة⟩')+(w.text?'<p class="mz-lbl">اللمسة</p>'+nl2p(w.text):'')+(lessonById[w.lesson]?'<p class="mz-src">من درس «'+plain(lessonById[w.lesson].title)+'» في كنوز البيان</p>':'');
   else if(t==='twins') h='<div class="mz-twins"><span class="mz-w">'+esc(w.w1||'')+'</span><span class="mz-and">و</span><span class="mz-w">'+esc(w.w2||'')+'</span></div>'+nl2p(w.text)+aud(w.audio);
@@ -30,7 +30,8 @@ function itemBody(w,o){
 function magById(id){return FAM.mags.filter(function(m){return m.id===id;})[0]||null;}
 function magItems(m){
   return (m.items||[]).map(function(it){
-    if(it.w){var w=workById(it.w); if(!w) return null; return {key:'w:'+w.id,w:w,sec:w.type,kid:kidById(w.kid),name:(kidById(w.kid)||{}).name||'',g:gOf(kidById(w.kid))};}
+    /* only works that are approved for the magazines now: a work sent back, or approved for the radio only, leaves the issue */
+    if(it.w){var w=workById(it.w); if(!w||w.status!=='approved'||(w.pub&&w.pub.mag===false)) return null; return {key:'w:'+w.id,w:w,sec:w.type,kid:kidById(w.kid),name:(kidById(w.kid)||{}).name||'',g:gOf(kidById(w.kid))};}
     if(it.x){var x=FAM.ext[it.x]; if(!x) return null; return {key:'x:'+x.id,w:x,sec:x.type,ext:1,name:x.author,g:x.g==='f'};}
     return null;
   }).filter(Boolean);
@@ -53,7 +54,7 @@ function magNew(){
   L=null;
   go('<div class="ax-page narrow" style="--ax:var(--gold)"><button class="back" type="button" data-act="mags">'+BACK+' مجلّاتنا</button>'+
     '<header class="page-head"><h1 class="h1">مجلةٌ جديدة</h1><p class="lead">⟨ستكون|ستكونين⟩ ⟨رئيس|رئيسة⟩ تحريرها: ⟨تختار|تختارين⟩ الأعمال ⟨وترتّبها|وترتّبينها⟩، ويشارك فيها إخوتك.</p></header>'+
-    '<form class="form" id="magForm"><span class="lbl">اسم المجلة</span><div class="mag-names">'+MAGN.map(function(x,i){return '<label class="mn" style="--ax:var(--'+x[2]+')"><input type="radio" name="mn" value="'+x[0]+'"'+(i===0?' checked':'')+'><span class="mn-n">'+x[0]+'</span><span class="mn-d">'+x[1]+'</span></label>';}).join('')+
+    '<form class="form" id="magForm" novalidate><span class="lbl">اسم المجلة</span><div class="mag-names">'+MAGN.map(function(x,i){return '<label class="mn" style="--ax:var(--'+x[2]+')"><input type="radio" name="mn" value="'+x[0]+'"'+(i===0?' checked':'')+'><span class="mn-n">'+x[0]+'</span><span class="mn-d">'+x[1]+'</span></label>';}).join('')+
       '<label class="mn" style="--ax:var(--plum)"><input type="radio" name="mn" value="*"><span class="mn-n">اسمٌ من اختياري</span><input id="mnCustom" maxlength="20" placeholder="اسم المجلة"></label></div>'+
       '<label for="mTitle2" class="lbl">عنوان هذا العدد</label><input id="mTitle2" maxlength="40" placeholder="مثلًا: عدد الشتاء، أو: أسرار الحروف">'+
       '<p class="form-err" id="magErr" role="alert"></p><div class="actions"><button class="btn" type="submit">⟨أنشئ|أنشئي⟩ المجلة</button></div></form></div>');
@@ -83,8 +84,8 @@ function magEdit(id){
           (editable&&(KID&&(m.editor===KID.id||(i.w.kid===KID.id)))?'<button class="link small" type="button" data-act="magRemove" data-id="'+m.id+'" data-v="'+i.key+'">أزِل</button>':'')+'</li>';}).join('')+'</ul>':'<p class="muted small">لا شيء بعد.</p>')+'</section>';
     }).join('')+'</div>'+
     '<div class="actions">'+(items.length?'<button class="btn ghost" type="button" data-act="magPreview" data-id="'+m.id+'">'+ICON.book+' ⟨اقرأ|اقرئي⟩ المجلة</button>':'')+
-      (editable&&items.length?'<button class="btn" type="button" data-act="magSend" data-id="'+m.id+'">'+ICON.check+' ⟨أرسلها|أرسليها⟩ إلى وليّ أمري لإصدارها</button>':'')+
-      (editable&&!items.length?'<button class="btn ghost danger-ghost" type="button" data-act="magDel" data-id="'+m.id+'">'+ICON.trash+' احذف المجلة</button>':'')+'</div></div>');
+      (editable&&items.length?'<button class="btn" type="button" data-act="magSend" data-id="'+m.id+'">'+ICON.check+' ⟨أرسلها|أرسليها⟩ إلى وليّ ⟨أمرك|أمركِ⟩ لإصدارها</button>':'')+
+      (editable&&!items.length?'<button class="btn ghost danger-ghost" type="button" data-act="magDel" data-id="'+m.id+'">'+ICON.trash+' ⟨احذف|احذفي⟩ المجلة</button>':'')+'</div></div>');
 }
 function eligible(m,sec){
   var inMag={}; (m.items||[]).forEach(function(it){inMag[it.w?'w:'+it.w:'x:'+it.x]=1;});
@@ -107,7 +108,7 @@ async function magAdd(id,sec){
   m.updated=Date.now(); saveFam(); magEdit(m.id);
 }
 function magRemove(id,key){var m=magById(id); if(!m) return; m.items=m.items.filter(function(it){return (it.w?'w:'+it.w:'x:'+it.x)!==key;}); m.updated=Date.now(); saveFam(); magEdit(id);}
-async function magSend(id){var m=magById(id); if(!m) return; m.status='sent'; m.sentAt=Date.now(); saveFam(); toast('⟨أرسلتَ|أرسلتِ⟩ المجلة إلى وليّ أمرك.'); magEdit(id);}
+async function magSend(id){var m=magById(id); if(!m) return; var was=m.status; m.status='sent'; m.sentAt=Date.now(); if(!saveFam()){ m.status=was; return toast(G('لم تُحفظ المجلة: مساحة الجهاز ممتلئة. ⟨أخبر|أخبري⟩ وليّ ⟨أمرك|أمركِ⟩.')); } toast('⟨أرسلتَ|أرسلتِ⟩ المجلة إلى وليّ ⟨أمرك|أمركِ⟩.'); magEdit(id);}
 async function magDel(id){var ok=await ask({title:'حذف المجلة؟',c:'rose',ok:'احذفها',danger:1}); if(!ok) return; FAM.mags=FAM.mags.filter(function(m){return m.id!==id;}); saveFam(); magsView();}
 
 /* the magazine as a reading page; used in-app (data-src) and in exported files (data URIs) */
@@ -124,7 +125,7 @@ function magBody(m,o){
       (edName?'<p class="mz-ed">'+Gx('⟨رئيس|رئيسة⟩ التحرير: ',gOf(ed))+esc(edName)+'</p>':'')+
       (contrib.length?'<p class="mz-by">بأقلام وأصوات: '+contrib.map(esc).join('، ')+'</p>':'')+'</header>'+
     '<nav class="mz-toc" aria-label="فهرس العدد"><span class="mz-toc-t">في هذا العدد</span><ol>'+secs.map(function(s){return '<li><a href="#mz-'+s+'">'+TYPES[s].n+'</a></li>';}).join('')+'</ol></nav>'+
-    (items.some(function(i){return i.w.audio;})?'<div class="mz-radio no-print"><button type="button" class="mz-play" data-act="magRadio" data-id="'+m.id+'">'+ICON.play+' استمع إلى العدد كاملًا</button><span class="mz-now" id="mzNow" aria-live="polite"></span></div>':'')+
+    (items.some(function(i){return i.w.audio;})?'<div class="mz-radio no-print"><button type="button" class="mz-play" data-act="magRadio" data-id="'+m.id+'">'+ICON.play+' '+(o.forExport?'استمعوا':'⟨استمع|استمعي⟩')+' إلى العدد كاملًا</button><span class="mz-now" id="mzNow" aria-live="polite"></span></div>':'')+
     secs.map(function(s){
       return '<section class="mz-sec" id="mz-'+s+'"><h2 class="mz-sec-n"><span>'+TYPES[s].n+'</span></h2>'+
         items.filter(function(i){return i.sec===s;}).map(function(i){
@@ -139,7 +140,7 @@ function magBody(m,o){
 function magPreview(id){
   var m=magById(id); if(!m) return magsView(); L=null;
   go('<div class="ax-page wide-page" style="--ax:var(--'+magColor(m.name)+')"><div class="ph-top no-print"><button class="back" type="button" data-act="magOpen" data-id="'+m.id+'">'+BACK+' رجوع</button>'+
-    '<span class="ph-acts"><button class="btn ghost small-btn" type="button" data-act="presentMag" data-id="'+m.id+'">اعرضها على الشاشة</button><button class="btn ghost small-btn" type="button" data-act="print">اطبعها</button></span></div><div class="xp">'+magBody(m,{media:'src'})+'</div></div>');
+    '<span class="ph-acts"><button class="btn ghost small-btn" type="button" data-act="presentMag" data-id="'+m.id+'">⟨اعرضها|اعرضيها⟩ على الشاشة</button><button class="btn ghost small-btn" type="button" data-act="print">اطبعها</button></span></div><div class="xp">'+magBody(m,{media:'src'})+'</div></div>');
 }
 
 /* ---------- magazines (parent) ---------- */
@@ -159,12 +160,13 @@ function magBack(id){var m=magById(id); if(!m) return; m.status='draft'; saveFam
 function magPublishLocal(id){var m=magById(id); if(!m) return; m.status='published'; m.pubAt=Date.now(); saveFam(); toast('اعتُمدت المجلة داخل البيت.'); magParent(id);}
 async function magExport(id){
   var m=magById(id); if(!m) return; var items=magItems(m);
+  if(!items.length) return toast('لا أعمال معتمدة للمجلّات في هذا العدد.');
   var keys=[]; items.forEach(function(i){if(i.w.audio) keys.push(i.w.audio); if(i.w.image) keys.push(i.w.image);});
   var media=await mediaMap(keys), size=sizeOfMap(media);
   var fam=[]; items.forEach(function(i){if(!i.ext&&i.kid&&fam.indexOf(i.kid)<0) fam.push(i.kid);}); var ed=kidById(m.editor); if(ed&&fam.indexOf(ed)<0) fam.push(ed);
   var guests=items.filter(function(i){return i.ext;}).map(function(i){return i.name;}).filter(function(v,i,a){return a.indexOf(v)===i;});
   var voices=items.filter(function(i){return i.w.audio;}).length, pics=items.filter(function(i){return i.w.image;}).length;
-  var r=await ask({title:'قبل أن تخرج المجلة من الجهاز',c:'rose',ok:'أوافق، أصدِروا المجلة',
+  var r=await pinAsk({title:'قبل أن تخرج المجلة من الجهاز',c:'rose',ok:'أوافق، أصدِروا المجلة',
     html:'<div class="consent"><p>ملفٌّ واحد يحتوي على المجلة كاملة: '+n2a(items.length)+' أعمال'+(voices?'، منها '+n2a(voices)+' تسجيلاتٍ صوتية':'')+(pics?'، و'+n2a(pics)+' رسوم':'')+'.</p>'+
       '<p class="lbl">أسماء أطفالكم كما تظهر في المجلة</p>'+fam.map(function(k){return '<div class="cn-row">'+avatarHTML(k,'s')+'<input data-cn="'+k.id+'" maxlength="30" value="'+escA(k.name)+'" aria-label="الاسم الظاهر لـ'+escA(k.name)+'"><label class="tog"><input type="checkbox" data-anon="'+k.id+'"><span>بلا اسم</span></label></div>';}).join('')+
       (guests.length?'<p class="muted small">مشاركات الضيوف تظهر بالأسماء التي اختارتها عائلاتهم: '+guests.map(esc).join('، ')+'.</p>':'')+
@@ -177,11 +179,11 @@ async function magExport(id){
       return map;
     }});
   if(!r) return;
-  var names={}; items.forEach(function(i){if(!i.ext&&i.kid) names[i.key]=r[i.kid];}); if(ed) names.ed=r[ed.id];
+  var names={}; items.forEach(function(i){if(!i.ext&&i.kid) names[i.key]=r[i.kid.id];}); if(ed) names.ed=r[ed.id];
   var date=m.pubAt||Date.now();
   var html=pageShell('«'+m.name+'» العدد '+n2a(m.no),'<main class="xp">'+magBody(m,{media:'data',map:media,names:names,forExport:1,date:date})+'</main>',MAG_JS);
   var res=await shareFile(safeName(m.name+' - العدد '+m.no)+'.html',html,'مجلة '+m.name);
-  if(res!=='aborted'){ m.status='published'; m.pubAt=date; m.log=m.log||[]; m.log.push({d:Date.now(),names:names}); saveFam(); }
+  if(res!=='aborted'){ m.status='published'; m.pubAt=date; m.log=m.log||[]; m.log.push({d:Date.now(),names:names}); saveFam(); logOut('مجلة «'+m.name+'» العدد '+m.no,null); }
   afterShare(res); magParent(id);
 }
 
@@ -217,7 +219,7 @@ async function radioPlay(i){
 function radioMark(i){
   var now=document.getElementById('plNow'), x=RADIO.list[i];
   [].slice.call(document.querySelectorAll('.pl-row')).forEach(function(b,j){b.classList.toggle('on',j===i);});
-  if(now) now.innerHTML=x?'<span class="eyebrow">على الهواء · '+n2a(i+1)+' من '+n2a(RADIO.list.length)+'</span><p class="pl-t">'+esc(x.t)+'</p><p class="muted small">'+esc(x.by)+' · '+x.ty+'</p>':'<span class="eyebrow">انتهى البثّ</span><p class="pl-t">'+G('⟨شكرًا لاستماعك|شكرًا لاستماعكِ⟩')+'</p>';
+  if(now) now.innerHTML=x?'<span class="eyebrow">على الهواء: '+n2a(i+1)+' من '+n2a(RADIO.list.length)+'</span><p class="pl-t">'+esc(x.t)+'</p><p class="muted small">'+esc(x.by)+' · '+x.ty+'</p>':'<span class="eyebrow">انتهى البثّ</span><p class="pl-t">'+G('⟨شكرًا لاستماعك|شكرًا لاستماعكِ⟩')+'</p>';
 }
 /* magazine radio inside the in-app preview */
 async function magRadio(){
@@ -237,9 +239,11 @@ async function magRadio(){
 }
 
 /* ---------- exported pages ---------- */
-var FONTS='<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Noto+Naskh+Arabic:wght@400;600;700&family=Reem+Kufi:wght@500;700&display=swap">';
+/* A file that leaves the device asks nothing of the network: no web fonts (they would tell a font server who opened it, and when),
+   and a policy that lets the page load nothing from outside. Its sounds and pictures are inside it (data: URLs). */
+var EXPORT_CSP='<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; script-src \'unsafe-inline\'; img-src data:; media-src data:; font-src data:; base-uri \'none\'; form-action \'none\'">';
 function pageShell(title,body,js,pkg){
-  return '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(title)+'</title>'+FONTS+
+  return '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">'+EXPORT_CSP+'<meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(title)+'</title>'+
     '<style>'+EXPORT_CSS+'</style></head><body>'+body+
     (pkg?'<script type="application/json" id="kb-pkg">'+JSON.stringify(pkg).replace(/</g,'\\u003c')+'<\/script>':'')+
     (js?'<script>'+js+'<\/script>':'')+'</body></html>';

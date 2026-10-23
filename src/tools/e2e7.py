@@ -81,7 +81,7 @@ async def main():
 
         # the current PIN cancels it — in the oasis …
         await fresh(p, URL); await p.wait_for_selector('#whoBtn'); await p.wait_for_timeout(500)
-        await p.click('#whoBtn'); await p.click('#ksDad'); await p.wait_for_selector('#pinIn')
+        await p.click('#whoBtn'); await p.click('#ksParent'); await p.click('#ksDad'); await p.wait_for_selector('#pinIn')
         await p.fill('#pinIn', '5678'); await p.click('#pinOk'); await p.wait_for_timeout(600)
         ok((await p.evaluate(FAM)).get('resetReq') is None, 'the PIN in the oasis cancels the request')
         await fresh(p, URL); await p.wait_for_selector('#whoBtn'); await p.wait_for_timeout(400)
@@ -103,7 +103,7 @@ async def main():
 
         # after 72 hours: a new PIN, approvals revoked, a new recovery code, and the date shows in every consent
         await request_reset(p)
-        await p.evaluate("(()=>{var f=" + FAM + "; f.resetReq.due=Date.now()-1000; localStorage.setItem('kb-family-v1',JSON.stringify(f));})()")
+        await p.evaluate("(()=>{var f=" + FAM + "; f.resetReq.due=Date.now()-1000; f.resetReq.days=['2000-1-1','2000-1-2','2000-1-3']; localStorage.setItem('kb-family-v1',JSON.stringify(f));})()")
         await forgot(p); await p.wait_for_selector('[data-act="resetDo"]'); await p.click('[data-act="resetDo"]')
         await p.wait_for_selector('#setPinForm'); await p.fill('#p1', '2468'); await p.fill('#p2', '2468'); await p.click('#setPinForm button[type=submit]')
         await p.wait_for_selector('#recCode'); code3 = (await p.inner_text('#recCode')).strip()
@@ -112,9 +112,10 @@ async def main():
         f = await p.evaluate(FAM)
         ok(len(f['pinResets']) == 1 and f.get('resetReq') is None, 'waited reset recorded (approvals revoked as before)')
         await fresh(p, HS); await p.wait_for_selector('#kzHome'); await p.wait_for_timeout(400)
-        await p.evaluate("exportProgress()"); await p.wait_for_selector('#pinPopup.active'); await p.fill('#pinInput', '2468'); await p.evaluate("submitPin()")
-        await p.wait_for_selector('#kzSheet')
-        ok('أُعيد ضبط رمز وليّ الأمر' in await p.inner_text('#kzSheet'), 'the consent sheet shows the recent reset')
+        await p.evaluate("exportProgress()"); await p.wait_for_selector('#kzSheet')
+        st = await p.inner_text('#kzSheet')
+        ok('تغيّر رمز وليّ الأمر' in st, 'the consent sheet shows the recent reset')
+        ok('موقوف' in st, 'and, after a reset made by waiting, holds the export until the old recovery code is typed')
         await shot(p, 'p05-consent-after-reset')
         await p.locator('#kzSheet button', has_text='إلغاء').click()
 

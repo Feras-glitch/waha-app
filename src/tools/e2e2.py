@@ -40,7 +40,7 @@ async def main():
         ok('أكملي درسًا لتنبت أول وردة' in t, 'empty garden prompt (f)')
         await shot(p, 'g01-home-empty')
         # do one lesson: flower note + reward
-        await p.click('[data-open="ghayth"]'); await p.click('[data-step="1"]'); await p.click('[data-step="2"]')
+        await p.evaluate("document.querySelectorAll('details.fold').forEach(d => d.open = true)"); await p.click('[data-open="ghayth"]'); await p.click('[data-step="1"]'); await p.click('[data-step="2"]')
         for q in range(2):
             for i in range(4):
                 if await p.locator('.fb-ok').count(): break
@@ -76,7 +76,7 @@ async def main():
           d.st.tests.push({d:'2026-10-20',m:'axis',ax:'nahw',p:90,n:10});
           d.st.tests.push({d:'2026-10-21',m:'axis',ax:'lamasat',p:70,n:10});
           d.st.tests.push({d:ds,m:'full',p:83,n:18});
-          d.st.daily={last:ds,streak:8,best:8};
+          d.st.daily={last:ds,days:[ds],wk:4};
           d.w={'w-rih':'أنا الرياح أسوق السحاب إلى الأرض العطشى','w-shayb':'اشتعل الليل نجومًا فوق المدينة الهادئة'};
           localStorage.setItem(k,JSON.stringify(d));
         }""")
@@ -125,7 +125,7 @@ async def main():
         await p.click('[data-act="exRiddle"]'); await p.wait_for_selector('.modal .consent')
         mt = await p.inner_text('.modal')
         ok('سيُصنع رابطٌ' in mt and 'يخرج الرابط' in mt, 'consent wording for link')
-        await p.check('#cOk'); await p.click('.modal [data-m="1"]')
+        await p.check('#cOk'); await p.fill('#fpIn', '1234'); await p.click('.modal [data-m="1"]')
         await p.wait_for_selector('.modal input[readonly]')
         url = await p.input_value('.modal input[readonly]')
         ok('#r=' in url and len(url) < 3000, 'riddle link built (%d chars)' % len(url))
@@ -161,7 +161,7 @@ async def main():
         await p.wait_for_selector('.gpair')
         await p.click('[data-act="pCerts"]'); await p.wait_for_selector('.certs')
         await p.click('.ccard.on >> nth=0'); await p.wait_for_selector('.cert')
-        await p.click('[data-act="exCert"]'); await p.check('#cOk')
+        await p.click('[data-act="exCert"]'); await p.check('#cOk'); await p.fill('#fpIn', '1234')
         async with p.expect_download() as dli:
             await p.click('.modal [data-m="1"]')
         dl = await dli.value; cp = os.path.join(DL, 'cert.html'); await dl.save_as(cp)

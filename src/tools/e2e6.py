@@ -7,8 +7,13 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST = os.path.join(ROOT, 'dist')
 SHOTS = sys.argv[1] if len(sys.argv) > 1 else '/tmp/shots6'
 os.makedirs(SHOTS, exist_ok=True); DL = os.path.join(SHOTS, 'dl'); os.makedirs(DL, exist_ok=True)
+DOWN = [False]
 class Q(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *a): pass
+    def handle(self):
+        if DOWN[0]: return            # the server is down: the connection closes unanswered, as when the device is offline
+        try: super().handle()
+        except (BrokenPipeError, ConnectionResetError): pass
 srv = http.server.ThreadingHTTPServer(('127.0.0.1', 8782), functools.partial(Q, directory=DIST))
 threading.Thread(target=srv.serve_forever, daemon=True).start()
 BASE = 'http://127.0.0.1:8782/'
@@ -17,12 +22,18 @@ ERRS = []
 def ok(c, m):
     print(('PASS ' if c else 'FAIL ') + m)
     if not c: ERRS.append(m)
+async def until(p, js, timeout=10000):
+    """wait_for_function evaluates its text with eval, which the pages' content policy refuses; this asks the page instead"""
+    for _ in range(int(timeout / 100)):
+        if await p.evaluate(js): return
+        await asyncio.sleep(0.1)
+    raise TimeoutError('still false: ' + js)
 async def shot(p, n, full=False): await p.screenshot(path=os.path.join(SHOTS, n + '.png'), full_page=full)
 async def add_kid(p, name, g, by):
     await p.wait_for_selector('#kidForm'); await p.fill('#kfName', name); await p.click('[data-act="kfG"][data-v="%s"]' % g)
     await p.select_option('#kfBy', str(by)); await p.click('#kidForm button[type=submit]')
 async def oasis_ready(p): await p.wait_for_selector('#whoBtn'); await p.wait_for_timeout(700)
-async def hs_ready(p): await p.wait_for_selector('#kzHome'); await p.wait_for_function("typeof users!=='undefined'&&users.length>0&&!!state"); await p.wait_for_timeout(500)
+async def hs_ready(p): await p.wait_for_selector('#kzHome'); await until(p, "typeof users!=='undefined'&&users.length>0&&!!state"); await p.wait_for_timeout(500)
 async def corner(p):
     await p.goto('about:blank'); await p.goto(KZ + '#parent'); await p.wait_for_selector('#pinIn, .ph-top')
     if await p.locator('#pinIn').count():
@@ -95,7 +106,7 @@ async def main():
         ok('تم التصدير' not in await p.inner_text('#toast'), 'no «done» toast before the parent agrees')
         await p.wait_for_timeout(400); await shot(p, 'h03-consent')
         await p.wait_for_timeout(1500)
-        await p.check('#kzOk')
+        await p.check('#kzOk'); await p.fill('#kzPin', '1234')
         async with p.expect_download() as dli:
             await p.click('#kzGo')
         dl = await dli.value; fp = os.path.join(DL, 'report.json'); await dl.save_as(fp)
@@ -117,7 +128,7 @@ async def main():
         got = []; p.on('download', lambda d: got.append(d.suggested_filename))
         await p.evaluate("exportRecitation()"); await pin_if_asked(p); await p.wait_for_selector('#kzSheet'); await p.wait_for_timeout(1500)
         ok(await p.locator('#kzWhat li').count() == 2, 'one consent lists both parts (%d)' % await p.locator('#kzWhat li').count())
-        await p.check('#kzOk'); await p.click('#kzGo'); await p.wait_for_timeout(1500)
+        await p.check('#kzOk'); await p.fill('#kzPin', '1234'); await p.click('#kzGo'); await p.wait_for_timeout(1500)
         ok(sorted(got) == sorted(x for x in got if x.startswith('recitation-')) and len(got) == 2, 'both parts downloaded (%s)' % got)
         ok(await p.evaluate("JSON.parse(localStorage.getItem('kb-family-v1')).waLog.length") == n0 + 2, 'both parts logged')
         await p.evaluate("(async()=>{var a=await recAllForUser(activeUserId); for (var r of a) await recDelete(r.key);})()")
@@ -170,8 +181,8 @@ async def main():
         await corner(p)
         await p.click('[data-act="pBackup"]'); await p.wait_for_selector('[data-act="backupMake"]')
         t = await p.evaluate("document.getElementById('view').innerText")
-        ok('ما خرج من الواحة والحسنية' in t and 'الحسنية · تقرير تقدّم هند' in t, 'Hasaniya exports listed in the parent corner')
-        await p.click('[data-act="backupMake"]'); await p.fill('#bk1', 'kunuz-2026'); await p.fill('#bk2', 'kunuz-2026')
+        ok('ما خرج من الجهاز' in t and 'الحسنية · تقرير تقدّم هند' in t, 'Hasaniya exports listed in the parent corner')
+        await p.click('[data-act="backupMake"]'); await p.fill('#bk1', 'kunuz-2026'); await p.fill('#bk2', 'kunuz-2026'); await p.fill('#fpIn', '1234')
         async with p.expect_download() as dli:
             await p.click('.modal [data-m="1"]')
         dl = await dli.value; bp = os.path.join(DL, 'backup.json'); await dl.save_as(bp)
@@ -191,7 +202,8 @@ async def main():
         ok(await p.evaluate("appBack()") is True, 'back steps out of a parent page')
         await p.wait_for_selector('.ph-top')
         await p.goto('about:blank'); await p.goto(KZ + '#kunuz'); await p.wait_for_selector('.hello')
-        ok(await p.evaluate("appBack()") is False, 'back on the chambers home leaves to the oasis')
+        ok(await p.evaluate("appBack()") is True, 'back on the chambers home goes to the oasis (not out of the app)')
+        await p.wait_for_selector('#whoBtn'); ok('kunuz' not in p.url, 'and the oasis opens')
 
         # deleting a child removes her Hasaniya data, keeps her brother's
         await p.evaluate(OPEN_DB + "openHs().then(d=>new Promise(r=>{var t=d.transaction('recs','readwrite'),o=t.objectStore('recs');o.put({key:'author|line|x1',kind:'line',uid:'author',text:'يَا هِنْدُ',blob:new Blob(['a'])});o.put({key:'author|line|x2',kind:'line',uid:'author',text:'يا يوسف',blob:new Blob(['a'])});t.oncomplete=()=>{d.close();r();};}))")
@@ -214,9 +226,9 @@ async def main():
         # a fresh visit: the parent cancels at the PIN, nothing leaves
         got = []
         p.on('download', lambda d: got.append(d))
-        await p.evaluate("exportProgress()"); await p.wait_for_selector('#pinPopup.active')
-        await p.evaluate("cancelPin()"); await p.wait_for_timeout(1200)
-        ok(not got and 'لم يخرج شيء' in await p.inner_text('#toast'), 'cancelled at the PIN: nothing leaves')
+        await p.evaluate("exportProgress()"); await p.wait_for_selector('#kzSheet')
+        await p.locator('#kzSheet button', has_text='إلغاء').click(); await p.wait_for_timeout(1200)
+        ok(not got and 'لم يخرج شيء' in await p.inner_text('#toast'), 'cancelled in the consent sheet: nothing leaves')
         ok(not await p.locator('#kzSheet').count(), 'no consent sheet left behind')
         await p.evaluate("parentEntry()"); await p.wait_for_selector('#pinPopup.active'); await p.fill('#pinInput', '1234'); await p.evaluate("submitPin()")
         await p.wait_for_selector('#parentScreen', state='visible')
@@ -234,11 +246,11 @@ async def main():
         await p.goto(HS); await hs_ready(p)
         regs = await p.evaluate("navigator.serviceWorker.getRegistrations().then(a=>a.map(r=>r.scope))")
         ok(regs == [BASE], 'the Hasaniya registers no worker of its own (%s)' % regs)
-        await ctx.set_offline(True)
+        DOWN[0] = True     # not set_offline: it lets the service worker's own fetches through, so it proved nothing
         for u, sel in ((URL, '#whoBtn'), (KZ + '#kunuz', '.hello'), (HS, '#kzHome')):
             await p.goto('about:blank'); await p.goto(u); await p.wait_for_selector(sel, timeout=15000)
             ok(True, 'offline: ' + u.replace(BASE, ''))
-        await ctx.set_offline(False)
+        DOWN[0] = False
 
         # the Hasaniya with no family yet sends to the setup and creates nothing
         c2 = await b.new_context(viewport={'width': 390, 'height': 844}); p2 = await c2.new_page()

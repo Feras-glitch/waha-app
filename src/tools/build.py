@@ -47,6 +47,22 @@ style = rd('parts/style.css')
 tokens = re.sub(r'/\*.*?\*/', '', style[:style.index('*{box-sizing:border-box}')], flags=re.S)
 
 
+# Every page of the product says what it may load: its own files, and images/sounds/fonts made on the device (data:, blob:).
+# Nothing from another host — the "nothing leaves the device" promise is enforced by the browser, not only by our code.
+# Inline scripts stay allowed (the pages are single files); file: covers the desktop app, which opens the pages from disk.
+CSP = ("default-src 'self' file:; script-src 'self' file: 'unsafe-inline'; style-src 'self' file: 'unsafe-inline'; "
+       "img-src 'self' file: data: blob:; media-src 'self' file: data: blob:; font-src 'self' file: data:; "
+       "connect-src 'self' file: data: blob:; worker-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'")
+CSP_META = '<meta http-equiv="Content-Security-Policy" content="%s">' % CSP
+
+
+def with_csp(html, charset):
+    i, head_end = html.find(charset), html.find('</head>')
+    if i < 0 or head_end < 0 or i > head_end:
+        raise SystemExit('cannot place the CSP: no %s in the head' % charset)
+    return html[:i + len(charset)] + CSP_META + html[i + len(charset):]
+
+
 def mini(css):
     css = re.sub(r'/\*.*?\*/', '', css, flags=re.S)
     return re.sub(r'\s*\n\s*', '', css)
@@ -82,12 +98,17 @@ node_check('kunuz', '(function(){\n' + js + '\n})();')
 shell = rd('parts/shell.html')
 assert shell.count('/*@ICON@*/') == 1
 kunuz = shell.replace('/*@ICON@*/', ICON).replace('/*@CSS@*/', app_css).replace('/*@JS@*/', js)
+kunuz = with_csp(kunuz, '<meta charset="utf-8">')
+if 'src="../js/android-shim.js"' not in kunuz:
+    raise SystemExit('kunuz/index.html must load ../js/android-shim.js: without it the Android app cannot save or send any file')
 write('kunuz/index.html', kunuz)
 
 # ---------- the oasis (front page) ----------
 sys.path.insert(0, P('tools'))
 import waha_build
-waha_build.build(icon=ICON)
+waha_build.build(icon=ICON, csp=CSP_META)
+if CSP_META not in open(os.path.join(DIST, 'index.html'), encoding='utf-8').read():
+    raise SystemExit('the oasis page has no CSP')
 
 # ---------- hasaniya/ (pinned copy + adapter) ----------
 shutil.copytree(P('parts', 'hasaniya'), os.path.join(DIST, 'hasaniya'))
@@ -99,10 +120,13 @@ hp = os.path.join(DIST, 'hasaniya', 'index.html')
 h = open(hp, encoding='utf-8').read()
 for old, new in (('<link rel="manifest" href="manifest.json">', '<link rel="manifest" href="../manifest.json">'),
                  ('<script src="js/android-shim.js"></script>', '<script src="js/waha-early.js"></script>\n<script src="js/android-shim.js"></script>'),
+                 # the product's own fonts (bundled, offline), so the three sections read alike
+                 ('<link rel="manifest" href="../manifest.json">', '<link rel="manifest" href="../manifest.json">\n<link rel="stylesheet" href="../fonts/fonts.css">'),
                  ('<script src="js/app.js"></script>', '<script src="js/app.js"></script>\n<script src="js/waha-late.js"></script>')):
     if h.count(old) != 1:
         raise SystemExit('hasaniya/index.html changed upstream; adapter hook not found: ' + old)
     h = h.replace(old, new)
+h = with_csp(h, '<meta charset="UTF-8">')
 open(hp, 'w', encoding='utf-8').write(h)
 # the adapter must wrap the Hasaniya from both ends, and everything it overrides or calls must still exist upstream
 scripts = re.findall(r'<script[^>]*src="([^"]+)"', h)
@@ -115,6 +139,17 @@ needs = json.loads(re.search(r'var KZ_HS_NEEDS = (\[[^\]]*\])', late).group(1).r
 missing = [n for n in needs if not re.search(r'(^|\n)\s*(async\s+)?(function\s+%s\s*\(|(const|let|var)\s+%s\b)' % (n, n), hs_src)]
 if missing:
     raise SystemExit('hasaniya upstream no longer defines what the adapter relies on: ' + ', '.join(missing))
+# the girls' labels: every masculine phrase the adapter rewrites must still be in the Hasaniya (index.html or its scripts)
+hs_all = hs_src + open(hp, encoding='utf-8').read()
+fem = re.search(r'var HS_FEM = \[(.*?)\n  \];', late, re.S)
+pairs = re.findall(r"\['([^']+)', '([^']+)'\]", fem.group(1)) if fem else []
+if not pairs:
+    raise SystemExit('hasaniya_late.js: HS_FEM not found')
+names = re.search(r'var HS_NAMES = \[(.*?)\n  \];', late, re.S)
+pairs += re.findall(r"\['([^']+)', '([^']+)'\]", names.group(1)) if names else []
+gone = [m for m, f in pairs if m not in hs_all]
+if gone:
+    raise SystemExit("hasaniya: these labels are no longer in the Hasaniya, update HS_FEM in hasaniya_late.js: " + ' · '.join(gone))
 
 # ---------- one service worker ----------
 assets, digest = ['./'], hashlib.sha256()
