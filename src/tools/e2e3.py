@@ -53,7 +53,7 @@ async def main():
         await shot(p, 'v02-voice-one')
         await p.click('[data-act="pVoice"]'); await p.click('[data-act="parent"]'); await p.click('[data-act="backKid"]')
         await p.wait_for_selector('.hello')
-        await p.click('[data-open="ghayth"]'); await p.click('[data-step="1"]')
+        await p.evaluate("document.querySelectorAll('details.fold').forEach(d => d.open = true)"); await p.click('[data-open="ghayth"]'); await p.click('[data-step="1"]')
         t = await text(p)
         ok('اسمعي الشرح بصوت ماما' in t, 'lesson offers the family voice (f)')
         await p.click('[data-act="narPlay"]'); await p.wait_for_timeout(600)

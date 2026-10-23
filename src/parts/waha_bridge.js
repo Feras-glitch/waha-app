@@ -49,6 +49,13 @@
         stamped: Object.keys(stamps).filter(function (k) { return +stamps[k] >= from; }).length
       };
     },
+    /* the days the child played in «كنوز البيان» or the Hasaniya (yyyy-mm-dd): with the oasis's own, one week counter for the product */
+    playDays: function (i) {
+      var id = ids[i], out = []; if (!id) return out;
+      var d = lsGet('kb-kid-' + id), dd = d && d.st && d.st.daily && d.st.daily.days; if (Array.isArray(dd)) out = out.concat(dd);
+      var u = hsUser(id), ad = u && u.state && u.state.activeDays; if (Array.isArray(ad)) out = out.concat(ad);
+      return out;
+    },
     /* what the child has studied in the two sections: lessons whose gem was earned, Hasaniya stations completed and verses answered.
        The oasis asks about these alone, so its questions are review and never something the child was not taught */
     studied: function (i) {

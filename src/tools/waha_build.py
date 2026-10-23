@@ -205,6 +205,13 @@ def build(verbose=True, icon='', csp=''):
         if stray:
             raise SystemExit('waha glosses.json: words not in the palms: ' + ', '.join(stray[:10]))
         D['glosses'] = {k: {'zh': v['zh'], 'py': v['py'], 'en': v['en']} for k, v in G.items()}
+    # the quarterly reading passages: in the app only once the sheikh has approved them ("status": "approved" in pending/orf.json)
+    op = os.path.join(ROOT, 'parts', 'waha', 'pending', 'orf.json')
+    if os.path.exists(op):
+        O = _j.load(open(op, encoding='utf-8'))
+        if O.get('status') == 'approved':
+            D['orf'] = {'levels': O['levels'], 'procedure': {'scoring': O['procedure']['scoring']},
+                        'passages': [{k: x[k] for k in ('id', 'level', 'title', 'text', 'words', 'questions')} for x in O['passages']]}
     data = _j.dumps(D, ensure_ascii=False, separators=(',', ':'))
     css, bridge, post = rd('parts', 'waha.css'), rd('parts', 'waha_bridge.js'), rd('parts', 'waha_post.js')
     miss = check_markers('page', page) + check_markers('app', app) + check_markers('data', data)
