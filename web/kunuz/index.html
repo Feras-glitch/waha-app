@@ -2241,7 +2241,7 @@ function ansType(){
 function finishItem(sc){
   var A=AS,b=A.items[A.i],s=A.s; s.done=true; s.sc=sc; A.scores[A.i]=sc;
   /* the periodic diagnostic measures, it does not teach: no right or wrong shown, nothing goes to the spaced review */
-  if(A.mode==='diag'){ var st=document.getElementById('asItem'); if(st) st.style.opacity='.55'; setTimeout(function(){ if(AS===A&&A.items[A.i]===b) nextItem(); },300); return; }
+  if(A.mode==='diag'){ var st=document.getElementById('asItem'); if(st){ st.style.opacity='.55'; [].forEach.call(st.querySelectorAll('button,input'),function(x){x.disabled=true;}); } setTimeout(function(){ if(AS===A&&A.items[A.i]===b) nextItem(); },300); return; }
   if(A.mode==='majlis'){ if(sc>=1) A.pts[A.turn]++; } else record(b.id,sc);
   if(A.mode==='daily') markDaily();
   renderItem();
