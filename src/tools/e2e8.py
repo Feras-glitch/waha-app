@@ -102,8 +102,8 @@ async def main():
         mk = await p.evaluate("[mget('kz','sadd|0'), mget('hsq','s1v1|0'), seen('kz').includes('sadd|0')]")
         ok(n >= 2 and mk[0]['wrong'] == 1 and mk[1]['wrong'] == 1 and mk[2], 'a miss in the chambers and in the Hasaniya enters the oasis review')
         ok(await p.evaluate("importMisses()") == 0, 'each miss is taken once')
-        picks = await p.evaluate("Array.from({length:30},()=>genPick('kz', new Set()).id).filter(x=>x==='sadd|0').length")
-        ok(picks >= 10, 'the missed chamber question is favoured in the trip (%d/30)' % picks)
+        due = await p.evaluate("(() => { const m = mget('kz','sadd|0'); return [m.due - dayN(), (() => { const n0 = dayN; dayN = t => t == null ? n0() + 1 : n0(t); const r = buildTrip(false).some(c => c.g === 'kz' && c.id === 'sadd|0' && c.kind === 'review'); dayN = n0; return r; })()]; })()")
+        ok(due == [0, True] or due == [1, True], 'the missed chamber question comes back as a review the next day (%s)' % due)
         # a real miss inside a chamber lesson is recorded
         right = await p.evaluate("DATA.kunuz.lessons.filter(l=>l.ax==='furuq')[0].quiz.map(q=>kzPlain(q.o[0]))")
         await p.goto('about:blank'); await p.goto(KZ + '#kunuz'); await p.wait_for_selector('.hello')
