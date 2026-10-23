@@ -94,11 +94,75 @@ def check_unknown_words(D):
         raise SystemExit('waha data.json, unknown words:\n  ' + '\n  '.join(bad))
 
 
+GRADE_CASES = [
+    # (what a child types, the answer as the data has it, the grade)
+    ('الرحمن', 'ٱلرَّحْمَٰنِ', 'ok'), ('رحمن', 'رَحْمٰن', 'ok'), ('رحمان', 'رَحْمٰن', 'ok'), ('هذا', 'هَٰذَا', 'ok'), ('ذلك', 'ذَٰلِكَ', 'ok'),
+    ('إله', 'إِلَٰهَ', 'ok'), ('العالمين', 'ٱلْعَٰلَمِينَ', 'ok'), ('كتاب', 'كِتَٰبٌ', 'ok'), ('كتب', 'كِتَٰبٌ', 'bad'),
+    ('السماوات', 'ٱلسَّمَٰوَٰتِ', 'ok'), ('جاء', 'جَآءَ', 'ok'), ('الآن', 'ٱلْـَٔانَ', 'ok'),
+    ('موسى', 'مُوسَىٰ', 'ok'), ('الهدى', 'ٱلْهُدَىٰٓ', 'ok'), ('على', 'عَلَىٰ', 'ok'), ('ذكراها', 'ذِكْرَىٰهَآ', 'ok'), ('ونراه', 'وَنَرَىٰهُ', 'ok'),
+    ('بناها', 'بَنَىٰهَا', 'ok'), ('فوقاهم', 'فَوَقَىٰهُمُ', 'ok'), ('وتقواها', 'وَتَقْوَىٰهَا', 'ok'),
+    ('آمن', 'ءَامَنَ', 'ok'), ('آمنوا', 'ءَامَنُوٓا۟', 'ok'), ('قرآن', 'قُرْءَانٌ', 'ok'), ('آخر', 'ءَاخَرَ', 'ok'), ('آمنا', 'ـَٔامَنَّا', 'ok'),
+    ('يسألونك', 'يَسْـَٔلُونَكَ', 'ok'), ('شيئا', 'شَيْـًٔا', 'ok'), ('ورسالاته', 'وَرِسَٰلَٰتِهِۦ', 'ok'), ('به', 'بِهِۦ', 'ok'),
+    ('اقرأ', 'ٱقْرَأْ', 'ok'), ('عـلم', 'عَلِمَ', 'ok'), ('علی', 'عَلَى', 'ok'), ('کتب', 'كَتَبَ', 'ok'), ('آمن', 'آمَنَ', 'ok'),
+    ('عبادي', 'عِبَٰدِى', 'ok'), ('دعائي', 'دُعَآءِىٓ', 'ok'), ('يهدي', 'يَهْدِىٓ', 'ok'), ('في', 'فِى', 'ok'), ('إلى', 'إِلَى', 'ok'),
+    ('رحمه', 'رَحْمَة', 'near'), ('علي', 'عَلَى', 'near'), ('أعلم', 'اعْلَمْ', 'near'), ('سءل', 'سُئِلَ', 'near'),
+    ('علم', 'عَمِلَ', 'bad'), ('موس', 'مُوسَىٰ', 'bad'),
+]
+
+
+def check_grading(app):
+    """The oasis grades typed answers against the Quran's Uthmani spelling; these cases must keep their grade."""
+    import shutil, subprocess, json as _j
+    if not shutil.which('node'):
+        return
+    a, b = app.index('const strip = '), app.index('const NEAR_WHY')
+    code = app[a:app.index('\n', a)] + '\n' + app[app.index('/* ---- answer checking', a):b]
+    js = code + '\nconst C = ' + _j.dumps(GRADE_CASES, ensure_ascii=False) + ';\n' + \
+        "const bad = C.filter(([t, a, g]) => grade(t, a) !== g).map(([t, a, g]) => t + ' / ' + a + ': ' + grade(t, a) + ', expected ' + g);\n" + \
+        "if (bad.length) { console.log(bad.join('\\n')); process.exit(1); }"
+    r = subprocess.run(['node', '-e', js], capture_output=True, text=True)
+    if r.returncode:
+        raise SystemExit('waha grading:\n  ' + (r.stdout + r.stderr).strip().replace('\n', '\n  '))
+
+
+_MARK = re.compile(r'⟨[^⟨⟩]*⟩')
+_MASC = re.compile(r'(?:^|[\s«(])(\w*تَ|\w*كَ|أنتَ)(?=[\s.،؟!:»)]|$)|(?:^|[.،:«]\s*)(قل|اختر|افعل|أطعم|عش|اغتنم|اسمع|احفظ|أكمل|اكتب|اقرأ|انظر|تذكّر|لا تغضب|لا تستصغر)(?=[\s«:،.]|$)')
+
+
+QUOTED = {'لو كنتَ تغدّيتَ لسقيتُك', 'لولا أنك تغدّيتَ لأطعمتُك'}   # the miser's words, quoted from the story
+
+
+def check_gender(D):
+    """A girl is addressed in the feminine (⟨m|f⟩ markers) in everything said to the child. Outside the markers, the
+    child-facing fields must not hold an explicitly masculine form (دخلتَ، لكَ، أنتَ) or a bare masculine imperative."""
+    fields = []
+    for x in D['hayat']['situations']:
+        fields += [('hayat ' + x['id'], x['q'])] + [('hayat ' + x['id'], o) for o in x['options']]
+    for i, h in enumerate(D['hikam']):
+        fields += [('hikam %d' % i, h.get('meaning', '')), ('hikam %d' % i, h.get('when', ''))] + [('hikam %d' % i, t) for t in h['situations']]
+    fields += [('hadith ' + x['id'], x.get('meaning', '')) for x in D['hadith']['items']]
+    for x in D['alghaz']['folk']:
+        fields += [('folk ' + x['id'], x['q']), ('folk ' + x['id'], x['answer'])] + [('folk ' + x['id'], o) for o in x['options']]
+    for i, st in enumerate(D['nathr']['stories']):
+        fields.append(('story %d' % i, st.get('lesson', '')))
+        for q in st.get('questions') or []:
+            fields += [('story %d' % i, q.get('q', ''))] + [('story %d' % i, o) for o in q.get('options') or []]
+    bad = []
+    for where, t in fields:
+        m = _MASC.search(_MARK.sub(' ', t or ''))
+        if m and where != 'hadith W09' and t not in QUOTED:   # W09 is with the scholar
+            bad.append('%s: «%s» (%s)' % (where, t, (m.group(1) or m.group(2))))
+    if bad:
+        raise SystemExit('waha data.json, masculine address outside ⟨m|f⟩:\n  ' + '\n  '.join(bad))
+
+
 def build(verbose=True, icon='', csp=''):
     page, data, app = rd('parts', 'waha', 'page.html'), rd('parts', 'waha', 'data.json'), rd('parts', 'waha', 'app.js')
     import json as _j
     D = _j.loads(data)
     check_unknown_words(D)
+    check_grading(app)
+    check_gender(D)
     D['kunuz'] = kunuz_for_trip()
     data = _j.dumps(D, ensure_ascii=False, separators=(',', ':'))
     css, bridge, post = rd('parts', 'waha.css'), rd('parts', 'waha_bridge.js'), rd('parts', 'waha_post.js')

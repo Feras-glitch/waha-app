@@ -335,7 +335,7 @@ function certView(id,kidId,asParent){
   if(!asParent&&!aw.seen){aw.seen=true;saveKidData(k.id,d);}
   go('<div class="ax-page cert-page" style="--ax:var(--'+c.c+')"><div class="ph-top no-print"><button class="back" type="button" data-act="certs"'+(asParent?' data-k="'+k.id+'"':'')+'>'+BACK+' '+(asParent?'شهادات '+esc(k.name):'شهاداتي')+'</button></div>'+
     certHTML(c,aw,k.name,gOf(k))+
-    '<div class="actions no-print"><button class="btn" type="button" data-act="print">اطبعها</button>'+
+    '<div class="actions no-print"><button class="btn" type="button" data-act="print">'+(asParent?'اطبعوها':'⟨اطبعها|اطبعيها⟩ (برمز وليّ الأمر)')+'</button>'+
       (asParent?'<button class="btn ghost" type="button" data-act="exCert" data-id="'+id+'" data-k="'+k.id+'">'+ICON.share+' أرسلوها</button>':'')+'</div>'+
     (asParent?'':'<p class="muted small no-print">⟨تريد|تريدين⟩ أن تراها جدّتك؟ ⟨اطلب|اطلبي⟩ من وليّ أمرك أن يرسلها من «ركن وليّ الأمر».</p>')+'</div>');
 }

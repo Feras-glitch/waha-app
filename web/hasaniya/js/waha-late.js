@@ -355,12 +355,65 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
     switchUser = function (id) {
       var r = _switch.apply(this, arguments);
       var f = famIdOf(id), F = famGet(); if (f && F && F.cur !== f) { F.cur = f; famSet(F); }
+      try { if (window.KZ_HS_GENDER) window.KZ_HS_GENDER(); } catch (e) {}
       return r;
     };
     exportBackup = importBackupFile = function () {
       cornerSheet('💾 النسخة الاحتياطية', 'تقدّم الحسنية وتسجيلات الأطفال فيها داخلةٌ في النسخة الاحتياطية للعائلة، وهي مشفّرة بكلمة سرٍّ تختارونها: ركن وليّ الأمر ← الأمان والنسخ الاحتياطي. ومنها تكون الاستعادة.');
     };
   } catch (e) { console.warn('waha: children ui', e); }
+
+  /* ---------- girls: the Hasaniya's own labels speak to a boy («استمع»، «سجّل»…). For a girl they are rewritten on screen
+     (text, title, aria-label, placeholder), and back again for a boy. Its spoken and companion lines are already gendered upstream.
+     tools/build.py checks that every phrase here is still in the pinned Hasaniya, so this list follows its updates. ---------- */
+  var HS_FEM = [
+    ['اضغط على ناجي', 'اضغطي على ناجي'], ['استمع مرة أخرى', 'استمعي مرة أخرى'], ['استمع للقصة', 'استمعي للقصة'],
+    ['استمع للتسميع', 'استمعي للتسميع'], ['استمع للبيت', 'استمعي للبيت'], ['استمع للمعنى', 'استمعي للمعنى'], ['استمع للغز', 'استمعي للغز'],
+    ['استمع للسؤال', 'استمعي للسؤال'], ['استمع للشرح', 'استمعي للشرح'], ['استمع للخيار', 'استمعي للخيار'], ['▶ استمع', '▶ استمعي'],
+    ['سجّل التسميع المتصل', 'سجّلي التسميع المتصل'], ['سجّل صوتك', 'سجّلي صوتكِ'], ['⏺ سجّل', '⏺ سجّلي'], ['🎤 سجّل', '🎤 سجّلي'],
+    ['⏹ أوقف التسجيل', '⏹ أوقفي التسجيل'], ['⏹ أوقف', '⏹ أوقفي'], ['أوقف القراءة', 'أوقفي القراءة'], ['🔁 أعد التسجيل', '🔁 أعيدي التسجيل'], ['🔁 أعد', '🔁 أعيدي'],
+    ['رتّب الكلمات:', 'رتّبي الكلمات:'], ['رتّب المحطات', 'رتّبي المحطات'], ['رتّب بالنقر', 'رتّبي بالنقر'], ['انقر كلمات البيت بالترتيب الصحيح', 'انقري كلمات البيت بالترتيب الصحيح'],
+    ['اختبر فهمك', 'اختبري فهمكِ'], ['أكمل أول محطة', 'أكملي أول محطة'], ['أكمل 5 محطات', 'أكملي 5 محطات'], ['أكمل كل المحطات', 'أكملي كل المحطات'],
+    ['اجمع 100 نقطة', 'اجمعي 100 نقطة'], ['اجمع 500 نقطة', 'اجمعي 500 نقطة'], ['أكمل محطة لتملأها', 'أكملي محطة لتملئيها'], ['📖 أكمل القصة', '📖 أكملي القصة'],
+    ['استمر ➡️', 'استمرّي ➡️'], ['▶ تابع الرحلة', '▶ تابعي الرحلة'], ['سمّع ما حفظت', 'سمّعي ما حفظتِ'], ['🔁 سمّع', '🔁 سمّعي'],
+    ['راجع البطاقات', 'راجعي البطاقات'], ['راجع المستحق الآن', 'راجعي المستحق الآن'], ['اسأل المنظومة', 'اسألي المنظومة'],
+    ['تذكّر مرة أخرى', 'تذكّري مرة أخرى'], ['🔑 تذكّر', '🔑 تذكّري'], ['اختر طريقة التذكّر:', 'اختاري طريقة التذكّر:'],
+    ['اكتب جوابك', 'اكتبي جوابكِ'], ['اكتب بكلماتك', 'اكتبي بكلماتكِ'], ['اضغط أي كلمة لتسمعها', 'اضغطي أي كلمة لتسمعيها'],
+    ['اضغط النقطة لترى قصتها', 'اضغطي النقطة لتري قصتها'], ['اضغط البيت للتدرّب عليه', 'اضغطي البيت للتدرّب عليه'],
+    ['اضغط المحطات بالترتيب', 'اضغطي المحطات بالترتيب'], ['جرّب مرة أخرى', 'جرّبي مرة أخرى'], ['ابدأ بالمحطة', 'ابدئي بالمحطة'],
+    ['حاول مرة أخرى، الكلمات المعلّمة', 'حاولي مرة أخرى، الكلمات المعلّمة'], ['↺ ابدأ من جديد', '↺ ابدئي من جديد'], ['جرّب كلمة أوضح', 'جرّبي كلمة أوضح']
+  ];
+  window.KZ_HS_FEM = HS_FEM;
+  (function () {
+    var esc = function (t) { return t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); };
+    var by = function (i) { var m = {}; HS_FEM.forEach(function (p) { m[p[i]] = p[1 - i]; }); return m; };
+    var MF = by(0), FM = by(1);
+    var rx = function (m) { return new RegExp('(' + Object.keys(m).sort(function (a, b) { return b.length - a.length; }).map(esc).join('|') + ')(?![\\u0621-\\u064A\\u064B-\\u0652])', 'g'); };
+    var RMF = rx(MF), RFM = rx(FM), ATTR = ['title', 'aria-label', 'placeholder'];
+    function fix(s, girl) { return s.replace(girl ? RMF : RFM, function (w) { return (girl ? MF : FM)[w]; }); }
+    function text(n, girl) { var d = n.data, o = fix(d, girl); if (o !== d) n.data = o; }
+    function attrs(e, girl) { for (var i = 0; i < ATTR.length; i++) { var v = e.getAttribute(ATTR[i]); if (v) { var o = fix(v, girl); if (o !== v) e.setAttribute(ATTR[i], o); } } }
+    function walk(root, girl) {
+      if (!root) return;
+      if (root.nodeType === 3) return text(root, girl);
+      if (root.nodeType !== 1 || root.tagName === 'SCRIPT' || root.tagName === 'STYLE') return;
+      attrs(root, girl);
+      var tw = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT), n;
+      while ((n = tw.nextNode())) { if (n.nodeType === 3) text(n, girl); else if (n.tagName !== 'SCRIPT' && n.tagName !== 'STYLE') attrs(n, girl); }
+    }
+    window.KZ_HS_GENDER = function () { walk(document.body, isGirl()); };
+    window.addEventListener('DOMContentLoaded', function () {
+      window.KZ_HS_GENDER();
+      new MutationObserver(function (recs) {
+        var girl = isGirl();
+        recs.forEach(function (r) {
+          if (r.type === 'characterData') text(r.target, girl);
+          else if (r.type === 'attributes') attrs(r.target, girl);
+          else for (var j = 0; j < r.addedNodes.length; j++) walk(r.addedNodes[j], girl);
+        });
+      }).observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ATTR });
+    });
+  })();
 
   /* ---------- 4) one service worker (the oasis's), and the way home ---------- */
   try {

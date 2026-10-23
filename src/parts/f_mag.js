@@ -84,8 +84,8 @@ function magEdit(id){
           (editable&&(KID&&(m.editor===KID.id||(i.w.kid===KID.id)))?'<button class="link small" type="button" data-act="magRemove" data-id="'+m.id+'" data-v="'+i.key+'">أزِل</button>':'')+'</li>';}).join('')+'</ul>':'<p class="muted small">لا شيء بعد.</p>')+'</section>';
     }).join('')+'</div>'+
     '<div class="actions">'+(items.length?'<button class="btn ghost" type="button" data-act="magPreview" data-id="'+m.id+'">'+ICON.book+' ⟨اقرأ|اقرئي⟩ المجلة</button>':'')+
-      (editable&&items.length?'<button class="btn" type="button" data-act="magSend" data-id="'+m.id+'">'+ICON.check+' ⟨أرسلها|أرسليها⟩ إلى وليّ أمري لإصدارها</button>':'')+
-      (editable&&!items.length?'<button class="btn ghost danger-ghost" type="button" data-act="magDel" data-id="'+m.id+'">'+ICON.trash+' احذف المجلة</button>':'')+'</div></div>');
+      (editable&&items.length?'<button class="btn" type="button" data-act="magSend" data-id="'+m.id+'">'+ICON.check+' ⟨أرسلها|أرسليها⟩ إلى وليّ ⟨أمرك|أمركِ⟩ لإصدارها</button>':'')+
+      (editable&&!items.length?'<button class="btn ghost danger-ghost" type="button" data-act="magDel" data-id="'+m.id+'">'+ICON.trash+' ⟨احذف|احذفي⟩ المجلة</button>':'')+'</div></div>');
 }
 function eligible(m,sec){
   var inMag={}; (m.items||[]).forEach(function(it){inMag[it.w?'w:'+it.w:'x:'+it.x]=1;});
@@ -125,7 +125,7 @@ function magBody(m,o){
       (edName?'<p class="mz-ed">'+Gx('⟨رئيس|رئيسة⟩ التحرير: ',gOf(ed))+esc(edName)+'</p>':'')+
       (contrib.length?'<p class="mz-by">بأقلام وأصوات: '+contrib.map(esc).join('، ')+'</p>':'')+'</header>'+
     '<nav class="mz-toc" aria-label="فهرس العدد"><span class="mz-toc-t">في هذا العدد</span><ol>'+secs.map(function(s){return '<li><a href="#mz-'+s+'">'+TYPES[s].n+'</a></li>';}).join('')+'</ol></nav>'+
-    (items.some(function(i){return i.w.audio;})?'<div class="mz-radio no-print"><button type="button" class="mz-play" data-act="magRadio" data-id="'+m.id+'">'+ICON.play+' استمع إلى العدد كاملًا</button><span class="mz-now" id="mzNow" aria-live="polite"></span></div>':'')+
+    (items.some(function(i){return i.w.audio;})?'<div class="mz-radio no-print"><button type="button" class="mz-play" data-act="magRadio" data-id="'+m.id+'">'+ICON.play+' '+(o.forExport?'استمعوا':'⟨استمع|استمعي⟩')+' إلى العدد كاملًا</button><span class="mz-now" id="mzNow" aria-live="polite"></span></div>':'')+
     secs.map(function(s){
       return '<section class="mz-sec" id="mz-'+s+'"><h2 class="mz-sec-n"><span>'+TYPES[s].n+'</span></h2>'+
         items.filter(function(i){return i.sec===s;}).map(function(i){
@@ -140,7 +140,7 @@ function magBody(m,o){
 function magPreview(id){
   var m=magById(id); if(!m) return magsView(); L=null;
   go('<div class="ax-page wide-page" style="--ax:var(--'+magColor(m.name)+')"><div class="ph-top no-print"><button class="back" type="button" data-act="magOpen" data-id="'+m.id+'">'+BACK+' رجوع</button>'+
-    '<span class="ph-acts"><button class="btn ghost small-btn" type="button" data-act="presentMag" data-id="'+m.id+'">اعرضها على الشاشة</button><button class="btn ghost small-btn" type="button" data-act="print">اطبعها</button></span></div><div class="xp">'+magBody(m,{media:'src'})+'</div></div>');
+    '<span class="ph-acts"><button class="btn ghost small-btn" type="button" data-act="presentMag" data-id="'+m.id+'">⟨اعرضها|اعرضيها⟩ على الشاشة</button><button class="btn ghost small-btn" type="button" data-act="print">اطبعها</button></span></div><div class="xp">'+magBody(m,{media:'src'})+'</div></div>');
 }
 
 /* ---------- magazines (parent) ---------- */

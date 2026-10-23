@@ -15,7 +15,7 @@
   }
   var year = new Date().getFullYear();
   var kids = FAM.kids.map(function (k) {
-    var age = k.by ? Math.max(4, Math.min(16, year - k.by)) : 10;
+    var age = k.by ? Math.max(4, Math.min(16, year - k.by)) : 8;   /* a birth year left out plays the gentle way (choices) until the parent sets it */
     return { id: k.id, name: k.name, gender: k.g === 'f' ? 'f' : 'm', age: age };
   });
   lsSet('oasis:kids', kids);

@@ -25,7 +25,7 @@ function speak(btn){
 var view=document.getElementById('view'), tray=document.getElementById('tray');
 function renderTray(){
   tray.innerHTML='<span class="tray-gems">'+LESSONS.map(function(l){
-    return '<span class="tg'+(prog[l.id]?' on':'')+'" style="--ax:var(--'+axById[l.ax].c+'-band)" title="'+l.title+'">'+STAR+'</span>';
+    return '<span class="tg'+(prog[l.id]?' on':'')+'" style="--ax:var(--'+axById[l.ax].c+'-band)" title="'+escA(plain(G(l.title)))+'">'+STAR+'</span>';
   }).join('')+'</span><span class="tray-n">'+n2a(doneCount())+' / '+n2a(LESSONS.length)+'</span>';
   tray.setAttribute('aria-label',G('⟨جمعتَ|جمعتِ⟩ ')+''+n2a(doneCount())+' من '+n2a(LESSONS.length)+' جوهرة');
 }

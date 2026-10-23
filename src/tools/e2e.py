@@ -110,7 +110,7 @@ async def main():
         await page.click('[data-act="submitWork"]')
         await page.wait_for_selector('.wlist')
         t = await text(page)
-        ok('عند وليّ أمرك' in t, 'story sent to parent')
+        ok('عند وليّ الأمر' in t, 'story sent to parent')
 
         # ---------- drawing
         await page.click('#homeBtn')
