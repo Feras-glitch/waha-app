@@ -663,14 +663,14 @@ function home(){
       '</div></section>'+
     '<section><h2 class="h2">الخزائن '+axWord()+'</h2><p class="lead" style="margin:0 0 12px">'+gemsWord(LESSONS.length)+' من أسرار العربية، جمعناها من كتب علماء أحبّوها، من الخليل بن أحمد إلى الدكتور فاضل السامرائي وعارف حجاوي وقناة «تأمَّل».</p><div class="chambers">'+AXES.map(chamberCard).join('')+'</div></section>'+
     toolsHTML()+
-    '<section class="doors">'+
+    (function(x){ return x ? '<section class="doors">'+x+'</section>' : ''; })(wahaDoor()+rmDoor())+   /* the way back to the oasis and Ramadan's door stay in sight */
+    '<details class="fold"><summary><span class="h2">المزيد: ورشة الخيال، ورفّ الكنوز</span></summary><section class="doors">'+
       '<button class="door" type="button" data-view="workshop" style="--ax:var(--plum)"><span class="door-t">ورشة الخيال</span><span class="door-d">تمارين كتابةٍ تحوّل ما ⟨تعلّمته|تعلّمتِه⟩ إلى صورٍ من خيالك.</span></button>'+
       '<button class="door" type="button" data-view="shelf" style="--ax:var(--teal)"><span class="door-t">رفّ الكنوز</span><span class="door-d">أغنيةٌ وقنواتٌ وكتبٌ تُكمل الرحلة، للوالدين والأطفال.</span></button>'+
-      wahaDoor()+rmDoor()+
-    '</section>'+
-    '<section><h2 class="h2">سلسلة العلماء</h2>'+
+    '</section></details>'+
+    '<details class="fold"><summary><span class="h2">سلسلة العلماء</span></summary><section>'+
       '<p class="lead" style="margin:0 0 12px">من صاحب أول معجمٍ عربي إلى صاحب «لمسات بيانية»: كلٌّ منهم بنى على من سبقه. ⟨اضغط|اضغطي⟩ على اسم درسٍ ⟨لتفتحه|لتفتحيه⟩.</p>'+
-      '<ol class="chain">'+SCH.map(schItem).join('')+'</ol></section>');
+      '<ol class="chain">'+SCH.map(schItem).join('')+'</ol></section></details>');
 }
 function doorBtn(act,c,ic,t,d){
   return '<button class="sdoor" type="button" data-act="'+act+'" style="--ax:var(--'+c+')"><span class="ch-ico">'+ICON[ic]+'</span><span class="door-t">'+t+'</span><span class="door-d">'+d+'</span></button>';

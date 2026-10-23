@@ -40,7 +40,7 @@ async def main():
         ok('أكملي درسًا لتنبت أول وردة' in t, 'empty garden prompt (f)')
         await shot(p, 'g01-home-empty')
         # do one lesson: flower note + reward
-        await p.click('[data-open="ghayth"]'); await p.click('[data-step="1"]'); await p.click('[data-step="2"]')
+        await p.evaluate("document.querySelectorAll('details.fold').forEach(d => d.open = true)"); await p.click('[data-open="ghayth"]'); await p.click('[data-step="1"]'); await p.click('[data-step="2"]')
         for q in range(2):
             for i in range(4):
                 if await p.locator('.fb-ok').count(): break
