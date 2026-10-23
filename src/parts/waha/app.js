@@ -344,6 +344,7 @@ const OASES = [
  {id:'bag', name:'كلماتي', bl:'', games:[], tabs:[['kidBag','كلماتي']], hide:true},
  {id:'say', name:'⟨قل|قولي⟩ الجملة', bl:'', games:[], tabs:[['kidSay','⟨قل|قولي⟩ الجملة']], hide:true},
  {id:'fam', name:'تحدّي العائلة', bl:'', games:[], tabs:[['kidFam','تحدّي العائلة']], hide:true},
+ {id:'msr', name:'قياس الشهر', bl:'', games:[], tabs:[['kidMs','قياس الشهر']], hide:true},
  {id:'review', name:'مراجعة اليوم', bl:'', games:[], tabs:[['rvCard','مراجعة اليوم']], hide:true},
  {id:'place', name:'تحديد المستوى', bl:'', games:[], tabs:[['plCard','تحديد المستوى']], hide:true},
  {id:'dad', name:'لوحة ولي الأمر', bl:'', games:[], tabs:[['dad','لوحة الأب']], hide:true},
@@ -936,7 +937,15 @@ RESETS.push(() => { hkCur = whCur = null; });
 
 /* ================= اختبار القافلة: من المُتقَن فقط، بلا تلميح ================= */
 const WHO_L = Object.fromEntries(CATQ);
+/* «كنوز البيان» في الرحلة: دروس الخزائن السبع وأسئلتها (تُقرأ عند البناء من parts/data.js) */
+const KZD = DATA.kunuz || {axes: {}, lessons: []};
+const kzPlain = s => String(s == null ? '' : s).replace(/[{}\[\]]/g, '');
+function kzFind(id){ const [lid, qi] = String(id).split('|'); const L = KZD.lessons.find(l => l.id === lid); const q = L && L.quiz[+qi]; return q ? {L, q} : null; }
 const GEN = {
+  /* السؤال خارج درسه يحتاج سياقه: عنوان الدرس وآيته (إلا إن كان السؤال إكمالًا للآية نفسها) */
+  kz: id => { const x = kzFind(id); if (!x || !x.q.o || x.q.o.length < 2) return null; const v = (x.L.verses || [])[0], blank = /ـــ/.test(x.q.q);
+    return {q: kzPlain(x.q.q), a: kzPlain(x.q.o[0]), alts: x.q.o.slice(1).map(kzPlain), why: kzPlain(x.q.why), label: `كنوز البيان: ${x.L.title}`,
+      html: `<p class="note" style="margin:0 0 4px">💎 ${esc(x.L.title)}</p>` + (v && !blank ? `<p style="font-family:var(--f-q);font-size:1.15rem;line-height:1.9;margin:0">${esc(kzPlain(v.t))} <span class="ref">(${esc(v.n)} ${v.a})</span></p>` : '')}; },
   rl: id => { const [k, q] = id.split('|'); const P = ALL[k]; const r = P && P.roles.find(x => x.q === q); if (!r) return null; return {q:`${P.root}: ${r.q}`, a:r.a, alts:r.opts.filter(o => o !== r.a), type:true, label:`الوزن: ${r.q} (${P.root})`}; },
   drv: id => { const [k, l] = id.split('|'); const P = ALL[k]; const f = P && P.family.find(x => x.lemma === l); if (!f) return null; return {q:`من جذر ${P.root} على وزن ${dvPattern(f)}: ما الكلمة؟`, a:f.lemma, alts:P.family.filter(x => x !== f).map(x => x.lemma), type:true, label:`⟨اشتقّ|اشتقّي⟩: ${f.lemma}`}; },
   fill: id => { const [k, sa, w] = id.split('|'); const P = ALL[k]; let hit = null; P && P.family.forEach(f => f.verses.forEach(v => { if (`${v.s}:${v.a}` === sa && strip(v.word) === w) hit = {f, v}; })); if (!hit) return null;
@@ -968,7 +977,7 @@ const GEN = {
   tri: id => { const x = triApproved().find(t => t.id === id); if (!x) return null; return {q:`ما الكلمة العربية التي معناها: ${[x.zh, x.en].filter(Boolean).join(' / ')}؟`, a:x.lemma, alts:triAlts(x), type:true, label:`بثلاث لغات: ${x.lemma}`}; },
 };
 function describe(g, id){ try { const q = GEN[g] && GEN[g](id); return q ? q.label : `${g}: ${id}`; } catch (e) { return `${g}: ${id}`; } }
-const GNAME = {hsq:'المنظومة الحسنية', rl:'الوزن المناسب', drv:'⟨اشتقّ|اشتقّي⟩ الكلمة', uk:'الكلمة المجهولة', fill:'الكلمة الناقصة', rc:'تلاوة', gzw:'من أنا؟', gzd:'نقطة تغيّر المعنى', gzr:'جذرٌ يختبئ', gzf:'ألغاز وأحاجي', sha:'⟨أكمل|أكملي⟩ البيت', shl:'آخر كلمة', shp:'من الشاعر؟', pml:'تسميع شوقي', nt:'أسئلة الحكايات', nto:'⟨رتّب|رتّبي⟩ الأحداث', hys:'ماذا ⟨تقول|تقولين⟩؟', hyo:'⟨رتّب|رتّبي⟩ الجملة', hyc:'الألوان', sfr:'صحٌّ أم خطأ', sfo:'⟨رتّب|رتّبي⟩ الفقرات', hk:'متى ⟨تقولها|تقولينها⟩؟', wh:'من القائل؟', dct:'إملاء بالذاكرة', cnj:'⟨صرّف|صرّفي⟩ الفعل', mtn:'تسميع المتون', kq:'أسئلة الإخوة', gift:'الهدايا', tri:'بثلاث لغات', ajd:'ما المصطلح؟ (الآجرومية)', ajc:'كم عددها؟ (الآجرومية)', irb:'⟨أعرب|أعربي⟩ (التحفة السنية)'};
+const GNAME = {kz:'كنوز البيان', hsq:'المنظومة الحسنية', rl:'الوزن المناسب', drv:'⟨اشتقّ|اشتقّي⟩ الكلمة', uk:'الكلمة المجهولة', fill:'الكلمة الناقصة', rc:'تلاوة', gzw:'من أنا؟', gzd:'نقطة تغيّر المعنى', gzr:'جذرٌ يختبئ', gzf:'ألغاز وأحاجي', sha:'⟨أكمل|أكملي⟩ البيت', shl:'آخر كلمة', shp:'من الشاعر؟', pml:'تسميع شوقي', nt:'أسئلة الحكايات', nto:'⟨رتّب|رتّبي⟩ الأحداث', hys:'ماذا ⟨تقول|تقولين⟩؟', hyo:'⟨رتّب|رتّبي⟩ الجملة', hyc:'الألوان', sfr:'صحٌّ أم خطأ', sfo:'⟨رتّب|رتّبي⟩ الفقرات', hk:'متى ⟨تقولها|تقولينها⟩؟', wh:'من القائل؟', dct:'إملاء بالذاكرة', cnj:'⟨صرّف|صرّفي⟩ الفعل', mtn:'تسميع المتون', kq:'أسئلة الإخوة', gift:'الهدايا', tri:'بثلاث لغات', ajd:'ما المصطلح؟ (الآجرومية)', ajc:'كم عددها؟ (الآجرومية)', irb:'⟨أعرب|أعربي⟩ (التحفة السنية)'};
 function testPool(){ const pool = []; for (const g of Object.keys(GEN)) for (const id of seen(g)) if (mastered(g, id)) { const q = GEN[g](id); if (q && q.a) pool.push({g, id, ...q}); } return pool; }
 let TS = null;
 function testStage(){ return STAGES.filter(s => s.test).find(s => !stageDone(s) && !stageLocked(s)) || null; }
@@ -1018,7 +1027,7 @@ function renderDad(){
     const hard = Object.keys(GNAME).flatMap(g => seen(g).map(id => ({g, id, m: mget(g, id)}))).filter(x => x.m.wrong >= 2 && !mastered(x.g, x.id)).sort((a, b) => b.m.wrong - a.m.wrong).slice(0, 10);
     const tlog = store.get(`tripLog:${kid}`, []);
     const tlHtml = tlog.length ? `<p class="lbl">آخر الرحلات</p>${tlog.slice(0, 7).map(L => `<details class="qi"><summary style="cursor:pointer"><b>${esc(L.date)}</b>${L.extra ? ' (إضافية)' : ''} · تعلّم ${L.learned.length} · أصاب ${L.ok.length} · أخطأ ${L.wrong.length} · سجّل ${L.rec.length}</summary>${L.learned.length ? `<p class="note" style="margin:4px 0"><b>تعلّم:</b> ${L.learned.map(esc).join(' · ')}</p>` : ''}${L.wrong.length ? `<p class="note" style="margin:4px 0;color:var(--date)"><b>أخطأ:</b> ${L.wrong.map(esc).join(' · ')}</p>` : ''}${L.ok.length ? `<p class="note" style="margin:4px 0"><b>أصاب:</b> ${L.ok.map(esc).join(' · ')}</p>` : ''}${L.rec.length ? `<p class="note" style="margin:4px 0"><b>سجّل:</b> ${L.rec.map(esc).join(' · ')}</p>` : ''}</details>`).join('')}` : '';
-    B.innerHTML = tlHtml + `<p class="note">«متقن» = أجاب صحيحًا مرتين متتاليتين. الخطأ يُرجع السؤال إلى الصفر ويجعله يتكرر أكثر. المتقَن يعود في «مراجعة اليوم» بعد 1 ثم 3 ثم 7 ثم 21 ثم 45 يومًا. اختبار القافلة يسأل عن المتقَن فقط، بلا تلميح.</p>
+    B.innerHTML = measureHTML(kid) + tlHtml + `<p class="note">«متقن» = أجاب صحيحًا مرتين متتاليتين. الخطأ يُرجع السؤال إلى الصفر ويجعله يتكرر أكثر. المتقَن يعود في «مراجعة اليوم» بعد 1 ثم 3 ثم 7 ثم 21 ثم 45 يومًا. اختبار القافلة يسأل عن المتقَن فقط، بلا تلميح.</p>
      ${(() => { const pl = store.get(`placement:${kid}`, null); return `<p class="lbl">تحديد المستوى: ${pl ? `${pl.ok}/${pl.n} في ${esc(pl.date)} — المستوى ${pl.level} (سهل ${pl.byL[0] ? pl.byL[0].join('/') : '—'} · أوسط ${pl.byL[1] ? pl.byL[1].join('/') : '—'} · أصعب ${pl.byL[2] ? pl.byL[2].join('/') : '—'})` : 'لم يُجرَ بعد'} <button class="btn ghost sm" type="button" id="ddPlace">${pl ? 'أعده' : 'أجرِه'}</button></p>`; })()}
      <p class="lbl">المراحل: ${stagesDoneCount()} من ${STAGES.length} · أيام متتالية: ${dayStreak()} · مستحق للمراجعة اليوم: ${dueCount()} (راجع ${store.get(`rvDone:${kid}`, 0)}) · الاختبارات: ${hist.filter(h => h.pass).length ? 'نجح في ' + [...new Set(hist.filter(h => h.pass).map(h => h.n))].join('، ') : 'لم ينجح بعد'} (${hist.length} محاولة)</p>
      <div class="tablewrap"><table class="dash"><tr><th>اللعبة</th><th>متقن</th><th>جرّب</th><th>يتعثر</th></tr>${rows || '<tr><td colspan="4">لم يلعب بعد.</td></tr>'}</table></div>
@@ -1036,7 +1045,7 @@ function renderDad(){
   else if (ddTab === 'voice'){ renderVoiceStudio(B); }
   else if (ddTab === 'kidset'){ const c = cmpGet(); B.innerHTML = `<p class="note">واجهة ${esc(K().name)} البسيطة: شاشة بزر «رحلة اليوم»، ورفيق يتكلم. «كل الواحات» تظهر لمن عمره 9 فأكثر، ويمكنك فتحها للأصغر.</p>
      <label class="row" style="gap:8px"><input type="checkbox" id="ksMode" ${kidMode() ? 'checked' : ''}> الواجهة البسيطة للطفل</label>
-     <label class="row" style="gap:8px"><input type="checkbox" id="ksLib" ${store.get(`libOpen:${kid}`, false) ? 'checked' : ''}> أظهر «كل الواحات» حتى لو كان صغيرًا</label>
+     <label class="row" style="gap:8px"><input type="checkbox" id="ksLib" ${store.get(`libOpen:${kid}`, false) ? 'checked' : ''}> أظهر «كل الواحات» و«كنوز البيان» حتى لو كان صغيرًا</label>
      <label class="row" style="gap:8px"><input type="checkbox" id="ksMute" ${store.get('mute', false) ? 'checked' : ''}> اكتم صوت القارئ الآلي (تبقى تسجيلاتك)</label>
      <label class="row" style="gap:8px"><input type="checkbox" id="ksAi" ${store.get('aiAllowed', false) ? 'checked' : ''}> اسمح بمساعد الواحة (يرسل نص الطفل وعمره إلى النموذج للتصحيح؛ في صفحة Claude فقط)</label>
      <p class="note">الرفيق: ${c ? esc(c.name) + ' (' + esc((CMPS[c.kind] || {}).name || '') + ')' : 'لم يُختر بعد'} <button class="btn ghost sm" type="button" id="ksReset">أعد أول لقاء</button></p>
@@ -1066,11 +1075,18 @@ function renderDad(){
 async function renderTodayLine(B){
   B.innerHTML = '<p class="note">كل الأطفال في شاشة واحدة. اسمع ما قالوه اليوم، وأرسل لكل واحد كلمة أو صوتك: يسمعها من رفيقه عند فتح واحته.</p>';
   const all = await recAll(); const td = today();
+  /* ما ينتظر اعتمادك في القسمين: تسجيلات الواحة، وأعمال الاستوديو في «كنوز البيان» */
+  { const recP = all.filter(r => r.status === 'pending' && r.source !== 'import' && r.kid >= 0).length; let works = 0; try { works = (JSON.parse(localStorage.getItem('kb-works-v1') || '[]') || []).filter(w => w && w.status === 'sent').length; } catch (e) {}
+    if (recP || works){ const w = el('div','qi'); w.innerHTML = `<p class="lbl" style="margin:0 0 6px">بانتظار اعتمادك</p>`; const r = el('div','row'); r.style.cssText = 'gap:8px;flex-wrap:wrap';
+      if (recP){ const b1 = el('button','btn ghost sm', `🎙 ${recP} ${recP === 1 ? 'تسجيل' : recP === 2 ? 'تسجيلان' : 'تسجيلات'} في الواحة`); b1.type = 'button'; b1.addEventListener('click', () => { ddTab = 'rec'; renderDad(); }); r.appendChild(b1); }
+      if (works){ const b2 = el('a','btn ghost sm', `💎 ${works} ${works === 1 ? 'عمل' : works === 2 ? 'عملان' : 'أعمال'} في «كنوز البيان»`); b2.href = 'kunuz/index.html#parent'; r.appendChild(b2); }
+      w.appendChild(r); B.appendChild(w); } }
   kids.forEach((k, i) => {
     const log = store.get(`tripLog:${i}`, []).find(L => L.date === td && !L.extra); const doneToday = !!log; const recs = all.filter(r => r.kid === i && r.date === td && ['أخبرني', 'جملة', 'كلمة', 'رأيتُها اليوم'].includes(r.kind)).sort((a, b) => b.id.localeCompare(a.id));
     const wrong = doneToday ? log.wrong : []; const bag = store.get(`bag:${i}`, []).filter(w => w.day === dayN()).map(w => w.w);
     const d = el('div','qi'); d.innerHTML = `<div class="row" style="justify-content:space-between;align-items:center"><span>${avatarHtml(k, 28)} <b>${esc(k.name)}</b> ${doneToday ? '<span class="badge ok">رحلة اليوم ✓</span>' : (k.gender === 'f' ? '<span class="badge wait">لم ترحل اليوم</span>' : '<span class="badge wait">لم يرحل اليوم</span>')}</span><span class="ref">🔥 ${(() => { const kk = kid; kid = i; const n = dayStreak(); kid = kk; return n; })()} يوم</span></div>
       ${doneToday ? `<p class="note" style="margin:4px 0">${k.gender === 'f' ? 'تعلّمت' : 'تعلّم'}: ${bag.length ? bag.map(esc).join('، ') : (log.learned.length ? log.learned.length + ' دروس' : '—')} · ${k.gender === 'f' ? 'أصابت' : 'أصاب'} ${log.ok.length} · ${wrong.length ? `<span style="color:var(--date)">${k.gender === 'f' ? 'أخطأت' : 'أخطأ'} في: ${wrong.map(esc).join(' · ')}</span>` : 'بلا أخطاء'}</p>` : ''}`;
+    { const sl = secLine(i, 0, k); if (sl){ const p2 = el('p','note'); p2.style.margin = '2px 0 4px'; p2.textContent = sl; d.appendChild(p2); } }
     recs.slice(0, 3).forEach(r => { const row = el('div','row'); row.style.alignItems = 'center'; row.innerHTML = `<span class="chip">${esc(r.kind)}</span> <span class="note">${esc(r.text).slice(0, 70)}</span>`; const m = mediaEl(r); if (m.tagName === 'AUDIO'){ m.style.width = '160px'; } row.appendChild(m); d.appendChild(row); });
     const mrow = el('div','row'); mrow.style.cssText = 'align-items:center;flex-wrap:wrap;gap:6px'; const tx = el('input','f'); tx.placeholder = k.gender === 'f' ? 'كلمة لها (تُقرأ بصوت الرفيق)' : 'كلمة له (تُقرأ بصوت الرفيق)'; tx.style.cssText = 'flex:1 1 100%;min-width:100%'; const sendT = el('button','btn ghost sm','أرسل الكلمة'); sendT.type = 'button'; const mic = el('button','btn sm','🎙 سجّل رسالة بصوتك'); mic.type = 'button'; const mb = el('div'); const fb = el('p','fb');
     sendT.addEventListener('click', async () => { const t = tx.value.trim(); if (!t) return; await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid: -1, to: i, kind: 'من أبي', ref: td, text: t, date: td, type: '', blob: null, status: 'approved', notes: [], source: 'local', heard: false}); tx.value = ''; fb.textContent = `أُرسلت إلى ${k.name}؛ ${k.gender === 'f' ? 'تسمعها عند فتح واحتها' : 'يسمعها عند فتح واحته'}.`; fb.className = 'fb ok'; });
@@ -1098,7 +1114,7 @@ async function aiFeedback(btn, out, kind, text, ctx, title, qkind){
 const DAILY_N = 3;
 function dailyPick(){
   const key = `dailyPick:${kid}:${today()}`; let picks = store.get(key, null); if (picks) return picks;
-  const games = Object.keys(GNAME).filter(g => !['rc'].includes(g)); let weak = games.map(g => ({g, s: gstats(g)})).filter(x => x.s.wrong > 0).sort((a, b) => b.s.wrong - a.s.wrong);
+  const games = Object.keys(GNAME).filter(g => !['rc', 'kz'].includes(g)); let weak = games.map(g => ({g, s: gstats(g)})).filter(x => x.s.wrong > 0).sort((a, b) => b.s.wrong - a.s.wrong);
   const pl = store.get(`placement:${kid}`, null); if (!weak.length && pl && pl.byG) weak = Object.keys(pl.byG).filter(g => pl.byG[g][0] < pl.byG[g][1] && games.includes(g)).sort((a, b) => (pl.byG[a][0] / pl.byG[a][1]) - (pl.byG[b][0] / pl.byG[b][1])).map(g => ({g}));
   const ns = nextStage(); const chosen = [];
   if (weak[0]) chosen.push(weak[0].g);
@@ -1455,6 +1471,7 @@ const POOL = {
   sha: () => SH.abyat.map(x => x.id), shl: () => SH.abyat.map(x => x.id), shp: () => SH.abyat.map(x => x.id), pml: () => SH.qasaid.flatMap(q => q.lines.map((l, i) => `${q.id}|${i}`)),
   hys: () => HY.situations.map(x => x.id), hyc: () => HY.things.map(t => t.noun), hk: () => HIK.map(x => x.text), wh: () => HAD.items.map(x => x.id),
   nt: () => NT.stories.flatMap(s => s.questions.map((q, i) => `${s.id}|${i}`)), sfr: () => SF.articles.flatMap(a => a.tf.map((t, i) => `${a.id}|${i}`)),
+  kz: () => KZD.lessons.flatMap(l => l.quiz.map((q, i) => `${l.id}|${i}`)),
   dct: () => DCT.map(x => strip(x.w)), cnj: () => CJ.items.map(cjId), ajd: () => AJ.defs.map(d => d.term), ajc: () => (AJ.counts || []).map(c => c.q), irb: () => irbIds(), tri: () => triApproved().map(t => t.id), hsq: () => (DATA.hasaniya && DATA.hasaniya.quizzes || []).map(q => q.id),
 };
 const PL_LEVELS = [['hyc','hys','hk','uk','gzd'], ['rl','fill','wh','dct','shp'], ['drv','cnj','sha','shl','gzw','gzf','pml','ajd']];
@@ -1668,9 +1685,10 @@ function kidWeek(i, recs){
     const stages = STAGES.filter(s => { const v = store.get(`stage:${i}:${s.id}`, false); return v && v >= since; }).map(s => STAGE_NAMES_EL[s.el]);
     const rk = recs.filter(r => r.kid === i && days.includes(r.date)); const amal = store.get(`amalLog:${i}`, []).filter(x => days.includes(x.date));
     const tri = triAll().filter(t => t.kid === i && days.includes(t.okDate || '')).length; const tests = store.get(`tests:${i}`, []).filter(t => t.date >= since);
-    return {k: kids[i], active, answers, reviews, mastered, newMastered, weak: weak.sort((a, b) => b.m.wrong - a.m.wrong).slice(0, 5), stages, rec: rk.length, recOk: rk.filter(r => r.status === 'approved').length, gifts: store.get(`giftsSent:${i}`, 0), amal: amal.filter(x => x.confirmed).length, amalPend: amal.filter(x => !x.confirmed).length, tri, tests, due: dueCount(), streak: dayStreak(), stagesAll: stagesDoneCount()}; });
+    const msh = msHistory(i), msl = msh[msh.length - 1], msp = msh[msh.length - 2];
+    return {k: kids[i], sec: secLine(i, since, kids[i]), ms: msl ? `${msl.ok}/${msl.n} (${msl.date})${msp ? `، وقبله ${msp.ok}/${msp.n}` : ''}` : '', active, answers, reviews, mastered, newMastered, weak: weak.sort((a, b) => b.m.wrong - a.m.wrong).slice(0, 5), stages, rec: rk.length, recOk: rk.filter(r => r.status === 'approved').length, gifts: store.get(`giftsSent:${i}`, 0), amal: amal.filter(x => x.confirmed).length, amalPend: amal.filter(x => !x.confirmed).length, tri, tests, due: dueCount(), streak: dayStreak(), stagesAll: stagesDoneCount()}; });
 }
-function weekText(rows){ const days = weekDays(); return `تقرير الجمعة — واحة اللسان العربي\nمن ${days[6]} إلى ${days[0]}\n\n` + rows.map(r => `${r.k.name} (${r.k.age} سنوات)\n- أيام اللعب: ${r.active} من 7 (سلسلة: ${r.streak})\n- أسئلة أُجيبت: ${r.answers}، مراجعات: ${r.reviews}\n- متقَن جديد هذا الأسبوع: ${r.newMastered} (المجموع ${r.mastered})\n- مراحل فُتحت: ${r.stages.length ? r.stages.join('، ') : 'لا'} (المجموع ${r.stagesAll} من ${STAGES.length})\n- تسجيلات: ${r.rec} (معتمدة ${r.recOk})، هدايا مرسلة: ${r.gifts}\n- اعمل به: ${r.amal} مؤكَّدة${r.amalPend ? `، ${r.amalPend} بانتظارك` : ''}؛ كلمات بثلاث لغات: ${r.tri}\n- اختبارات القافلة: ${r.tests.length ? r.tests.map(t => `${t.score}/10${t.pass ? ' ✓' : ''}`).join('، ') : 'لا'}\n- ${r.k.gender === 'f' ? 'تتعثّر' : 'يتعثّر'} في: ${r.weak.length ? r.weak.map(w => describe(w.g, w.id)).join('؛ ') : 'لا شيء'}\n- مستحق للمراجعة الآن: ${r.due}`).join('\n\n'); }
+function weekText(rows){ const days = weekDays(); return `تقرير الجمعة — واحة اللسان العربي\nمن ${days[6]} إلى ${days[0]}\n\n` + rows.map(r => `${r.k.name} (${r.k.age} سنوات)\n- أيام اللعب: ${r.active} من 7 (سلسلة: ${r.streak})\n- أسئلة أُجيبت: ${r.answers}، مراجعات: ${r.reviews}\n- متقَن جديد هذا الأسبوع: ${r.newMastered} (المجموع ${r.mastered})\n- مراحل فُتحت: ${r.stages.length ? r.stages.join('، ') : 'لا'} (المجموع ${r.stagesAll} من ${STAGES.length})\n- تسجيلات: ${r.rec} (معتمدة ${r.recOk})، هدايا مرسلة: ${r.gifts}\n- اعمل به: ${r.amal} مؤكَّدة${r.amalPend ? `، ${r.amalPend} بانتظارك` : ''}؛ كلمات بثلاث لغات: ${r.tri}\n- اختبارات القافلة: ${r.tests.length ? r.tests.map(t => `${t.score}/10${t.pass ? ' ✓' : ''}`).join('، ') : 'لا'}\n- ${r.k.gender === 'f' ? 'تتعثّر' : 'يتعثّر'} في: ${r.weak.length ? r.weak.map(w => describe(w.g, w.id)).join('؛ ') : 'لا شيء'}\n- مستحق للمراجعة الآن: ${r.due}${r.ms ? `\n- قياس الشهر: ${r.ms}` : ''}${r.sec ? `\n- ${r.sec.replace(/ · /g, '\n- ')}` : ''}`).join('\n\n'); }
 async function renderWeekPanel(box){
   const recs = await recAll(); const rows = kids.map((k, i) => kidWeek(i, recs)); const days = weekDays();
   box.innerHTML = `<p class="note">آخر سبعة أيام (${esc(days[6])} ← ${esc(days[0])}) لكل الأبناء. انسخ النص وأرسله في المجموعة العائلية أو احفظه.</p>
@@ -1875,6 +1893,28 @@ function companionMemory(first){ const out = []; const last = lastActiveDay(); c
   const y = store.get(`bag:${kid}`, []).find(w => w.day === dayN() - 1 || w.day === dayN() - 2);
   if (first && y && Math.random() < .8){ const when = y.day === dayN() - 1 ? 'أمس' : 'قبل يومين'; out.push(T(`${when} تعلّمتَ كلمة «${y.w}». هل تذكر معناها؟`, `${when} تعلّمتِ كلمة «${y.w}». هل تذكرين معناها؟`)); }
   return out; }
+/* صندوق مراجعة واحد: ما أخطأ فيه الطفل في «كنوز البيان» أو في الحسنية يُعلَّم هنا خطأً، فيعود إليه في رحلة اليوم (بدرسه أولًا) */
+function importMisses(){ const S = window.KZ_SECTIONS; if (!S || !S.misses) return 0; let n = 0;
+  try { const seenAt = store.get(`missSeen:${kid}`, 0); const list = S.misses(kid, seenAt); const hsq = (DATA.hasaniya && DATA.hasaniya.quizzes) || [];
+    list.forEach(x => { const ids = x.g === 'kz' ? [x.id] : hsq.filter(q => q.ref === x.id).map(q => q.id);
+      ids.forEach(id => { if (!GEN[x.g] || !GEN[x.g](id)) return; const m = mget(x.g, id); if (m.lw != null && m.lw >= dayN(x.t)) return;
+        m.n++; m.wrong++; m.streak = 0; m.due = null; m.lw = dayN(x.t); m.t = Date.now(); store.set(MK(x.g, id), m);
+        const sn = seen(x.g); if (!sn.includes(id)){ sn.push(id); store.set(`seen:${kid}:${x.g}`, sn); } n++; }); });
+    store.set(`missSeen:${kid}`, Date.now()); } catch (e) {}
+  return n; }
+/* ما جمعه الطفل في القسمين الآخرين، في عدّاد مشهده: جواهر «كنوز البيان» (من الثامنة) ومحطات الحسنية */
+function secCounts(){ const S = window.KZ_SECTIONS; if (!S) return ''; let out = '';
+  try { if (K().age >= 8){ const z = S.kunuz(kid); if (z.gems) out += ` · 💎 ${z.gems}`; } const h = S.hasaniya(kid); if (h.stations) out += ` · 🐪 ${h.stations}`; } catch (e) {}
+  return out; }
+/* «سطر اليوم» و«تقرير الجمعة»: القسمان الآخران في سطر واحد لكل طفل */
+function secLine(i, since, k){ const S = window.KZ_SECTIONS; if (!S) return ''; const f = k.gender === 'f'; const parts = [];
+  try {
+    const z = S.kunuz(i, since); const titles = z.fresh.map(id => (KZD.lessons.find(l => l.id === id) || {}).title).filter(Boolean);
+    parts.push('💎 كنوز البيان: ' + (titles.length ? (titles.length > 3 ? `${titles.length} دروس` : titles.map(t => `«${t}»`).join('، ')) : 'لا جديد') + ` (المجموع ${z.gems} من ${KZD.lessons.length})`);
+    const h = S.hasaniya(i, since);
+    parts.push('🐪 الحسنية: ' + (h.verses || h.stamped ? [h.verses ? `${h.verses} ${h.verses === 1 ? 'بيت' : h.verses === 2 ? 'بيتان' : 'أبيات'}` : '', h.stamped ? `${f ? 'ختمت' : 'ختم'} ${h.stamped === 1 ? 'محطة' : h.stamped + ' محطات'}` : ''].filter(Boolean).join('، ') : 'لا جديد') + (since ? `، أيام الفتح ${h.days}` : '') + ` (المحطات ${h.stations}، النقاط ${h.points})`);
+  } catch (e) {}
+  return parts.join(' · '); }
 async function renderKidHome(){
   const C = $('kidHome'); C.innerHTML = ''; const u = unlockedSet(); if (store.get(`planted:${kid}`, false)) u.add('seed');
   const tripDone = store.get(`trip:${kid}:${today()}`, null) && store.get(`trip:${kid}:${today()}`).done;
@@ -1884,16 +1924,18 @@ async function renderKidHome(){
   try { const msgs = (await recAll()).filter(r => r.kind === 'من أبي' && r.to === kid && !r.heard).sort((a, b) => b.id.localeCompare(a.id)); if (msgs.length){ const m = msgs[0]; const box = el('div','kcard msg'); box.innerHTML = `<p class="kq" style="margin:0">💌 ${T('رسالة لك من أبيك', 'رسالة لكِ من أبيكِ')}${m.text ? `: ${esc(m.text)}` : ''}</p>`; const pl = el('button','bigplay','▶ ' + T('اسمعها', 'اسمعيها')); pl.type = 'button'; pl.style.marginTop = '6px';
     pl.addEventListener('click', async () => { voiceStop(); if (m.blob){ const a = new Audio(URL.createObjectURL(m.blob)); a.dataset.keep = '1'; VX.audio = a; companionTalk(true); a.onended = () => companionTalk(false); a.play().catch(() => {}); } else if (m.text) say(m.text); m.heard = true; try { await recPut(m); } catch (e) {} pl.textContent = '✓ ' + T('سمعتَها', 'سمعتِها'); cmpHappy(); }); box.appendChild(pl); C.appendChild(box); } } catch (e) {}
   { const y = store.get(`bag:${kid}`, []).find(w => w.day === dayN() - 1 || w.day === dayN() - 2); if (firstToday && y && !tripDone && C.firstChild && C.firstChild.textContent.includes(y.w)){ const rv = el('button','tiny', ((cmpGet() || {}).kind === 'owl' ? 'أريني المعنى' : 'أرني المعنى')); rv.type = 'button'; rv.addEventListener('click', () => { rv.replaceWith(el('p','lrn', `${y.w}: ${y.m}`)); say([y.w, y.m]); }); C.appendChild(rv); } }
-  const sc = el('div','kscene'); const ds = dayStreak(); sc.innerHTML = kidScene(u, '') + `<span class="cnt">🌴 ${tripsDone()} · 🟤 ${dates()}${ds > 1 ? ` · 🔥 ${ds}` : ''}</span>` + (K().photo ? `<span class="kav">${avatarHtml(K(), 44)}</span>` : ''); C.appendChild(sc);
+  const sc = el('div','kscene'); const ds = dayStreak(); sc.innerHTML = kidScene(u, '') + `<span class="cnt">🌴 ${tripsDone()} · 🟤 ${dates()}${secCounts()}${ds > 1 ? ` · 🔥 ${ds}` : ''}</span>` + (K().photo ? `<span class="kav">${avatarHtml(K(), 44)}</span>` : ''); C.appendChild(sc);
   if (!tripDone){ const nx = el('p','note', T(`رحلة اليوم تكبر نخلتك وتأتيك بهدية جديدة`, `رحلة اليوم تكبر نخلتكِ وتأتيكِ بهدية جديدة`)); nx.style.cssText = 'text-align:center;margin:0'; C.appendChild(nx); }
   const t = store.get(`trip:${kid}:${today()}`, null);
   const play = el('button', 'bigplay' + (tripDone ? ' done' : ''), tripDone ? '▶ رحلة إضافية' : t && t.i > 0 ? '▶ ⟨أكمل|أكملي⟩ رحلة اليوم' : '▶ رحلة اليوم'); play.type = 'button';
   play.addEventListener('click', () => startTrip(tripDone)); C.appendChild(play);
+  if (tripDone && msDue()){ const mc = el('div','kcard'); mc.style.padding = '12px 14px'; mc.innerHTML = `<p class="lbl" style="margin:0">🧭 قياس الشهر</p><p style="margin:4px 0">${T('أسئلةٌ قليلة، ثلاث دقائق. لنعرف كم تعلّمت', 'أسئلةٌ قليلة، ثلاث دقائق. لنعرف كم تعلّمتِ')}</p>`; const mb = el('button','btn sm', '⟨ابدأ|ابدئي⟩'); mb.type = 'button'; mb.id = 'msGo'; mb.addEventListener('click', startMeasure); mc.appendChild(mb); C.appendChild(mc); }
   const row = el('div','krow');
   const all = await recAll(); const gifts = await dbAll('gift').catch(() => []); const newGifts = gifts.filter(g => g.to === kid && g.status === 'sent').length;
   const bagN = store.get(`bag:${kid}`, []).length;
   const tiles = [
-    ['💎', 'كنوز البيان', () => kunuzGo('kunuz'), 0],
+    /* «كنوز البيان» مكتوبة لسنّ ٩–١٢: تظهر من الثامنة، أو لمن فتح له وليّ الأمر «كل الواحات» */
+    ...(K().age >= 8 || store.get(`libOpen:${kid}`, false) ? [['💎', 'كنوز البيان', () => kunuzGo('kunuz'), 0]] : []),
     ...(ramadanNow() ? [['🌙', 'لمسات رمضان', () => kunuzGo('rm'), 0]] : []),
     ['👜', 'كلماتي', () => go('bag', 'kidBag'), bagN],
     ['🗣', '⟨قل|قولي⟩ الجملة', () => go('say', 'kidSay'), 0],
@@ -1917,8 +1959,10 @@ async function renderKidHome(){
 
 /* ---------------- رحلة اليوم ---------------- */
 /* الألعاب بحسب العمر: الصغير (≤7) لا يرى الآجرومية ولا «من القائل» التصنيفي؛ القصص تُرشَّح بطولها وأسئلتها بنوعها */
-const G_AGE = { 7: ['hys', 'hyc', 'uk', 'gzd', 'gzw', 'hk', 'rl', 'nt', 'tri', 'hsq'], 9: ['hys', 'hyc', 'uk', 'gzd', 'gzw', 'hk', 'rl', 'nt', 'tri', 'wh', 'dct', 'ajc', 'hsq'],
-  99: ['drv', 'cnj', 'irb', 'ajd', 'sha', 'shl', 'fill', 'pml', 'dct', 'gzw', 'gzf', 'ajc', 'nt', 'sfr', 'hk', 'wh', 'uk', 'tri', 'hsq'] };
+const G_AGE = { 7: ['hys', 'hyc', 'uk', 'gzd', 'gzw', 'hk', 'rl', 'nt', 'tri', 'hsq'], 9: ['hys', 'hyc', 'uk', 'gzd', 'gzw', 'hk', 'rl', 'nt', 'tri', 'wh', 'dct', 'ajc', 'hsq', 'kz'],
+  99: ['drv', 'cnj', 'irb', 'ajd', 'sha', 'shl', 'fill', 'pml', 'dct', 'gzw', 'gzf', 'ajc', 'nt', 'sfr', 'hk', 'wh', 'uk', 'tri', 'hsq', 'kz'] };
+/* رحلة واحدة من الأقسام كلها: في كل رحلة سؤال من المنظومة الحسنية، ومن الثامنة سؤال من «كنوز البيان» */
+const TRIP_ALWAYS = ['hsq', 'kz'];
 function gamesFor(age){ return G_AGE[age <= 7 ? 7 : age <= 9 ? 9 : 99]; }
 const SMALL_G = G_AGE[9], BIG_G = G_AGE[99];
 function genPick(g, avoid){ const ids = (POOL[g] ? POOL[g]() : []).filter(id => !avoid.has(g + '|' + id)); if (!ids.length) return null; const fresh = ids.filter(id => mget(g, id).n === 0), weak = ids.filter(id => { const m = mget(g, id); return m.n && m.streak < 2; }); const id = pick(weak.length && Math.random() < .6 ? weak : fresh.length ? fresh : ids); let q = null; try { q = GEN[g](id); } catch (e) {} return q && q.a && q.alts && q.alts.length ? {g, id, ...q} : null; }
@@ -1928,6 +1972,8 @@ const SELF_G = new Set(['gzw', 'gzd', 'gzf']);
 const vtext = v => v ? `${v.text} (${v.name} ${v.a})` : '';
 const vsnip = v => v ? `${snip(v.text, v.word, 7)} (${v.name} ${v.a})` : '';
 const LEARN = {
+  kz: id => { const x = kzFind(id); if (!x) return null; const v = (x.L.verses || [])[0];
+    return {t: `كنوز البيان · ${KZD.axes[x.L.ax] || ''}`, big: v ? kzPlain(v.t) : x.L.title, body: [x.L.take, ...(x.L.secret || []).slice(0, 2)].map(kzPlain), quiet: v ? [`${v.n} ${v.a}`] : []}; },
   hys: id => { const x = HY.situations.find(q => q.id === id); return x && {t: 'ماذا نقول؟', big: x.options[0], body: [x.q, `في هذا الموقف نقول: ${x.options[0]}`]}; },
   hyc: id => { const t = HY.things.find(x => x.noun === id); const c = t && COLOR[t.color]; return c && {t: 'الألوان', big: `${t.noun} ${t.g === 'm' ? c.m : c.f}`, swatch: c.css, body: [`«${t.noun}» ${t.g === 'm' ? 'كلمة مذكّرة، فنقول: ' + c.m : 'كلمة مؤنّثة، فنقول: ' + c.f}`, `(مذكّر: ${c.m} · مؤنّث: ${c.f})`]}; },
   uk: id => { const [k, l] = id.split('|'); const u = ALL[k] && ALL[k].unknown.find(x => x.lemma === l); return u && {t: 'كلمة جديدة', big: u.verse ? u.verse.word : u.lemma, bagWord: u.lemma, bagMeaning: u.meaning, body: [`${u.lemma}: ${u.meaning}`, u.verse ? `في القرآن: ${vsnip(u.verse)}` : ''], quiet: u.verse ? [vsnip(u.verse)] : []}; },
@@ -1974,12 +2020,14 @@ function storyRecall(avoid){ const age = K().age; const cands = [];
   const c = pick(cands); if (!c) return null; const g = c.sfr ? 'sfr' : 'nt'; let q = null; try { q = GEN[g](c.id); } catch (e) {} if (!q) return null;
   q.q = q.q.replace(/^.+?:\s*(?=[^:]*$)/, ''); const first = c.sfr ? c.x.intro : (c.x.retell || '').split(/[.!؟]/)[0];
   return {g, id: c.id, ...q, kind: 'review', html: `<p class="note" style="margin:0 0 6px">${esc(c.sfr ? '⟨تذكّر|تذكّري⟩ مقالة' : '⟨تذكّر|تذكّري⟩ قصة')} «${esc(c.x.title)}»: ${esc(first)}.</p>` + (q.html || '')}; }
-const TRIP_V = 3;
+const TRIP_V = 4;
 function buildTrip(extra){
+  importMisses();
   const age = K().age; const small = age <= 8; const want = age <= 7 ? 3 : small ? 4 : 5; const qs = [], avoid = new Set();
   const add = c => { if (c && !avoid.has(c.g + '|' + c.id)){ qs.push([c]); avoid.add(c.g + '|' + c.id); } };
   const due = dueList().filter(q => q.g !== 'nt' && q.g !== 'sfr'); due.slice(0, Math.max(2, Math.min(Math.ceil(due.length / 2), small ? 2 : 3))).forEach(q => add({...q, kind: 'review'}));
   const ns = nextStage(); if (ns && ns.g && POOL[ns.g] && gamesFor(age).includes(ns.g)) for (let i = 0; i < 2; i++) add(genPick(ns.g, avoid));
+  for (const g of TRIP_ALWAYS) if (gamesFor(age).includes(g) && POOL[g]) add(genPick(g, avoid));
   if (Math.random() < .7) add(storyRecall(avoid));
   let storyDone = false; const pool = shuffle(gamesFor(age).filter(g => POOL[g]));
   for (const g of pool){ if (qs.reduce((n, grp) => n + grp.filter(c => c.kind !== 'learn').length, 0) >= want) break;
@@ -2031,7 +2079,8 @@ function renderTrip(){
     if (c.after) awardAfter(c.g, c.id, ok ? true : near ? null : false); else { award(c.g, c.id, ok ? true : near ? null : false); if (!ok && !near){ const m = mget(c.g, c.id); m.lw = dayN(); store.set(MK(c.g, c.id), m); } }
     TRIP.res.push(ok || near); if (ok || near) store.set(`dates:${kid}`, dates() + 1);
     const line = ok ? CL.right() : near ? CL.near() : CL.wrong(); fb.textContent = ok ? line : `${line}: ${c.a}`; fb.className = 'fb ' + (ok ? 'ok' : near ? 'near' : 'bad'); say(ok ? line : [line, c.a]);
-    if (!ok && !near && K().age <= 9){ const L = learnCard(c.g, c.id); if (L && (L.big || L.body.length)){ const why = el('p','lrn'); why.style.cssText = 'margin:6px 0 0;opacity:.85'; why.textContent = [L.big, L.body[0]].filter(Boolean).join(' — ').slice(0, 160); card.appendChild(why); } }
+    if (c.why){ const w = el('p','lrn'); w.style.cssText = 'margin:6px 0 0;opacity:.85'; w.textContent = c.why; card.appendChild(w); }
+    else if (!ok && !near && K().age <= 9){ const L = learnCard(c.g, c.id); if (L && (L.big || L.body.length)){ const why = el('p','lrn'); why.style.cssText = 'margin:6px 0 0;opacity:.85'; why.textContent = [L.big, L.body[0]].filter(Boolean).join(' — ').slice(0, 160); card.appendChild(why); } }
     TRIP.i++; tripSave(); next.hidden = false; next.focus(); };
   if (c.type && K().age >= 10 && Math.random() < .5) typeBox(tb, c.a, {id:'ktIn', onDone: done});
   else mcq(o, [c.a, ...shuffle([...new Set(c.alts.filter(x => x !== c.a))]).slice(0, K().age <= 7 ? 2 : 3)], c.a, done, 'm');
@@ -2225,6 +2274,59 @@ INIT.kidHome = () => { if (!cmpGet()){ if (HELLO.kid !== kid) HELLO = {step: 0, 
 INIT.kidHello = () => renderHello();
 INIT.kidTrip = () => renderTrip();
 
+/* ================= قياس الشهر: أسئلة ثابتة لكل طفل من الأقسام كلها، تُعاد كل ثلاثين يومًا =================
+   لا درس قبلها ولا تمور ولا أثر لها في الإتقان: هي مقياس فقط، فيرى وليّ الأمر أين كان طفله وأين صار.
+   الأسئلة نفسها كل شهر (تُختار مرة واحدة بمعرّف الطفل وتُحفظ)، فالفرق بين قياسين هو ما تعلّمه فعلًا. */
+const MS_PLAN = {7: ['hys', 'hyc', 'uk', 'hk', 'hsq'], 9: ['uk', 'hk', 'wh', 'dct', 'hsq', 'kz'], 99: ['uk', 'drv', 'dct', 'ajd', 'hsq', 'kz']};
+const MS_PER = 2, MS_DAYS = 30;
+let MS = null;
+function msHash(s){ let h = 2166136261; for (const c of String(s)){ h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+function msRand(seed){ let x = seed || 1; return () => { x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0; return x / 4294967296; }; }
+function msForm(){
+  const f = store.get(`msForm:${kid}`, null); if (f && f.v === 1 && f.items.length) return f.items;
+  const age = K().age, plan = MS_PLAN[age <= 7 ? 7 : age <= 9 ? 9 : 99], rnd = msRand(msHash((window.KZ_IDS || [])[kid] || K().name)); const items = [];
+  plan.forEach(g => { if (!POOL[g]) return; const ids = POOL[g]().slice().sort();
+    for (let i = ids.length - 1; i > 0; i--){ const j = Math.floor(rnd() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
+    let k = 0; for (const id of ids){ if (k >= MS_PER) break; let q = null; try { q = GEN[g](id); } catch (e) {} if (q && q.a && q.alts && q.alts.length){ items.push({g, id}); k++; } } });
+  store.set(`msForm:${kid}`, {v: 1, items, age}); return items; }
+function msHistory(i){ return store.get(`ms:${i == null ? kid : i}`, []); }
+function msDue(){ const h = msHistory(); return tripsDone() > 0 && (!h.length || dayN() - h[h.length - 1].day >= MS_DAYS); }
+function startMeasure(){ MS = {items: msForm(), i: 0, res: []}; go('msr', 'kidMs'); }
+function renderMeasure(){
+  const C = $('kidMs'); C.innerHTML = ''; if (!MS){ go('kid'); return; }
+  const top = el('div','row'); top.style.justifyContent = 'space-between';
+  const x = el('button','tiny','✕ خروج'); x.type = 'button'; x.addEventListener('click', () => { voiceStop(); MS = null; go('kid'); });
+  const dots = el('div','dots'); MS.items.forEach((_, i) => { const d = document.createElement('i'); d.className = i < MS.i ? 'ok' : i === MS.i ? 'now' : ''; dots.appendChild(d); }); top.append(dots, x); C.appendChild(top);
+  const it = MS.items[MS.i]; if (!it) return measureEnd(C);
+  let q = null; try { q = GEN[it.g](it.id); } catch (e) {}
+  if (!q || !q.a){ MS.res.push(null); MS.i++; return renderMeasure(); }
+  C.appendChild(talkRow(MS.i === 0 ? [T('قياس الشهر: أسئلةٌ قليلة نعرف بها ما تعلّمتَ. أجب بما تعرف، ولا بأس إن لم تعرف', 'قياس الشهر: أسئلةٌ قليلة نعرف بها ما تعلّمتِ. أجيبي بما تعرفين، ولا بأس إن لم تعرفي'), q.q] : q.q, {say: true}));
+  const card = el('div','kcard'); if (q.html) card.insertAdjacentHTML('beforeend', `<div class="kq">${q.html}</div>`);
+  const o = el('div','kopts'); card.appendChild(o); C.appendChild(card);
+  const next = () => { MS.i++; setTimeout(() => { voiceStop(); renderMeasure(); window.scrollTo({top: 0}); }, 450); };
+  mcq(o, [q.a, ...shuffle([...new Set((q.alts || []).filter(a => a !== q.a))]).slice(0, K().age <= 7 ? 2 : 3)], q.a, ok => { MS.res.push(!!ok); next(); }, 'm');
+  const skip = el('button','tiny', T('لا أعرف', 'لا أعرف')); skip.type = 'button'; skip.addEventListener('click', () => { if (MS.res.length > MS.i) return; MS.res.push(false); next(); }); C.appendChild(skip);
+}
+function measureEnd(C){
+  const n = MS.items.length, ok = MS.res.filter(Boolean).length, byG = {};
+  MS.items.forEach((it, i) => { const b = byG[it.g] || (byG[it.g] = [0, 0]); b[1]++; if (MS.res[i]) b[0]++; });
+  const h = msHistory(), prev = h[h.length - 1]; h.push({day: dayN(), date: today(), ok, n, byG}); store.set(`ms:${kid}`, h.slice(-24)); MS = null;
+  const up = prev && ok > prev.ok;
+  C.appendChild(talkRow(up ? T(`أحسنت! أجبتَ ${ok} من ${n}، أكثر من المرة الماضية`, `أحسنتِ! أجبتِ ${ok} من ${n}، أكثر من المرة الماضية`) : T(`شكرًا لك! أجبتَ ${ok} من ${n}. سنعيد القياس بعد شهر لنرى كم تعلّمت`, `شكرًا لكِ! أجبتِ ${ok} من ${n}. سنعيد القياس بعد شهر لنرى كم تعلّمتِ`), {say: true}));
+  if (up){ chime(true); cmpHappy(); }
+  const b = el('button','bigplay','◀ واحتي'); b.type = 'button'; b.addEventListener('click', () => go('kid')); C.appendChild(b);
+}
+INIT.kidMs = renderMeasure;
+/* لوليّ الأمر: القياسات كلها لطفلٍ واحد، وأقسامها */
+function measureHTML(i){
+  const h = msHistory(i); if (!h.length) return '<p class="lbl">قياس الشهر</p><p class="note">لم يُجرَ بعد. يظهر للطفل بعد أول رحلة، ثم كل ثلاثين يومًا: أسئلةٌ ثابتة من الأقسام كلها، بلا تعليمٍ ولا تمور، فالفرق بين قياسين هو ما تعلّمه فعلًا.</p>';
+  const max = Math.max(...h.map(x => x.n), 1);
+  const bars = h.map(x => `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:34px"><div style="height:${Math.round(70 * x.ok / max)}px;width:22px;border-radius:5px 5px 0 0;background:var(--palm)" title="${x.ok}/${x.n}"></div><span class="ref" style="font-size:.75rem">${x.ok}/${x.n}</span><span class="ref" style="font-size:.7rem">${esc(String(x.date).slice(5))}</span></div>`).join('');
+  const last = h[h.length - 1], first = h[0];
+  const rows = Object.keys(last.byG).map(g => `<tr><td>${GNAME[g] || g}</td><td>${first.byG[g] ? first.byG[g].join('/') : '—'}</td><td>${last.byG[g].join('/')}</td></tr>`).join('');
+  return `<p class="lbl">قياس الشهر</p><div style="display:flex;align-items:flex-end;gap:6px;overflow-x:auto;padding:6px 0;border-bottom:1px solid var(--line)">${bars}</div>` +
+    (h.length > 1 ? `<div class="tablewrap"><table class="dash"><tr><th></th><th>أول قياس (${esc(first.date)})</th><th>آخر قياس (${esc(last.date)})</th></tr>${rows}</table></div>` : `<p class="note">القياس التالي بعد ${Math.max(0, MS_DAYS - (dayN() - last.day))} يومًا.</p>`); }
+
 /* زر الرجوع في أندرويد: يغلق ما فوق الشاشة، ثم يعود خطوة نحو «واحتي»؛ يُرجع false عند الواحة نفسها فيخرج التطبيق */
 function appBack(){
   voiceStop();
@@ -2233,6 +2335,7 @@ function appBack(){
   if (cur.o === 'kid' || (cur.o === 'home' && !kidMode())) return false;
   if (cur.o === 'home' && LIB){ LIB = false; go('home'); return true; }
   if (cur.o === 'hello'){ if (HELLO.step > 0){ HELLO.step--; renderHello(); return true; } return false; }
+  if (cur.o === 'msr'){ MS = null; go('kid'); return true; }
   if (cur.o === 'trip' || cur.o === 'bag' || cur.o === 'say' || cur.o === 'fam'){ FAM = null; SAY = null; go('kid'); return true; }
   if (LIB){ go('home'); return true; }
   go('home'); return true;

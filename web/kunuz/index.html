@@ -1877,6 +1877,8 @@ function pick(i){
     var nb=fb.querySelector('button'); if(nb) nb.focus();
   } else {
     miss++; btns[i].classList.add('wrong'); btns[i].disabled=true;
+    /* one review box for the whole app: a miss here comes back in the oasis daily trip */
+    if(KD){ KD.qmiss=KD.qmiss||{}; KD.qmiss[L.id+'|'+qi]=Date.now(); save(); }
     fb.innerHTML=G('<div class="fb-no">ليست هذه. ⟨فكّر|فكّري⟩ مرةً أخرى، أو <button class="link" type="button" data-step="1">⟨ارجع|ارجعي⟩ إلى السرّ</button>.</div>');
   }
 }
