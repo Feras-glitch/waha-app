@@ -137,7 +137,7 @@ async def main():
             ok(await p.evaluate("[weekPlayed(), weeksMet()]") == [1, 1], 'the oasis counts this week\'s days and the weeks completed')
             await p.evaluate("renderDaily()"); await p.wait_for_timeout(200)
             dl = await p.inner_text('#daily')
-            ok('هذا الأسبوع: 1 من 4' in dl and 'سلسلة' not in dl and 'متتالية' not in dl, 'her daily mission: «هذا الأسبوع: 1 من 4» (%s)' % dl[:60].replace('\n', ' '))
+            ok('هذا الأسبوع: ١ من ٤' in dl and 'سلسلة' not in dl and 'متتالية' not in dl, 'her daily mission: «هذا الأسبوع: ١ من ٤» (%s)' % dl[:60].replace('\n', ' '))
             rep = await p.evaluate("weekText([kidWeek(0, [])])")
             ok('أسابيع مكتملة: 1' in rep and 'سلسلة' not in rep, 'the Friday report counts weeks, not a chain')
 
@@ -160,7 +160,7 @@ async def main():
             await parent_kz(p); await p.click('[data-act="pWeekly"]'); await p.wait_for_selector('.who-turn')
             ok('يوسف' in await p.inner_text('.who-turn'), 'the next week it is يوسف\'s turn')
             t = await p.inner_text('#app')
-            ok('لم يسجّل يوسف' in t and await p.locator('[data-act="passWeekly"]').count() == 1, 'he has no reading yet: the parents may pass his turn to هند')
+            ok('يوسف ليس له قراءةٌ معتمدة' in t and await p.locator('[data-act="passWeekly"]').count() == 1, 'he has no reading yet: the parents may pass his turn to هند')
             await shot(p, 'w02-weekly-turn')
             await p.click('[data-act="passWeekly"]'); await p.wait_for_timeout(300)
             ok('هند' in await p.inner_text('.who-turn'), 'passed: هند this week, and يوسف keeps the first place for the next')

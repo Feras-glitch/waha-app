@@ -10,13 +10,26 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
   'showUsersModal', 'openUserEditor', 'deleteUser', 'switchUser', 'exportBackup', 'importBackupFile', 'closePopup', 'appDismiss', 'showMap',
   'printCertificate', 'printTeacherReport', 'printAllCards', 'guideParentNote', 'selectParentNote', 'openHub', 'recAllForUser', 'learnedVerses',
   'completedCount', 'guideStreak', 'openGuideJournal', 'escapeHtml', 'activeUserId', 'pinUnavailable', 'pinLockState', 'pinLockSave', 'appBack',
-  'showNewAchievement', 'offerReview', 'guideBubbleEl', 'showParentScreen'];
+  'showNewAchievement', 'offerReview', 'guideBubbleEl', 'showParentScreen', 'parentEntry', 'importProgressDoc', 'ttsWaqfWord', 'guidePanel', 'guideStartChallenge',
+  'guideStreak', 'updateStreak', 'updatePointsDisplay', 'ACHIEVEMENTS', 'GUIDE_BADGES', 'guideDayKey', 'guideTouchToday', 'updateStats'];
 (function () {
   'use strict';
   var FAMKEY = 'kb-family-v1', HOME = '../index.html', CORNER = '../kunuz/index.html#parent';
   function famGet() { try { return JSON.parse(localStorage.getItem(FAMKEY)) || null; } catch (e) { return null; } }
   function famSet(F) { try { localStorage.setItem(FAMKEY, JSON.stringify(F)); } catch (e) {} }
   var FAM = famGet();
+  /* moving to another section: step back over this page's guard entry first, so the page's own entry is the one replaced
+     and Back never finds the section just left (otherwise Back cycles oasis → section → oasis…) */
+  function kzLeave(url){
+    window.__kzLeaving = true;
+    var st = null; try { st = history.state; } catch (e) {}
+    if (!window.AndroidBridge && st && st.wahaBack) {
+      var done = false, to = function () { if (done) return; done = true; window.removeEventListener('popstate', to, true); location.replace(url); };
+      window.addEventListener('popstate', to, true);
+      try { history.back(); } catch (e) { to(); }
+      setTimeout(to, 700);
+    } else location.replace(url);
+  }
   if (!FAM || !FAM.pin || !Array.isArray(FAM.kids) || !FAM.kids.length) {
     /* no family yet: setup starts in the parent's app; the Hasaniya must not create a default child meanwhile */
     window.addEventListener('DOMContentLoaded', function (e) { e.stopImmediatePropagation(); }, true);
@@ -34,7 +47,10 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
 
   /* ---------- the family PIN (needed by the gates) ---------- */
   var PARENT_UNTIL = 0, LAST_PIN = 0;
-  try { var pu = +sessionStorage.getItem('kz-parent-until') || 0; if (pu > Date.now()) PARENT_UNTIL = Math.min(pu, Date.now() + 15 * 60 * 1000); } catch (e) {}
+  try { var pu = +sessionStorage.getItem('kz-parent-until') || 0; sessionStorage.removeItem('kz-parent-until'); if (pu > Date.now()) PARENT_UNTIL = Math.min(pu, Date.now() + 15 * 60 * 1000); } catch (e) {}
+  /* read before the address is tidied (choosing the child below drops «?kid=…», and «?parent=1» with it) */
+  var WANT_PARENT = false, PU_KEPT = 0;
+  try { WANT_PARENT = !!new URLSearchParams(location.search).get('parent'); PU_KEPT = PARENT_UNTIL; } catch (e) {}
   function parentOn() { return Date.now() < PARENT_UNTIL; }
   async function famHash(salt, pin) {
     var txt = salt + ':' + pin;
@@ -104,21 +120,52 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
       b.items.forEach(function (it) { try { it.no(); } catch (e) {} });
     }
   }
+  function exportHold() { var F = famGet(); return F && +F.exportHold > Date.now() ? +F.exportHold : 0; }
+  async function holdLift(code) {
+    var F = famGet(), p = F && F.recPrev; if (!p || !p.salt) return false;
+    var ok = (await famHash(p.salt, String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, ''))) === p.h;
+    if (ok) { F.exportHold = 0; (F.pinLog = F.pinLog || []).push({ t: Date.now(), k: 'hold-lift' }); famSet(F); }
+    return ok;
+  }
+  function lockLeft() { try { var o = JSON.parse(localStorage.getItem('kb-pin-lock') || '{}') || {}; return Math.max(0, Math.min(+o.until || 0, Date.now() + 15 * 60000) - Date.now()); } catch (e) { return 0; } }
+  function lockFail() { try { var o = JSON.parse(localStorage.getItem('kb-pin-lock') || '{}') || {}; o.fails = (+o.fails || 0) + 1; if (o.fails % 5 === 0) o.until = Date.now() + Math.min(15 * 60000, 60000 * Math.pow(2, o.fails / 5 - 1)); localStorage.setItem('kb-pin-lock', JSON.stringify(o)); } catch (e) {} }
+  function lockMsg() { var t = Math.ceil(lockLeft() / 1000); return 'محاولاتٌ خاطئةٌ كثيرة. انتظروا ' + (t >= 60 ? Math.ceil(t / 60) + ' دقيقة.' : t + ' ثانية.'); }
+  async function pinFor(v) {
+    var F = famGet(); if (!F || !F.pin) return 'لم يُضبط رمز وليّ الأمر بعد.';
+    if (lockLeft()) return lockMsg();
+    if (!String(v || '').trim()) return 'اكتبوا الرمز.';
+    if ((await famHash(F.salt || '', String(v).trim())) === F.pin) { try { localStorage.removeItem('kb-pin-lock'); } catch (e) {} return ''; }
+    lockFail(); return lockLeft() ? lockMsg() : 'الرمز غير صحيح.';
+  }
   function consent() {
     var b = BATCH; if (!b) return;
-    var r = lastReset(), when = '';
+    var r = lastReset(), when = '', hold = exportHold();
     try { when = new Date(r).toLocaleDateString('ar-EG'); } catch (e) {}
     var f = isGirl(), n = esc(kidName());
     sheet('تنبيهٌ قبل إخراج ' + (b.items.length > 1 ? 'ملفات' : 'ملف'),
       '<p style="margin:0;line-height:1.9">سيخرج من الجهاز:</p><ul id="kzWhat" style="margin:4px 0 8px;padding-right:20px;line-height:1.9">' +
         b.items.map(function (it) { return '<li><b>' + esc(it.label) + '</b></li>'; }).join('') + '</ul>' +
       '<p style="font-size:.88rem;color:#555;line-height:1.9;margin:0">قد يحمل اسم ' + n + (f ? ' وصوتها وصورتها' : ' وصوته وصورته') + '. وبعد إرساله إلى المعلم أو غيره لا يبقى في يدكم: من يصله يستطيع أن يحفظه أو يعيد إرساله.</p>' +
-      (r && Date.now() - r < 30 * 864e5 ? '<p style="font-size:.88rem;color:#b3261e;line-height:1.8">⚠ أُعيد ضبط رمز وليّ الأمر يوم ' + esc(when) + '. إن لم تكونوا أنتم من أعاده فلا توافقوا، وراجعوا ركن وليّ الأمر.</p>' : '') +
-      '<label style="display:flex;gap:8px;align-items:center;justify-content:flex-start;margin-top:8px"><input type="checkbox" id="kzOk"> أوافق على إخراج ما سبق</label>',
-      [{ t: 'أخرجوه', cls: 'btn-success', id: 'kzGo', disabled: true, v: true }, { t: 'إلغاء', v: false }],
+      (r && Date.now() - r < 30 * 864e5 ? '<p style="font-size:.88rem;color:#b3261e;line-height:1.8">⚠ تغيّر رمز وليّ الأمر يوم ' + esc(when) + '. إن لم تكونوا أنتم من غيّره فلا توافقوا، وراجعوا ركن وليّ الأمر.</p>' : '') +
+      (hold ? '<p style="font-size:.88rem;color:#b3261e;line-height:1.8">⚠ أُعيد ضبط الرمز بالانتظار دون رمز الاسترداد، فالإخراج موقوفٌ مدّة شهر. لرفع الإيقاف الآن اكتبوا رمز الاسترداد القديم (الذي كان قبل إعادة الضبط).</p>' +
+        '<label for="kzPin" style="display:block;margin-top:6px">رمز الاسترداد القديم</label><input id="kzPin" dir="ltr" lang="en" autocomplete="off" autocapitalize="characters" spellcheck="false" style="width:100%;padding:8px;font-size:1.1rem">'
+        : '<label for="kzPin" style="display:block;margin-top:6px">رمز وليّ الأمر لهذا الإخراج</label><input id="kzPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" style="width:100%;padding:8px;font-size:1.1rem">') +
+      '<label style="display:flex;gap:8px;align-items:center;justify-content:flex-start;margin-top:8px;min-height:44px"><input type="checkbox" id="kzOk" style="width:22px;height:22px"> أوافق على إخراج ما سبق</label>' +
+      '<p id="kzFb" role="alert" style="color:#b3261e;margin:4px 0 0;min-height:1.2em"></p>',
+      [{ t: 'أخرجوه', cls: 'btn-success', id: 'kzGo', disabled: true, v: true, on: function (x) {
+          /* the PIN (or the old recovery code) is checked first; the save, share or print still runs inside this tap */
+          var inp = document.getElementById('kzPin'), fb = document.getElementById('kzFb'), val = inp ? inp.value : '';
+          x.disabled = true;
+          (hold ? holdLift(val).then(function (ok) { if (!ok) lockFail(); return ok ? '' : (lockLeft() ? lockMsg() : 'رمز الاسترداد غير صحيح.'); }) : pinFor(val)).then(function (err) {
+            if (err) { if (fb) fb.textContent = err; if (inp) { inp.value = ''; try { inp.focus(); } catch (e) {} } x.disabled = false; return; }
+            if (CUR) CUR.close(true);
+          });
+          return true;
+        } }, { t: 'إلغاء', v: false }],
       function (v) { settle(!!v); });
     var c = document.getElementById('kzOk'), g = document.getElementById('kzGo');
     if (c && g) c.addEventListener('change', function () { g.disabled = !c.checked; });
+    var pi = document.getElementById('kzPin'); if (pi) try { pi.focus(); } catch (e) {}
   }
   /* go() runs inside the tap on «أخرجوه», so the browser still counts the save, share or print as the parent's own */
   function gate(label, go, no, key) {
@@ -131,14 +178,26 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
       return;
     }
     BATCH = { items: [{ label: label, go: go, no: no }], key: key };
-    if (Date.now() - LAST_PIN < 30000) return consent();      /* the PIN was typed just now for this very action */
-    if (!_require) { toast('تعذّر طلب رمز وليّ الأمر؛ لم يخرج شيء', 'error'); return settle(false); }
-    BATCH.pin = true;
-    _require(function () { if (BATCH) { BATCH.pin = false; consent(); } }, 'إخراج شيء من الجهاز يحتاج رمز وليّ الأمر');
+    consent();                                   /* the PIN is typed in the consent sheet itself, for this export only */
   }
   /* while the parent decides, the Hasaniya's own «تم التصدير» would be untrue */
   try { showToast = function (m, t) { if (BATCH && t === 'success') return; return _toast.apply(this, arguments); }; } catch (e) {}
   try { var _cancelPin = cancelPin; cancelPin = function () { var r = _cancelPin.apply(this, arguments); if (BATCH && BATCH.pin) settle(false); return r; }; } catch (e) {}
+
+  var DIG = function (s) { return String(s).replace(/[0-9]/g, function (c) { return '٠١٢٣٤٥٦٧٨٩'[c]; }); };
+  /* files that people read (a report, a page, a text) carry ١٢٣ like the screens (the parents' decision); data files (.json) and
+     file names keep theirs, and so do code, preformatted text and typed fields inside a page */
+  function digitsFor(name, text) {
+    if (typeof text !== 'string') return text;
+    var ext = (String(name || '').split('.').pop() || '').toLowerCase();
+    if (ext === 'md' || ext === 'txt') return DIG(text);
+    if (ext !== 'html' && ext !== 'htm') return text;
+    try {
+      var doc = new DOMParser().parseFromString(text, 'text/html'), tw = doc.createTreeWalker(doc.documentElement, NodeFilter.SHOW_TEXT), n;
+      while ((n = tw.nextNode())) { var p = n.parentElement; if (p && /^(SCRIPT|STYLE|CODE|PRE|TEXTAREA)$/.test(p.tagName)) continue; if (/[0-9]/.test(n.data)) n.data = DIG(n.data); }
+      return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+    } catch (e) { return text; }
+  }
 
   /* files: the Hasaniya makes a download link and clicks it (in Android the bridge turns that into the share screen) */
   var _click = HTMLAnchorElement.prototype.click;
@@ -150,6 +209,9 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
       var file = fetch(href).then(function (r) { return r.blob(); });
       gate(describe(name), function () {
         file.then(function (blob) {
+          var ext = (name.split('.').pop() || '').toLowerCase();
+          return /^(md|txt|html|htm)$/.test(ext) ? blob.text().then(function (t) { return new Blob([digitsFor(name, t)], { type: blob.type || 'text/plain;charset=utf-8' }); }) : blob;
+        }).then(function (blob) {
           var u = URL.createObjectURL(blob), b = document.createElement('a');
           b.href = u; b.download = name; _click.call(b);
           toast(window.AndroidBridge ? 'اختاروا أين يُحفظ الملف أو إلى من يُرسل' : 'نُزّل الملف', 'success');
@@ -181,7 +243,7 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
     if (OPEN_FREE) return _open.apply(window, args);
     var label = OPEN_LABEL || 'صفحة للطباعة فيها بيانات ' + kidName(); OPEN_LABEL = null;
     var html = '', closed = false, real = null;
-    function flush() { if (!real) return; try { real.document.open(); real.document.write(html); if (closed) real.document.close(); } catch (e) {} }
+    function flush() { if (!real) return; try { real.document.open(); real.document.write(closed ? digitsFor('p.html', html) : html); if (closed) real.document.close(); } catch (e) {} }
     var fake = {
       document: { open: function () { html = ''; }, write: function (s) { html += s; }, writeln: function (s) { html += s + '\n'; }, close: function () { closed = true; if (real) { try { real.document.close(); } catch (e) {} } } },
       close: function () {}, focus: function () {}, print: function () {}
@@ -209,7 +271,7 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
           'السلام عليكم، أنا ناجي، رفيق ' + name + ' في رحلة السيرة النبوية.',
           'هذا الأسبوع ' + (f ? 'سجّلت ' : 'سجّل ') + name + ' ' + week + ' ' + (week === 1 ? 'بيتاً' : 'أبيات') + (f ? ' بصوتها.' : ' بصوته.'),
           'إجمالي ما ' + (f ? 'حفظته' : 'حفظه') + ': ' + learned + ' ' + (learned === 1 ? 'بيت' : 'أبيات') + '، ' + (f ? 'وأكملت ' : 'وأكمل ') + stations + ' ' + (stations === 1 ? 'محطة' : 'محطات') + ' من الرحلة.',
-          'عدد الأيام المتتالية التي ' + (f ? 'فتحت' : 'فتح') + ' فيها التطبيق: ' + days + '.',
+          'أيام هذا الأسبوع التي ' + (f ? 'فتحت' : 'فتح') + ' فيها التطبيق: ' + days + ' من ٧ (يتمّ الأسبوع بأربعة).',
           f ? 'شجّعوها على التسميع المتصل في نهاية الأسبوع لتثبت ما حفظته 🐪' : 'شجّعوه على التسميع المتصل في نهاية الأسبوع ليثبت ما حفظه 🐪'
         ].join('\n');
         openHub('📝 رسالة ناجي للوالدين',
@@ -260,7 +322,7 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
       var F = famGet(); if (!F || !F.pin) return false;
       var ok = (await famHash(F.salt || '', String(pin).trim())) === F.pin;
       if (ok) {
-        PARENT_UNTIL = Date.now() + 15 * 60 * 1000; LAST_PIN = Date.now();
+        LAST_PIN = Date.now();
         /* whoever knows the current PIN cancels a pending «forgot PIN» request */
         var G = famGet(); if (G && G.resetReq) { G.resetReq = null; (G.pinLog = G.pinLog || []).push({ t: Date.now(), k: 'cancel-pin-hasaniya' }); famSet(G); var rb = document.getElementById('kzReset'); if (rb) rb.remove(); }
       }
@@ -271,12 +333,18 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
     pinLockState = function () { try { var o = JSON.parse(localStorage.getItem('kb-pin-lock') || '{}') || {}; return { fails: +o.fails || 0, until: Math.min(+o.until || 0, Date.now() + 15 * 60000) }; } catch (e) { return { fails: 0, until: 0 }; } };
     pinLockSave = function (o) { try { if (o && (o.fails || o.until)) localStorage.setItem('kb-pin-lock', JSON.stringify({ fails: +o.fails || 0, until: +o.until || 0 })); else localStorage.removeItem('kb-pin-lock'); } catch (e) {} };
     /* a parent who just typed the PIN is not asked again for the next screen; the session ends when the child's map is back */
+    var IN_PE = false;
     requirePin = function (cb, message) {
       if (parentOn()) { if (cb) setTimeout(cb, 0); return; }
-      return _require(cb, message);
+      /* the PIN typed at the parents' entry opens the session; one typed for anything else (a certificate, a file) is spent on it */
+      var sess = IN_PE;
+      return _require(function () { if (sess) PARENT_UNTIL = Date.now() + 15 * 60 * 1000; if (cb) return cb.apply(this, arguments); }, message);
     };
+    if (typeof parentEntry === 'function') { var _pe = parentEntry; parentEntry = function () { IN_PE = true; try { return _pe.apply(this, arguments); } finally { IN_PE = false; } }; }
+    /* opening a progress file replaces what the child has learned here (and what the oasis reads from it): the parent's step */
+    if (typeof importProgressDoc === 'function') { var _ipd = importProgressDoc; importProgressDoc = function (data) { var self = this; requirePin(function () { _ipd.call(self, data); }, 'فتح ملف تقدّم يغيّر ما حفظه الطفل، فيحتاج رمز وليّ الأمر'); }; }
     var _map = showMap;
-    showMap = function () { PARENT_UNTIL = 0; return _map.apply(this, arguments); };
+    showMap = function () { PARENT_UNTIL = 0; var r = _map.apply(this, arguments); if (WANT_PARENT) openParentNow(); return r; };
     document.addEventListener('visibilitychange', function () { if (document.hidden) PARENT_UNTIL = 0; });
     var _showPin = showPinModal;
     showPinModal = function (title, subtitle) {
@@ -290,6 +358,10 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
     var r = F && F.resetReq, now = Date.now(); if (!r) return false;
     var max = Math.max(+r.max || 0, +r.at || 0);
     if (now < max - 2 * 3600e3) { r.due = Math.max(+r.due || 0, now + 72 * 3600e3); r.days = []; r.back = (+r.back || 0) + 1; }
+    /* the Android app has a clock the user cannot set (time since the device started): seen again with the wall clock further ahead
+       than that clock moved, the request was sped up by hand, and its wait starts again */
+    var mono = 0; try { mono = window.AndroidBridge && AndroidBridge.elapsed ? +AndroidBridge.elapsed() : 0; } catch (e) {}
+    if (mono) { var o = r.mono; if (o && mono >= o.m && now - o.w > (mono - o.m) + 10 * 60000) { r.due = Math.max(+r.due || 0, now + 72 * 3600e3); r.days = []; r.fwd = (+r.fwd || 0) + 1; } r.mono = { w: now, m: mono }; }
     r.max = Math.max(max, now); var t = new Date(now), d = t.getFullYear() + '-' + (t.getMonth() + 1) + '-' + t.getDate();
     r.days = Array.isArray(r.days) ? r.days : []; if (r.days.indexOf(d) < 0) r.days = r.days.concat(d).slice(-10);
     return true;
@@ -308,7 +380,13 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
     }
   } catch (e) {}
 
-  function toCorner() { location.href = CORNER; }
+  /* a restore, or the Hasaniya's state written by another tab: reload, so this tab never writes its older copy back over it */
+  window.addEventListener('storage', function (e) { if (e.key === 'kb-epoch' || e.key === 'waha.hasaniya_v13_users') { try { location.reload(); } catch (x) {} } });
+  function toCorner() { try { if (parentOn()) sessionStorage.setItem('kz-parent-until', String(PARENT_UNTIL)); } catch (e) {} kzLeave(CORNER); }
+  /* «?parent=1»: opened from the parents' hub, straight to the parents' screen (the code, or the session carried with it),
+     once the Hasaniya has drawn its map (drawing the map ends a parent session, so the carried one is kept aside until then) */
+  function openParentNow() { if (!WANT_PARENT) return; WANT_PARENT = false; try { history.replaceState(history.state, '', location.pathname); } catch (e) {} if (PU_KEPT > Date.now()) PARENT_UNTIL = PU_KEPT; setTimeout(function () { try { parentEntry(); } catch (e) {} }, 60); }
+  window.addEventListener('load', function () { setTimeout(openParentNow, 1500); });
   /* one thing at a time on the child's screen: a new achievement, or the offer to recite what came before, waits until the
      window in front (the station's quiz, «لنكرّر هذه الأبيات»…) is closed, and the offer does not come with a second bubble */
   try {
@@ -320,20 +398,27 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
     if (typeof offerReview === 'function') { var _offer = offerReview; offerReview = function () {
       if (busy()) { if (!LATER.some(function (f) { return f.offer; })) { var f = function () { _offer(); quietGuide(); }; f.offer = 1; LATER.push(f); } return; }
       _offer(); quietGuide(); }; }
+    /* the parents' one way in (2.8): from here to the two other boards, carrying the open session */
+    var handoff = function (url) { try { if (parentOn()) sessionStorage.setItem('kz-parent-until', String(PARENT_UNTIL)); } catch (e) {} try { saveState(); } catch (e) {} kzLeave(url); };
+    var hubBar = function () { var ps = document.getElementById('parentScreen'); if (!ps || document.getElementById('kzHub')) return;
+      var d = document.createElement('div'); d.id = 'kzHub'; d.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px';
+      d.innerHTML = '<button class="tool-btn" type="button" data-to="corner">💎 ركن وليّ الأمر</button><button class="tool-btn" type="button" data-to="waha">🌴 لوحة الواحة</button>';
+      d.addEventListener('click', function (e) { var b = e.target.closest('[data-to]'); if (!b) return; handoff(b.dataset.to === 'corner' ? CORNER : HOME + '?dad=1'); });
+      ps.insertBefore(d, ps.firstChild); };
     /* no mistakes is not mastery when nothing has been learned yet */
-    if (typeof showParentScreen === 'function') { var _ps = showParentScreen; showParentScreen = function () { var r = _ps.apply(this, arguments);
+    if (typeof showParentScreen === 'function') { var _ps = showParentScreen; showParentScreen = function () { var r = _ps.apply(this, arguments); try { hubBar(); } catch (x) {}
       try { var pl = document.getElementById('parentMistakesList'), e = pl && pl.querySelector('.empty-state');
         if (e && !learnedVerses('all').length) e.textContent = isGirl() ? 'لم تبدأ الحفظ بعد.' : 'لم يبدأ الحفظ بعد.'; } catch (x) {} return r; }; }
     var quietGuide = function () { try { var b = guideBubbleEl(); if (b && document.getElementById('reviewOffer')) b.classList.remove('show'); } catch (e) {} };
   } catch (e) {}
   /* Android back on the Hasaniya's map goes to the oasis (the front door), not out of the app */
-  try { if (typeof appBack === 'function') { var _back = appBack; appBack = function () { if (_back.apply(this, arguments)) return true; try { saveState(); } catch (e) {} location.replace(HOME); return true; }; } } catch (e) {}
+  try { if (typeof appBack === 'function') { var _back = appBack; appBack = function () { if (_back.apply(this, arguments)) return true; try { saveState(); } catch (e) {} kzLeave(HOME); return true; }; } } catch (e) {}
   /* the back of a browser, or of the web app installed on Android, steps back inside this section as the Android app's button does:
      one guard entry in the history catches it; where there is nowhere left to go back to, the browser is let go */
   (function () { if (window.AndroidBridge || !window.history || !history.pushState) return;
-    function guard() { try { history.pushState({ wahaBack: 1 }, '', location.href); } catch (e) {} }
+    function guard() { if (window.__kzLeaving) return; try { history.pushState({ wahaBack: 1 }, '', location.href); } catch (e) {} }
     if (!(history.state && history.state.wahaBack)) guard();
-    window.addEventListener('popstate', function () { var done = false; try { done = appBack(); } catch (e) {} if (done) guard(); });
+    window.addEventListener('popstate', function () { if (window.__kzLeaving) return; var done = false; try { done = appBack(); } catch (e) {} if (done) guard(); });
   })();
   function cornerSheet(title, text) {
     sheet(title, '<p style="line-height:1.9">' + text + '</p>', [{ t: 'افتحوا ركن وليّ الأمر', cls: 'btn-success', on: function () { toCorner(); } }, { t: 'إغلاق' }]);
@@ -390,6 +475,48 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
     };
   } catch (e) { console.warn('waha: children ui', e); }
 
+  /* the five-minute challenge (how many new verses before the clock runs out) is hidden for every child: new verses are learnt
+     slowly, and the weekly rhythm has no race against time (the parents' decision). The review «⚡ تحدٍّ سريع» stays */
+  try {
+    if (typeof guidePanel === 'function') { var _panel = guidePanel; guidePanel = function (text, actions) { if (Array.isArray(actions)) arguments[1] = actions.filter(function (a) { return !(a && /^⏱/.test(String(a.label || ''))); }); return _panel.apply(this, arguments); }; }
+    if (typeof guideStartChallenge === 'function') guideStartChallenge = function () {};
+  } catch (e) {}
+
+  /* the Hasaniya's own «للوالدين» button leads to the one parents' entry, the hub in the oasis, like the doors of the other sections */
+  function hubDoor() { var pb = document.getElementById('parentEntryBtn'); if (pb && !pb.__kz) { pb.__kz = 1; pb.onclick = function (e) { if (e) e.preventDefault(); try { saveState(); } catch (x) {} kzLeave(HOME + '?hub=1'); }; } }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hubDoor); else hubDoor();
+
+  /* the weekly rhythm of the whole product: no daily streak that a missed day breaks. Days count from Saturday to Friday; four make
+     the week. The 🔥 badge is hidden, the two streak achievements become days in a week, the parents see «أيام هذا الأسبوع» */
+  try {
+    var weekDays = function (st) {
+      var s0 = st || state, days = new Set((s0 && s0.activeDays) || []), d = new Date(), back = (d.getDay() + 1) % 7, n = 0;
+      for (var i = 0; i <= back; i++) { var x = new Date(d.getFullYear(), d.getMonth(), d.getDate() - i); if (days.has(guideDayKey(x))) n++; }
+      return n;
+    };
+    window.KZ_HS_WEEKDAYS = weekDays;
+    guideStreak = function () { return weekDays(); };
+    var _upd = updateStreak;
+    updateStreak = function () { try { guideTouchToday(); } catch (e) {} var r; try { r = _upd.apply(this, arguments); } catch (e) {} try { state.streak = weekDays(); saveState(); updatePointsDisplay(); } catch (e) {} return r; };
+    var _pts = updatePointsDisplay;
+    updatePointsDisplay = function () { var r = _pts.apply(this, arguments); var sb = document.getElementById('streakBadge'); if (sb) sb.style.display = 'none'; return r; };
+    ACHIEVEMENTS.forEach(function (a) {
+      if (a.id === 'streak3') { a.desc = 'ثلاثة أيام في أسبوع'; a.check = function (s1) { return weekDays(s1) >= 3; }; }
+      if (a.id === 'streak7') { a.desc = 'أربعة أيام في أسبوع'; a.check = function (s1) { return weekDays(s1) >= 4; }; }
+    });
+    if (GUIDE_BADGES.streak3) { GUIDE_BADGES.streak3.name = 'ثلاثة أيام في أسبوع'; GUIDE_BADGES.streak3.desc = 'ثلاثة أيام من الحضور في أسبوعٍ واحد'; }
+    var _stats = updateStats;
+    updateStats = function () {
+      var r = _stats.apply(this, arguments);
+      try { var box = document.getElementById('masteryBreakdown'); if (box) [].forEach.call(box.children, function (d) { if (/^\s*🔥/.test(d.textContent)) d.innerHTML = '📅 أيام هذا الأسبوع: <strong>' + weekDays() + ' من ٧</strong> (يتمّ بأربعة)'; }); } catch (e) {}
+      return r;
+    };
+  } catch (e) { console.warn('waha: weekly rhythm', e); }
+
+  /* speech: the pause at the end of a phrase drops the last vowel, except the vowel of «you» (ـكَ ـكِ ـتَ ـتِ), so a girl hears
+     «أحسنتِ» and «فيكِ» and not the boy's form */
+  try { if (typeof ttsWaqfWord === 'function') { var _waqf = ttsWaqfWord; ttsWaqfWord = function (w) { return /[كت]ّ?[َِ]$/.test(w) ? w : _waqf(w); }; } } catch (e) {}
+
   /* ---------- girls: the Hasaniya's own labels speak to a boy («استمع»، «سجّل»…). For a girl they are rewritten on screen
      (text, title, aria-label, placeholder), and back again for a boy. Its spoken and companion lines are already gendered upstream.
      tools/build.py checks that every phrase here is still in the pinned Hasaniya, so this list follows its updates. ---------- */
@@ -408,8 +535,22 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
     ['اكتب جوابك', 'اكتبي جوابكِ'], ['اكتب بكلماتك', 'اكتبي بكلماتكِ'], ['اضغط أي كلمة لتسمعها', 'اضغطي أي كلمة لتسمعيها'],
     ['اضغط النقطة لترى قصتها', 'اضغطي النقطة لتري قصتها'], ['اضغط البيت للتدرّب عليه', 'اضغطي البيت للتدرّب عليه'],
     ['اضغط المحطات بالترتيب', 'اضغطي المحطات بالترتيب'], ['جرّب مرة أخرى', 'جرّبي مرة أخرى'], ['ابدأ بالمحطة', 'ابدئي بالمحطة'],
-    ['حاول مرة أخرى، الكلمات المعلّمة', 'حاولي مرة أخرى، الكلمات المعلّمة'], ['↺ ابدأ من جديد', '↺ ابدئي من جديد'], ['جرّب كلمة أوضح', 'جرّبي كلمة أوضح']
+    ['حاول مرة أخرى، الكلمات المعلّمة', 'حاولي مرة أخرى، الكلمات المعلّمة'], ['↺ ابدأ من جديد', '↺ ابدئي من جديد'], ['جرّب كلمة أوضح', 'جرّبي كلمة أوضح'],
+    ['🔊 استمع', '🔊 استمعي'], ['استمع للقصص', 'استمعي للقصص'], ['🔊 اسمع مرة أخرى', '🔊 اسمعي مرة أخرى'], ['🎯 تدرّب', '🎯 تدرّبي'],
+    ['أتممت التركيز!', 'أتممتِ التركيز!'], ['تدرّب مرة أخرى.', 'تدرّبي مرة أخرى.'], ['التفكير! اسأل نفسك', 'التفكير! اسألي نفسكِ'],
+    ['وإن لم تجد الجواب الحاسم، فقل', 'وإن لم تجدي الجواب الحاسم، فقولي'], ['أخبر الوالد ليحرّر مساحة', 'أخبري الوالد ليحرّر مساحة'], ['شارك نتيجتك', 'شاركي نتيجتكِ']
   ];
+  /* one name for one thing in the three sections: the family PIN is «رمز وليّ الأمر», this board is «لوحة الحسنية», and the
+     parents are spoken to in the plural (for every child, boy or girl). tools/build.py checks these are still in the Hasaniya too */
+  var HS_NAMES = [
+    ['وضع الأسرة 👨‍👩‍👧', '🐪 لوحة الحسنية'], ['أهلاً بك في وضع الأسرة 👋', 'أهلًا بكم في لوحة الحسنية 👋'], ['فهمت، ابدأ', 'فهمنا، نبدأ'],
+    ['منطقة الوالدين محمية، أدخل الرقم السري', 'لوحة الحسنية: اكتبوا رمز وليّ الأمر'], ['🔐 إدارة الرقم السري', '🔐 رمز وليّ الأمر'],
+    ['ضبط الرقم السري', 'ضبط رمز وليّ الأمر'], ['تغيير الرقم السري', 'تغيير رمز وليّ الأمر'], ['إزالة الرقم السري', 'إزالة رمز وليّ الأمر'],
+    ['تم ضبط الرقم السري', 'ضُبط رمز وليّ الأمر'], ['🔐 الرقم السري', '🔐 رمز وليّ الأمر'], ['نسيت الرقم؟', 'نسيتم الرمز؟'],
+    ['يطلبان الرقم السري', 'يطلبان رمز وليّ الأمر'], ['(بالرقم السري)', '(برمز وليّ الأمر)']
+  ];
+  /* labels that are one word alone (a tile «تذكّر», the 🔊 buttons' «استمع»): rewritten only when they are the whole text, never inside a word */
+  var HS_FEM_EXACT = [['تذكّر', 'تذكّري'], ['استمع', 'استمعي']];
   window.KZ_HS_FEM = HS_FEM;
   (function () {
     var esc = function (t) { return t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); };
@@ -417,9 +558,17 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
     var MF = by(0), FM = by(1);
     var rx = function (m) { return new RegExp('(' + Object.keys(m).sort(function (a, b) { return b.length - a.length; }).map(esc).join('|') + ')(?![\\u0621-\\u064A\\u064B-\\u0652])', 'g'); };
     var RMF = rx(MF), RFM = rx(FM), ATTR = ['title', 'aria-label', 'placeholder'];
-    function fix(s, girl) { return s.replace(girl ? RMF : RFM, function (w) { return (girl ? MF : FM)[w]; }); }
-    function text(n, girl) { var d = n.data, o = fix(d, girl); if (o !== d) n.data = o; }
-    function attrs(e, girl) { for (var i = 0; i < ATTR.length; i++) { var v = e.getAttribute(ATTR[i]); if (v) { var o = fix(v, girl); if (o !== v) e.setAttribute(ATTR[i], o); } } }
+    var NM = {}; HS_NAMES.forEach(function (p) { NM[p[0]] = p[1]; }); var RNM = rx(NM);
+    /* and numbers are written ١٢٣ as in the rest of the product (2.8), except in what is typed and in code-like text */
+    var AD = '٠١٢٣٤٥٦٧٨٩', LATIN = 'textarea,input,pre,code,[data-latin],[lang]:not([lang^="ar"])';
+    var toL = function (s) { return s.replace(/[٠-٩]/g, function (c) { return String(AD.indexOf(c)); }); };
+    var toA = function (s) { return s.replace(/[0-9]/g, function (c) { return AD[c]; }); };
+    var latin = function (n) { var e = n.nodeType === 1 ? n : n.parentElement; try { return !!(e && e.closest(LATIN)); } catch (x) { return false; } };
+    function fix(s, girl, n) { if (n && latin(n)) return s; var t = toL(s); t = t.replace(RNM, function (w) { return NM[w]; }); t = t.replace(girl ? RMF : RFM, function (w) { return (girl ? MF : FM)[w]; }); return toA(t); }
+    var EX = [{}, {}]; HS_FEM_EXACT.forEach(function (p) { EX[0][p[0]] = p[1]; EX[1][p[1]] = p[0]; });
+    function exact(s, girl) { var t = s.trim(), r = (girl ? EX[0] : EX[1])[t]; return r ? s.replace(t, r) : null; }
+    function text(n, girl) { var d = n.data, o = exact(d, girl); if (o === null) o = fix(d, girl, n); if (o !== d) n.data = o; }
+    function attrs(e, girl) { for (var i = 0; i < ATTR.length; i++) { var v = e.getAttribute(ATTR[i]); if (v) { var o = exact(v, girl); if (o === null) o = fix(v, girl, e); if (o !== v) e.setAttribute(ATTR[i], o); } } }
     function walk(root, girl) {
       if (!root) return;
       if (root.nodeType === 3) return text(root, girl);
@@ -458,6 +607,8 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
     var st = document.createElement('style'); st.id = 'kzFix';
     st.textContent = '.review-offer{left:12px!important;right:12px!important;transform:none!important;margin-inline:auto;width:auto;max-width:520px}' +
       '#mainHeader .icon-btn,#kzHome{min-width:44px;min-height:44px}' +
+      /* white text on red or pink reached 3.7:1; a darker red and slightly larger badges read clearly */
+      ':root{--danger:#c62828}.review-count{font-size:.8rem}' +
       /* the product's fonts: Tajawal for the interface, Amiri for the poem, as in the oasis and «كنوز البيان» */
       'body,button,input,select,textarea{font-family:"Tajawal","Amiri",system-ui,sans-serif}' +
       '.verse-text,.full-verse-box .text,.verse-intro,.intro-verse,.seq-verse,.ask-verse,.word-btn{font-family:"Amiri","Noto Naskh Arabic",serif}';
@@ -467,7 +618,7 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
     var left = document.querySelector('#mainHeader .header-left'); if (!left || document.getElementById('kzHome')) return;
     var b = document.createElement('button'); b.id = 'kzHome'; b.className = 'icon-btn'; b.type = 'button'; b.textContent = '🌴';
     b.setAttribute('aria-label', 'العودة إلى الواحة'); b.title = 'الواحة';
-    b.onclick = function () { try { saveState(); } catch (e) {} location.href = HOME; };
+    b.onclick = function () { try { saveState(); } catch (e) {} kzLeave(HOME); };
     left.insertBefore(b, left.firstChild);
   });
 })();

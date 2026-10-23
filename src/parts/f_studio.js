@@ -215,8 +215,10 @@ async function submitWork(){
   if(w.type==='draw'&&DR.dirty) await drawSave();
   var m=missingFor(w), e=document.getElementById('wErr');
   if(m){ if(e) e.textContent=G(m); return; }
-  w.status='sent'; w.sentAt=Date.now(); w.updated=Date.now(); w.seen=false; saveWorks();
-  toast('⟨أرسلتَ|أرسلتِ⟩ «'+clip(titleOf(w),30)+'» إلى وليّ أمرك.');
+  var was=w.status; w.status='sent'; w.sentAt=Date.now(); w.updated=Date.now(); w.seen=false;
+  /* a full storage keeps nothing: say so, and keep the work open, rather than «sent» */
+  if(!saveWorks()){ w.status=was; delete w.sentAt; if(e) e.textContent=G('لم يُحفظ العمل: مساحة الجهاز ممتلئة. ⟨أخبر|أخبري⟩ وليّ ⟨أمرك|أمركِ⟩.'); return; }
+  toast('⟨أرسلتَ|أرسلتِ⟩ «'+clip(titleOf(w),30)+'» إلى وليّ ⟨أمرك|أمركِ⟩.');
   CUR=null; worksView('sent');
 }
 async function delWork(){

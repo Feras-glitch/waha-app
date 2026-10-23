@@ -74,6 +74,8 @@ async def main():
 
         # ---- the Hasaniya: one window at a time, the product's fonts, and back to the oasis
         await p.goto('about:blank'); await p.goto(HS); await p.wait_for_timeout(1800)
+        hn = await p.evaluate("(() => { const ws = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT); let n, bad = []; while ((n = ws.nextNode())){ const e = n.parentElement; if (e && !e.closest('textarea,input,script,style,pre,code,[lang]:not([lang^=ar])') && /[0-9]/.test(n.data) && e.offsetParent) bad.push(n.data.trim().slice(0, 30)); } return bad; })()")
+        ok(not hn, 'and in the Hasaniya (%s)' % hn[:3])
         f = await p.evaluate("getComputedStyle(document.body).fontFamily")
         ok('Tajawal' in f, 'the Hasaniya uses the product\'s fonts (%s)' % f[:40])
         r = await p.evaluate("""(async () => { document.getElementById('quizPopup').classList.add('active'); showNewAchievement({icon: '⭐', name: 'تجربة', desc: 'تجربة'});
@@ -89,11 +91,31 @@ async def main():
 
         # ---- the parents are addressed in the plural on the oasis board
         await p.goto('about:blank'); await p.goto(URL); await p.wait_for_selector('#whoBtn'); await p.wait_for_timeout(400)
-        await p.click('#whoBtn'); await p.click('#ksDad'); await p.wait_for_selector('#sheet:not([hidden]) #pinIn'); await p.fill('#pinIn', '1234'); await p.click('#pinOk')
+        await p.click('#whoBtn'); await p.click('#ksParent'); await p.click('#ksDad'); await p.wait_for_selector('#sheet:not([hidden]) #pinIn'); await p.fill('#pinIn', '1234'); await p.click('#pinOk')
         await p.wait_for_selector('#ddTabs'); await p.wait_for_timeout(600)
         t = await p.inner_text('#ddBody')
         ok('اسمعوا ما قالوه اليوم، وأرسلوا' in t, 'the board speaks to «you» in the plural: a mother or a father')
         await shot(p, 'b01-board')
+        # ---- one way in for the parents: the three boards a tap apart, the code asked once
+        await p.click('#ddHub [data-hub="corner"]'); await p.wait_for_selector('.ph-top, #pinIn', timeout=8000)
+        ok(await p.locator('.ph-top').count() == 1 and await p.locator('#pinIn').count() == 0, 'from the oasis board to «ركن وليّ الأمر»: no second code')
+        ok(await p.locator('.hub-row .hub-b').count() == 3, 'the corner lists the three boards')
+        await shot(p, 'b02-corner-hub')
+        await p.click('.hub-b[data-act="pHasaniya"]'); await p.wait_for_timeout(2200)
+        ok(await p.evaluate("getComputedStyle(document.getElementById('parentScreen')).display !== 'none' && !document.getElementById('pinPopup').classList.contains('active')"), '…to the Hasaniya parents\' screen, no second code')
+        ok(await p.locator('#kzHub [data-to]').count() == 2, 'which links back to the two other boards')
+        await shot(p, 'b03-hasaniya-parent')
+        await p.click('#kzHub [data-to="waha"]'); await p.wait_for_selector('#ddTabs', timeout=8000)
+        ok(await p.locator('#ddTabs').count() == 1, '…and to the oasis board, no second code')
+        ctx2 = await b.new_context(viewport={'width': 390, 'height': 844}, storage_state=await ctx.storage_state())
+        q = await ctx2.new_page(); await q.goto(HS + '?parent=1'); await q.wait_for_timeout(2200)
+        ok(await q.evaluate("document.getElementById('pinPopup').classList.contains('active')"), 'opened without a session, the Hasaniya parents\' screen asks for the code')
+        await ctx2.close()
+        await p.goto('about:blank'); await p.goto(URL); await p.wait_for_selector('#whoBtn'); await p.wait_for_timeout(400)
+        await p.click('#whoBtn'); await p.click('#ksParent'); await p.wait_for_selector('#sheet .hub')
+        ok(await p.locator('#sheet .hubi').count() == 4, 'the oasis: «👪 للوالدين» opens the one list of boards')
+        nums = await p.evaluate("(() => { const ws = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT); let n, bad = []; while ((n = ws.nextNode())){ const e = n.parentElement; if (e && !e.closest('textarea,input,script,style,pre,code,[lang]:not([lang^=ar])') && /[0-9]/.test(n.data) && e.offsetParent) bad.push(n.data.trim().slice(0, 30)); } return bad; })()")
+        ok(not nums, 'numbers on the oasis screens are written ١٢٣ (%s)' % nums[:3])
         await b.close()
     srv.shutdown()
     print('\nERRORS:', len(ERRS))

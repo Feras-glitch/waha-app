@@ -13,6 +13,11 @@ function parentHome(){
     (FAM.pinResets.length?'<p class="tip">'+ICON.shield.replace('<svg','<svg class="ic-s"')+' أُعيد ضبط الرمز آخر مرة في '+fmtDate(FAM.pinResets[FAM.pinResets.length-1])+'، وأُلغيت الموافقات السابقة عندها.</p>':'')+
     (!FAM.rec?'<button class="banner rose" type="button" data-act="rcNew">'+ICON.lock+'<div class="bn-t"><strong>لا يوجد رمز استرداد بعد</strong><span>أنشئوه وأرسلوه إلى بريدكم؛ فبه وحده يُعاد ضبط الرمز إن نُسي.</span></div></button>':'')+
     (backupDue()?'<button class="banner gold" type="button" data-act="pBackup">'+ICON.shield+'<div class="bn-t"><strong>'+(FAM.lastBackup?'مضى أكثر من شهرٍ على آخر نسخةٍ احتياطية':'لم تحفظوا نسخةً احتياطية بعد')+'</strong><span>أصوات الأطفال وأعمالهم على هذا الجهاز وحده. احفظوا نسخةً مشفّرة في مكانٍ آمن.</span></div></button>':'')+
+    /* the parents' one way in: the three boards side by side (2.8) */
+    '<section class="hub-row" aria-label="لوحات العائلة"><span class="eyebrow">لوحات العائلة، برمزٍ واحد</span><div class="hub-btns">'+
+      '<button class="hub-b on" type="button" disabled><b>💎 ركن وليّ الأمر</b><span>أنتم هنا: الأعمال، والأطفال، والرمز، والنسخ</span></button>'+
+      '<button class="hub-b" type="button" data-act="pWaha"><b>🌴 لوحة الواحة</b><span>سطر اليوم، والتقدّم، والتسجيلات، وتقرير الجمعة</span></button>'+
+      '<button class="hub-b" type="button" data-act="pHasaniya"><b>🐪 لوحة الحسنية</b><span>حفظ المنظومة وتسجيلاتها وتقاريرها</span></button></div></section>'+
     (!IDB.db?'<p class="tip warn">هذا المتصفح لا يسمح بحفظ التسجيلات والرسوم بعد إغلاقه (ربما وضع التصفّح الخاص). افتحوا التطبيق في نافذةٍ عادية.</p>':'')+
     '<section><h2 class="h2">بانتظار مراجعتكم'+(pend.length?' · '+n2a(pend.length):'')+'</h2>'+
       (pend.length?'<ul class="wlist">'+pend.map(pRow).join('')+'</ul>':'<p class="muted">لا أعمال تنتظر المراجعة.</p>')+'</section>'+
@@ -22,7 +27,6 @@ function parentHome(){
       ptool('pCode','lapis','talk','ردّ المعلّم','ألصقوا الرمز الذي أرسله المعلّم، أو أدخلوا ردّه بأنفسكم')+
       ptool('pWeekly','gold','radio','قارئ الأسبوع',wk?Gx(esc(kidById(wk.kid).name)+' ⟨قارئ|قارئة⟩ هذا الأسبوع',gOf(kidById(wk.kid))):(weeklyTurn()?'تكريمٌ بالتناوب · هذا الأسبوع دور '+esc(weeklyTurn().name):'تكريمٌ يدور على الأطفال'))+
       ptool('pFamily','olive','users','جلسة العائلة','بطاقة هذا الأسبوع: '+plain(Gx(lessonById[fsCurrent().l].title,0)))+
-      ptool('pWaha','olive','palm','لوحة الواحة','تقدّم الأطفال في «واحة اللسان العربي»، ورسائلهم وأخبارهم وتسجيلاتهم للمراجعة')+
       ptool('pVoice','teal','mic','صوت البيت','سجّلوا شرح الدروس بصوتكم ليسمعه الأطفال · '+n2a(Object.keys(FAM.nar||{}).length)+' تسجيلًا')+
       ptool('pKids','rose','users','الأطفال',n2a(FAM.kids.length)+' · الأسماء، والصيغة، والتقدّم')+
       ptool('pFrom','olive','radio','من الواحة والحسنية','تسجيلاتٌ من القسمين تضيفونها إلى الإذاعة والمجلّات')+
@@ -118,15 +122,15 @@ function pApproved(){
 /* ---------- consent before anything leaves the device ---------- */
 /* what: list of plain labels; returns {name} or false */
 async function consent(o){
-  if(!(await freshParent())) return false;
-  var k=o.kid, f=gOf(k);
-  var r=await ask({title:'قبل أن يخرج هذا من الجهاز',c:'rose',ok:'أوافق، أصدِروا الملف',
+  var k=o.kid, f=gOf(k), rs=(FAM.pinResets||[]).slice(-1)[0]||0;
+  var r=await pinAsk({title:'قبل أن يخرج هذا من الجهاز',c:'rose',ok:'أوافق، أصدِروا الملف',
     html:'<div class="consent">'+
       '<p>سيُصنع '+(o.link?'رابطٌ':'ملفٌّ واحد')+' '+(o.to?(/^ال/.test(o.to)?'لل'+esc(o.to.slice(2)):'لـ'+esc(o.to))+' ':'')+'يحتوي على:</p><ul class="checks small">'+o.what.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>'+
       '<label for="cName" class="lbl">الاسم الذي يظهر في الملف</label><input id="cName" maxlength="30" value="'+escA(o.name!=null?o.name:(k?k.name:''))+'">'+
       '<label class="tog"><input type="checkbox" id="cAnon"><span>بلا اسم (يظهر: '+Gx('⟨صديقٌ صغير|صديقةٌ صغيرة⟩',f)+')</span></label>'+
       '<div class="warn-box"><strong>تنبيه:</strong> بعد الإرسال يخرج '+(o.link?'الرابط':'الملف')+' من أيديكم: يستطيع من يستلمه أن يحفظه أو يعيد إرساله، ولا يستطيع التطبيق استرجاعه. الصورة الشخصية للطفل لا تدخل الملف أبدًا.</div>'+
       (o.size?'<p class="muted small">حجم الملف نحو '+fmtMB(o.size)+(o.size>15*1048576?'، وقد يستغرق إرساله وقتًا.':'.')+'</p>':'')+
+      (rs&&Date.now()-rs<30*864e5?'<div class="warn-box"><strong>تغيّر رمز وليّ الأمر يوم '+fmtDate(rs)+'.</strong> إن لم تكونوا أنتم من غيّره فلا توافقوا، وراجعوا «الأمان والنسخ الاحتياطي».</div>':'')+
       '<label class="tog strong"><input type="checkbox" id="cOk"><span>أنا وليّ أمر '+(k?esc(k.name):'الطفل')+'، وأوافق على مشاركة هذه المعلومات'+(o.to?' مع '+esc(o.to):'')+'.</span></label></div>',
     check:function(el){
       if(!el.querySelector('#cOk').checked) return modalErr(el,'ضعوا علامة الموافقة أولًا.');
@@ -134,6 +138,7 @@ async function consent(o){
       if(!anon&&!nm) return modalErr(el,'اكتبوا اسمًا يظهر في الملف، أو اختاروا «بلا اسم».');
       return {name:anon?Gx('⟨صديقٌ صغير|صديقةٌ صغيرة⟩',f):nm.slice(0,30),anon:anon};
     }});
+  if(r) logOut((o.log||o.what[0]||'ملف')+(o.to?' ← '+o.to:''),k&&k.id);
   return r;
 }
 function mediaWhat(w){
@@ -273,10 +278,26 @@ function pWeekly(){
       return '<li class="cand'+(on?' on':'')+'"><div class="cd-m"><p class="cd-t">'+esc(titleOf(w))+' <span class="muted">· '+typeOf(w).n+(x.now?' · هذا الأسبوع':'')+'</span></p>'+
         (r?'<p class="rub-line">'+rubStars(r)+'</p>':'<p class="muted small">بلا تقييم بعد</p>')+'<audio controls preload="none" data-src="'+w.audio+'"></audio></div>'+
         '<button class="btn'+(on?'':' ghost')+'" type="button" data-act="setWeekly" data-id="'+w.id+'">'+(on?ICON.check+' المختارة':'اختاروها')+'</button></li>';}).join('')+'</ul>':
-      '<p class="muted">'+Gx('لم ⟨يسجّل|تسجّل⟩ '+nm+' قراءةً معتمدة بعد. ⟨شجّعوه|شجّعوها⟩ على «قراءتي» في الاستوديو، ثم اعتمدوها لتظهر هنا.',g)+'</p>'+
-      (!cur&&nx?'<div class="actions"><button class="btn ghost" type="button" data-act="passWeekly" data-id="'+k.id+'">'+Gx('⟨أجّلوا دوره|أجّلوا دورها⟩ إلى الأسبوع القادم، والدور الآن لـ',g)+esc(nx.name)+'</button></div>':''))+
+      '<div id="wkNone"><p class="muted">'+Gx(nm+' ليس ⟨له|لها⟩ قراءةٌ معتمدة بعد. ⟨اعتمدوا له|اعتمدوا لها⟩ تسجيلًا في الواحة أو الحسنية أو «قراءتي» في الاستوديو، فيظهر هنا.',g)+'</p>'+
+      (!cur&&nx?'<div class="actions"><button class="btn ghost" type="button" data-act="passWeekly" data-id="'+k.id+'">'+Gx('⟨أجّلوا دوره|أجّلوا دورها⟩ إلى الأسبوع القادم، والدور الآن لـ',g)+esc(nx.name)+'</button></div>':'')+'</div>')+
+    '<div id="wkFrom"></div>'+
     '<p class="muted small">من لم يُكرَّم بعدُ يأتي دوره أولًا، ومن أجّلتم دوره يبقى في أوّل الدور للأسبوع الذي يليه.</p></div>');
+  weeklyFromFill(k,since);
 }
+/* the oasis and the Hasaniya recordings approved for this child are candidates too (a six-year-old has no studio yet): choosing
+   one copies it here as an approved work, as «من الواحة والحسنية» does, and makes it the week's reading */
+var WK_FROM=[];
+async function weeklyFromFill(k,since){
+  FROM.urls.forEach(function(u){try{URL.revokeObjectURL(u);}catch(e){}}); FROM.urls=[];
+  var list=[]; try{ list=(await fromRecs()).filter(function(x){return x.kid===k.id&&!fromWork(x);}); }catch(e){}
+  var box=document.getElementById('wkFrom'); if(!box||!list.length) return;
+  WK_FROM=list; var none=document.getElementById('wkNone'); if(none) none.hidden=true;
+  box.innerHTML='<h2 class="h2">من الواحة والحسنية</h2><ul class="cands">'+list.map(function(x,i){
+    return '<li class="cand"><div class="cd-m"><p class="cd-t">'+esc(x.title)+' <span class="muted">· '+(x.src==='hasaniya'?'الحسنية':'الواحة')+(x.t>=since?' · هذا الأسبوع':'')+'</span></p><audio controls preload="none" data-wk="'+i+'"></audio></div>'+
+      '<button class="btn ghost" type="button" data-act="setWeeklyFrom" data-v="'+i+'">اختاروها</button></li>';}).join('')+'</ul>';
+  [].slice.call(box.querySelectorAll('audio[data-wk]')).forEach(function(a){ var u=URL.createObjectURL(list[+a.getAttribute('data-wk')].blob); FROM.urls.push(u); a.src=u; });
+}
+async function setWeeklyFrom(i){ var x=WK_FROM[+i]; if(!x) return; var w=fromWork(x)||await fromAddOne(x); if(w) setWeekly(w.id); }
 function setWeekly(id){var w=workById(id); if(!w) return; FAM.weekly[weekKey()]={kid:w.kid,work:w.id,d:Date.now()}; saveFam(); var k=kidById(w.kid); toast(Gx(k.name+' ⟨قارئ|قارئة⟩ الأسبوع!',gOf(k))); pWeekly();}
 
 /* ---------- kids management ---------- */
@@ -297,7 +318,7 @@ async function kidDelete(id){
   var ws=WORKS.filter(function(w){return w.kid===id;}); for(var i=0;i<ws.length;i++) await deleteWork(ws[i]);
   if(k.photo) await blobDel('photo-'+id);
   try{localStorage.removeItem(kidKey(id));}catch(e){}
-  try{await oasisForget(id);}catch(e){}
+  try{await oasisForget(id,k.name);}catch(e){}
   try{await hasaniyaForget(id,k.name);}catch(e){}
   FAM.kids=FAM.kids.filter(function(x){return x.id!==id;});
   FAM.mags.forEach(function(m){if(m.editor===id) m.editor=null;});
@@ -432,9 +453,9 @@ async function decryptStr(o,pass){
 }
 function canEncrypt(){return !!(window.crypto&&crypto.subtle&&window.TextEncoder);}
 async function backupMake(){
-  if(!(await freshParent('النسخة الاحتياطية تحمل بيانات الأطفال وأصواتهم، فتحتاج رمز وليّ الأمر الآن.'))) return;
-  var opt=await ask({title:'نسخةٌ احتياطية مشفّرة',c:'plum',ok:'احفظوا النسخة',
-    html:'<p>اختاروا كلمة سرٍّ تحفظونها جيدًا: لا يُفتح الملف إلا بها، ولا يمكن استرجاعها إن نُسيت.</p>'+
+  /* one sheet: the password of the file, then the parent's PIN for this backup (it carries every child's voice) */
+  var opt=await pinAsk({title:'نسخةٌ احتياطية مشفّرة',c:'plum',ok:'احفظوا النسخة',
+    html:'<p>النسخة تحمل بيانات الأطفال وأصواتهم. اختاروا كلمة سرٍّ تحفظونها جيدًا: لا يُفتح الملف إلا بها، ولا يمكن استرجاعها إن نُسيت.</p>'+
       (canEncrypt()?'<label class="lbl" for="bk1">كلمة السر (ستة أحرف أو أكثر)</label><input id="bk1" type="password" autocomplete="new-password">'+
         '<label class="lbl" for="bk2">أعيدوا كتابتها</label><input id="bk2" type="password" autocomplete="new-password">'+
         '<label class="tog"><input type="checkbox" id="bkPlain"><span>بلا تشفير (لا يُنصح: من يجد الملف يرى الأصوات والصور)</span></label>':
@@ -467,8 +488,15 @@ async function backupMake(){
   }catch(e){ return toast('تعذّر حفظ الملف: '+(e&&e.message||'')); }
   data=null;
   FAM.lastBackup=Date.now(); FAM.lastBackupEnc=!!opt.pass; saveFam();
+  logOut('نسخة احتياطية لكل الأطفال'+(opt.pass?' (مشفّرة)':' (بلا تشفير)'),null);
   if(miss.length){ toast('حُفظت النسخة، لكن بلا '+miss.join(' و')+': تعذّرت قراءتها.'); return; }
   toast(opt.pass?'حُفظت النسخة المشفّرة في التنزيلات.':'حُفظت النسخة في التنزيلات.');
+}
+/* two logs as one, without repeats, oldest first (a row is the same row if its time and text are) */
+function logMerge(a,b,max){
+  var seen={}, out=[];
+  (a||[]).concat(b||[]).forEach(function(x){ if(!x) return; var k=(x.d||x.t||0)+'|'+(x.name||x.k||''); if(seen[k]) return; seen[k]=1; out.push(x); });
+  out.sort(function(x,y){return (x.d||x.t||0)-(y.d||y.t||0);}); return out.slice(-max);
 }
 async function restorePicked(file){
   if(!file) return; var txt; try{txt=await readText(file);}catch(e){return toast('تعذّرت قراءة الملف.');}
@@ -493,12 +521,19 @@ async function restorePicked(file){
     Object.keys(o.kids||{}).forEach(function(id){ if(!lsSet(kidKey(id),o.kids[id])) throw new Error('مساحة الجهاز'); });
     for(var i=0;i<old.length;i++){ if(bk.indexOf(old[i])<0) await blobDel(old[i]); }
     FAM.kids.forEach(function(k){ if(!(o.kids||{})[k.id]) try{localStorage.removeItem(kidKey(k.id));}catch(e){} });
-    FAM=o.fam; FAM.mags=FAM.mags||[]; FAM.weekly=FAM.weekly||{}; FAM.ext=FAM.ext||{}; FAM.pinResets=FAM.pinResets||[]; FAM.nar=FAM.nar||{}; FAM.fs=FAM.fs||{done:{}};
+    var logA=FAM.waLog||[], logP=FAM.pinLog||[], logR=FAM.pinResets||[];
+    FAM=o.fam; FAM.waLog=logMerge(FAM.waLog,logA,200); FAM.pinLog=logMerge(FAM.pinLog,logP,100);
+    FAM.pinResets=(FAM.pinResets||[]).concat(logR.filter(function(t){return (FAM.pinResets||[]).indexOf(t)<0;})).sort(function(a,b){return a-b;});
+    FAM.mags=FAM.mags||[]; FAM.weekly=FAM.weekly||{}; FAM.ext=FAM.ext||{}; FAM.pinResets=FAM.pinResets||[]; FAM.nar=FAM.nar||{}; FAM.fs=FAM.fs||{done:{}};
     WORKS=o.works; saveFam(); saveWorks();
-    if(o.oasis) await oasisImport(o.oasis);
-    if(o.hasaniya) await hasaniyaImport(o.hasaniya);
+    var bad=0;
+    if(o.oasis) bad+=await oasisImport(o.oasis);
+    if(o.hasaniya) bad+=await hasaniyaImport(o.hasaniya);
     for(var x=0;x<FAM.kids.length;x++){if(FAM.kids[x].photo) await mediaURL('photo-'+FAM.kids[x].id);}
-    KID=null; KD=null; PARENT_UNTIL=0; toast('استُعيدت النسخة. أدخلوا رمز النسخة المستعادة عند الحاجة.');
+    KID=null; KD=null; PARENT_UNTIL=0;
+    toast(bad?'استُعيدت النسخة إلا '+n2a(bad)+' من أجزاء الواحة والحسنية لم تُكتب (قد تكون مساحة الجهاز ممتلئة). جرّبوا الاستعادة مرةً أخرى بعد إفراغ مساحة.':'استُعيدت النسخة. أدخلوا رمز النسخة المستعادة عند الحاجة.');
+    /* every other open page of the app (the oasis, the Hasaniya, another tab) reloads, so none writes its old state back */
+    try{ localStorage.setItem('kb-epoch',String(Date.now())); }catch(e){}
     if(FAM.cur&&kidById(FAM.cur)){selectKid(FAM.cur);home();} else who();
   }catch(e){toast('تعذّرت الاستعادة: '+(e&&e.message||''));}
 }

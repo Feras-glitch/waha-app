@@ -1,0 +1,1523 @@
+{
+ "v": 1,
+ "status": "pending-home-review",
+ "langs": {
+  "zh": "zh-Hant",
+  "py": "Hanyu Pinyin",
+  "en": "en"
+ },
+ "about": "معاني كلمات الواحة بلغة البيت: الصينية التقليدية مع البينيين، والإنجليزية. تظهر تحت الكلمة الجديدة في بطاقة الدرس إذا فعّلها وليّ الأمر للطفل. note: موضعٌ تحتاج مراجعته.",
+ "words": {
+  "علم|عَلِمَ": {
+   "zh": "知道",
+   "py": "zhīdào",
+   "en": "knew"
+  },
+  "علم|عَلِيم": {
+   "zh": "全知的主",
+   "py": "quánzhī de zhǔ",
+   "en": "the All-Knowing"
+  },
+  "علم|عَلَّمَ": {
+   "zh": "教導",
+   "py": "jiàodǎo",
+   "en": "taught"
+  },
+  "علم|عِلْم": {
+   "zh": "知識",
+   "py": "zhīshì",
+   "en": "knowledge"
+  },
+  "علم|عالَم": {
+   "zh": "世界",
+   "py": "shìjiè",
+   "en": "world"
+  },
+  "علم|أَعْلَم": {
+   "zh": "更了解",
+   "py": "gèng liǎojiě",
+   "en": "knows more"
+  },
+  "علم|يَتَعَلَّمُ": {
+   "zh": "學習",
+   "py": "xuéxí",
+   "en": "learns"
+  },
+  "علم|مَعْلُوم": {
+   "zh": "已知的",
+   "py": "yǐzhī de",
+   "en": "known"
+  },
+  "علم|مَعْلُومَة": {
+   "zh": "已知的",
+   "py": "yǐzhī de",
+   "en": "known"
+  },
+  "علم|عالِم": {
+   "zh": "知者",
+   "py": "zhīzhě",
+   "en": "the Knower",
+   "note": "The app sentence uses the 'scholar' sense; gloss follows the definition and verse (Knower of the unseen)."
+  },
+  "علم|عَلَّام": {
+   "zh": "全知的",
+   "py": "quánzhī de",
+   "en": "All-Knowing"
+  },
+  "علم|مُعَلَّم": {
+   "zh": "受人教導的",
+   "py": "shòu rén jiàodǎo de",
+   "en": "taught by others"
+  },
+  "علم|عَلامات": {
+   "zh": "路標",
+   "py": "lùbiāo",
+   "en": "landmarks"
+  },
+  "علم|أَعْلام": {
+   "zh": "高山",
+   "py": "gāoshān",
+   "en": "mountains"
+  },
+  "قول|قالَ": {
+   "zh": "說",
+   "py": "shuō",
+   "en": "said"
+  },
+  "قول|قَوْل": {
+   "zh": "話語",
+   "py": "huàyǔ",
+   "en": "saying"
+  },
+  "قول|تَقَوَّلَ": {
+   "zh": "捏造話語",
+   "py": "niēzào huàyǔ",
+   "en": "made up sayings"
+  },
+  "قول|أَقاوِيل": {
+   "zh": "捏造的話",
+   "py": "niēzào de huà",
+   "en": "made-up sayings"
+  },
+  "قول|قِيل": {
+   "zh": "言語",
+   "py": "yányǔ",
+   "en": "speech"
+  },
+  "قول|قائِل": {
+   "zh": "說話的人",
+   "py": "shuōhuà de rén",
+   "en": "speaker"
+  },
+  "كتب|كِتاب": {
+   "zh": "書",
+   "py": "shū",
+   "en": "book"
+  },
+  "كتب|كَتَبَ": {
+   "zh": "寫",
+   "py": "xiě",
+   "en": "wrote"
+  },
+  "كتب|كاتِب": {
+   "zh": "書寫者",
+   "py": "shūxiězhě",
+   "en": "writer"
+  },
+  "كتب|مَكْتُوب": {
+   "zh": "寫下的",
+   "py": "xiěxià de",
+   "en": "written"
+  },
+  "كتب|اكْتَتَبَ": {
+   "zh": "讓人抄寫",
+   "py": "ràng rén chāoxiě",
+   "en": "had it written down"
+  },
+  "عمل|عَمِلَ": {
+   "zh": "做",
+   "py": "zuò",
+   "en": "did"
+  },
+  "عمل|عَمَل": {
+   "zh": "行為",
+   "py": "xíngwéi",
+   "en": "deed"
+  },
+  "عمل|عامِلَة": {
+   "zh": "勞作的",
+   "py": "láozuò de",
+   "en": "working hard"
+  },
+  "عمل|عامِل": {
+   "zh": "工作者",
+   "py": "gōngzuòzhě",
+   "en": "worker"
+  },
+  "أخذ|أَخَذَ": {
+   "zh": "拿",
+   "py": "ná",
+   "en": "took"
+  },
+  "أخذ|اتَّخَذَ": {
+   "zh": "選取",
+   "py": "xuǎnqǔ",
+   "en": "took for himself"
+  },
+  "أخذ|آخَذَ": {
+   "zh": "責罰",
+   "py": "zéfá",
+   "en": "held to account"
+  },
+  "أخذ|أَخْذ": {
+   "zh": "拿取",
+   "py": "náqǔ",
+   "en": "taking",
+   "note": "Verse word أخذة (69:10) is a single punishing 'seizure'; gloss follows the definition 'taking'."
+  },
+  "أخذ|اتِّخاذ": {
+   "zh": "擇取",
+   "py": "zéqǔ",
+   "en": "taking for oneself"
+  },
+  "أخذ|آخِذ": {
+   "zh": "拿取者",
+   "py": "náqǔzhě",
+   "en": "one who takes"
+  },
+  "أخذ|مُتَّخِذ": {
+   "zh": "選取者",
+   "py": "xuǎnqǔzhě",
+   "en": "one who chooses"
+  },
+  "ذكر|ذَكَرَ": {
+   "zh": "記起",
+   "py": "jìqǐ",
+   "en": "remembered"
+  },
+  "ذكر|ذِكْر": {
+   "zh": "記念",
+   "py": "jìniàn",
+   "en": "remembrance",
+   "note": "In 77:5 ذكرًا is the reminder (revelation) the angels deliver, not personal remembrance."
+  },
+  "ذكر|تَذَكَّرَ": {
+   "zh": "想起",
+   "py": "xiǎngqǐ",
+   "en": "recalled",
+   "note": "In 87:10 سيذّكّر means 'will take heed'; gloss follows the definition 'recalled'."
+  },
+  "ذكر|تَذْكِرَة": {
+   "zh": "提醒的話",
+   "py": "tíxǐng de huà",
+   "en": "reminder"
+  },
+  "ذكر|ذِكْرَى": {
+   "zh": "回憶",
+   "py": "huíyì",
+   "en": "memory",
+   "note": "In 79:43 ذكراها means 'mentioning it (the Hour)', not a memory; gloss follows the definition."
+  },
+  "ذكر|ذَكَّرَ": {
+   "zh": "提醒",
+   "py": "tíxǐng",
+   "en": "reminded"
+  },
+  "ذكر|ذَكَر": {
+   "zh": "男性",
+   "py": "nánxìng",
+   "en": "male"
+  },
+  "ذكر|مَذْكُور": {
+   "zh": "被提到的",
+   "py": "bèi tídào de",
+   "en": "mentioned"
+  },
+  "ذكر|مُذَكِّر": {
+   "zh": "提醒者",
+   "py": "tíxǐngzhě",
+   "en": "one who reminds"
+  },
+  "ذكر|ذاكِر": {
+   "zh": "記念真主者",
+   "py": "jìniàn zhēnzhǔ zhě",
+   "en": "one who remembers Allah"
+  },
+  "ذكر|مُدَّكِر": {
+   "zh": "記取教訓者",
+   "py": "jìqǔ jiàoxùn zhě",
+   "en": "one who takes heed"
+  },
+  "رأي|رَأَى": {
+   "zh": "看見",
+   "py": "kànjiàn",
+   "en": "saw"
+  },
+  "رأي|أَرَى": {
+   "zh": "讓人看見",
+   "py": "ràng rén kànjiàn",
+   "en": "showed"
+  },
+  "رأي|رِئاء": {
+   "zh": "炫耀",
+   "py": "xuànyào",
+   "en": "showing off"
+  },
+  "رأي|رُؤْيا": {
+   "zh": "夢",
+   "py": "mèng",
+   "en": "dream",
+   "note": "In 17:60 الرؤيا is the Night Journey vision, which Ibn Abbas says was seen awake, not in sleep; gloss follows the definition 'dream'."
+  },
+  "رأي|راءَى": {
+   "zh": "做給人看",
+   "py": "zuò gěi rén kàn",
+   "en": "showed off"
+  },
+  "رأي|رَأْي": {
+   "zh": "所見",
+   "py": "suǒjiàn",
+   "en": "view"
+  },
+  "سأل|سَأَلَ": {
+   "zh": "問",
+   "py": "wèn",
+   "en": "asked"
+  },
+  "سأل|سائِل": {
+   "zh": "求助的人",
+   "py": "qiúzhù de rén",
+   "en": "one who asks"
+  },
+  "سأل|مَسْئُول": {
+   "zh": "被問責的",
+   "py": "bèi wènzé de",
+   "en": "held responsible"
+  },
+  "سأل|يَتَساءَلُ": {
+   "zh": "互相詢問",
+   "py": "hùxiāng xúnwèn",
+   "en": "ask each other"
+  },
+  "سأل|سُؤال": {
+   "zh": "請求",
+   "py": "qǐngqiú",
+   "en": "asking for"
+  },
+  "قوم|قَوْم": {
+   "zh": "族人",
+   "py": "zúrén",
+   "en": "people"
+  },
+  "قوم|أَقامَ": {
+   "zh": "堅守",
+   "py": "jiānshǒu",
+   "en": "kept up",
+   "note": "Definition also gives 'stayed (in a place)'; 98:5 uses 'keep up (the prayer)'."
+  },
+  "قوم|قِيامَة": {
+   "zh": "復活日",
+   "py": "fùhuó rì",
+   "en": "the Day of Rising"
+  },
+  "قوم|قامَ": {
+   "zh": "站起來",
+   "py": "zhàn qǐlái",
+   "en": "stood up"
+  },
+  "قوم|مُسْتَقِيم": {
+   "zh": "筆直的",
+   "py": "bǐzhí de",
+   "en": "straight"
+  },
+  "قوم|مَقام": {
+   "zh": "站立處",
+   "py": "zhànlìchù",
+   "en": "standing place"
+  },
+  "قوم|أَقْوَم": {
+   "zh": "更正直的",
+   "py": "gèng zhèngzhí de",
+   "en": "more upright"
+  },
+  "قوم|اسْتَقامَ": {
+   "zh": "走正道",
+   "py": "zǒu zhèngdào",
+   "en": "kept straight"
+  },
+  "قوم|قَيِّمَة": {
+   "zh": "正確的",
+   "py": "zhèngquè de",
+   "en": "upright"
+  },
+  "قوم|قَيُّوم": {
+   "zh": "維護萬物的主",
+   "py": "wéihù wànwù de zhǔ",
+   "en": "the Sustainer of All"
+  },
+  "قوم|قائِم": {
+   "zh": "站立的",
+   "py": "zhànlì de",
+   "en": "standing",
+   "note": "In 70:33 قائمون means 'upholding (their testimonies)'; gloss gives the basic 'standing'."
+  },
+  "قوم|تَقْوِيم": {
+   "zh": "塑造",
+   "py": "sùzào",
+   "en": "shaping"
+  },
+  "قوم|مُقِيم": {
+   "zh": "持久的",
+   "py": "chíjiǔ de",
+   "en": "lasting"
+  },
+  "قوم|قَوّام": {
+   "zh": "始終堅守的",
+   "py": "shǐzhōng jiānshǒu de",
+   "en": "always standing firm"
+  },
+  "كبر|كَبِير": {
+   "zh": "大的",
+   "py": "dà de",
+   "en": "big"
+  },
+  "كبر|أَكْبَر": {
+   "zh": "至大",
+   "py": "zhìdà",
+   "en": "greatest"
+  },
+  "كبر|اسْتَكْبَرَ": {
+   "zh": "自高自大",
+   "py": "zìgāo zìdà",
+   "en": "was arrogant"
+  },
+  "كبر|كُبْرَى": {
+   "zh": "最大的",
+   "py": "zuìdà de",
+   "en": "greatest"
+  },
+  "كبر|كَبِّرْ": {
+   "zh": "頌揚",
+   "py": "sòngyáng",
+   "en": "glorify"
+  },
+  "كبر|كَبِيرَة": {
+   "zh": "重大的",
+   "py": "zhòngdà de",
+   "en": "great",
+   "note": "In 2:45 لكبيرة means 'hard, heavy to bear'; gloss follows the definition 'great'."
+  },
+  "كبر|كِبَر": {
+   "zh": "老年",
+   "py": "lǎonián",
+   "en": "old age"
+  },
+  "كبر|كَبُرَ": {
+   "zh": "變大",
+   "py": "biàndà",
+   "en": "became big"
+  },
+  "كبر|تَكْبِير": {
+   "zh": "讚主至大",
+   "py": "zàn zhǔ zhìdà",
+   "en": "saying Allahu Akbar"
+  },
+  "كبر|اسْتِكْبار": {
+   "zh": "傲慢",
+   "py": "àomàn",
+   "en": "arrogance"
+  },
+  "كبر|كُبّار": {
+   "zh": "極大的",
+   "py": "jídà de",
+   "en": "very great"
+  },
+  "كبر|مُتَكَبِّر": {
+   "zh": "自大者",
+   "py": "zìdàzhě",
+   "en": "arrogant one"
+  },
+  "كبر|كِبْرِياء": {
+   "zh": "偉大",
+   "py": "wěidà",
+   "en": "greatness"
+  },
+  "حسن|أَحْسَن": {
+   "zh": "最好的",
+   "py": "zuìhǎo de",
+   "en": "best"
+  },
+  "حسن|مُحْسِن": {
+   "zh": "行善者",
+   "py": "xíngshànzhě",
+   "en": "one who does good"
+  },
+  "حسن|إِحْسان": {
+   "zh": "行善",
+   "py": "xíngshàn",
+   "en": "doing good"
+  },
+  "حسن|أَحْسَنَ": {
+   "zh": "做好",
+   "py": "zuòhǎo",
+   "en": "did well"
+  },
+  "حسن|حُسْنَى": {
+   "zh": "至善",
+   "py": "zhìshàn",
+   "en": "the very best"
+  },
+  "حسن|حَسَنَة": {
+   "zh": "善行",
+   "py": "shànxíng",
+   "en": "good deed",
+   "note": "In 2:201 حسنة means good things/blessings given in this world, not a deed; the definition's 'its reward' covers it."
+  },
+  "حسن|حَسَن": {
+   "zh": "美好的",
+   "py": "měihǎo de",
+   "en": "good"
+  },
+  "حسن|حُسْن": {
+   "zh": "美善",
+   "py": "měishàn",
+   "en": "goodness"
+  },
+  "حسن|حَسُنَ": {
+   "zh": "變好",
+   "py": "biànhǎo",
+   "en": "became good",
+   "note": "In 4:69 وحسن is praise ('how excellent they are as companions'), not 'became good'."
+  },
+  "صدق|صادِق": {
+   "zh": "誠實的",
+   "py": "chéngshí de",
+   "en": "truthful"
+  },
+  "صدق|مُصَدِّق": {
+   "zh": "證實的",
+   "py": "zhèngshí de",
+   "en": "confirming",
+   "note": "Definition says 'one who believes a thing is true'; in 2:97 (and the app sentence) it means 'confirming' earlier scripture."
+  },
+  "صدق|صَدَقَة": {
+   "zh": "施捨",
+   "py": "shīshě",
+   "en": "charity"
+  },
+  "صدق|صَدَّقَ": {
+   "zh": "相信",
+   "py": "xiāngxìn",
+   "en": "believed it true"
+  },
+  "صدق|صِدْق": {
+   "zh": "誠實",
+   "py": "chéngshí",
+   "en": "truthfulness"
+  },
+  "صدق|صَدَقَ": {
+   "zh": "說實話",
+   "py": "shuō shíhuà",
+   "en": "told the truth"
+  },
+  "صدق|تَصَدَّقَ": {
+   "zh": "施捨給人",
+   "py": "shīshě gěi rén",
+   "en": "gave charity"
+  },
+  "صدق|صِدِّيق": {
+   "zh": "至誠者",
+   "py": "zhìchéngzhě",
+   "en": "always truthful"
+  },
+  "صدق|صَدِيق": {
+   "zh": "朋友",
+   "py": "péngyǒu",
+   "en": "friend"
+  },
+  "سلم|مُسْلِم": {
+   "zh": "穆斯林",
+   "py": "mùsīlín",
+   "en": "Muslim"
+  },
+  "سلم|أَسْلَمَ": {
+   "zh": "歸順",
+   "py": "guīshùn",
+   "en": "submitted to Allah"
+  },
+  "سلم|مُسَلَّمَة": {
+   "zh": "完好的",
+   "py": "wánhǎo de",
+   "en": "without a flaw"
+  },
+  "سلم|مُسْلِمَة": {
+   "zh": "歸順的",
+   "py": "guīshùn de",
+   "en": "submitting to Allah",
+   "note": "Feminine form; in 2:128 it describes a nation (أمة), so the gloss is adjectival rather than 'Muslim woman'."
+  },
+  "سلم|سِلْم": {
+   "zh": "和平",
+   "py": "hépíng",
+   "en": "peace",
+   "note": "In 2:208 most exegetes take السلم as 'Islam' (enter Islam completely); gloss follows the definition 'peace'."
+  },
+  "سلم|سَلَّمَ": {
+   "zh": "交付",
+   "py": "jiāofù",
+   "en": "handed over",
+   "note": "Definition gives 'greeted (said salam)' first; 2:233 uses its other sense, 'handed over (payment)'."
+  },
+  "سلم|سالِم": {
+   "zh": "平安的",
+   "py": "píng'ān de",
+   "en": "safe and sound"
+  },
+  "سلم|سَلام": {
+   "zh": "平安",
+   "py": "píng'ān",
+   "en": "peace"
+  },
+  "سلم|إِسْلام": {
+   "zh": "伊斯蘭",
+   "py": "Yīsīlán",
+   "en": "Islam"
+  },
+  "سلم|سَلِيم": {
+   "zh": "純潔的",
+   "py": "chúnjié de",
+   "en": "pure"
+  },
+  "أمن|آمَنَ": {
+   "zh": "歸信",
+   "py": "guīxìn",
+   "en": "believed"
+  },
+  "أمن|مُؤْمِن": {
+   "zh": "信士",
+   "py": "xìnshì",
+   "en": "believer"
+  },
+  "أمن|أَمِنَ": {
+   "zh": "感到安全",
+   "py": "gǎndào ānquán",
+   "en": "felt safe"
+  },
+  "أمن|إِيمان": {
+   "zh": "信仰",
+   "py": "xìnyǎng",
+   "en": "faith"
+  },
+  "أمن|مُؤْمِنَة": {
+   "zh": "信女",
+   "py": "xìnnǚ",
+   "en": "believing woman"
+  },
+  "أمن|أَمِين": {
+   "zh": "忠實的",
+   "py": "zhōngshí de",
+   "en": "trustworthy"
+  },
+  "أمن|أَمْن": {
+   "zh": "安全",
+   "py": "ānquán",
+   "en": "safety"
+  },
+  "أمن|آمِن": {
+   "zh": "安全的",
+   "py": "ānquán de",
+   "en": "safe"
+  },
+  "أمن|اؤْتُمِنَ": {
+   "zh": "受託",
+   "py": "shòutuō",
+   "en": "was entrusted"
+  },
+  "أمن|أَمانَة": {
+   "zh": "託付之物",
+   "py": "tuōfù zhī wù",
+   "en": "entrusted thing"
+  },
+  "أمن|مَأْمُون": {
+   "zh": "不必害怕的",
+   "py": "bùbì hàipà de",
+   "en": "not to be feared"
+  },
+  "أمن|مَأْمَن": {
+   "zh": "安全之地",
+   "py": "ānquán zhī dì",
+   "en": "safe place"
+  },
+  "رحم|رَحِيم": {
+   "zh": "至慈的主",
+   "py": "zhìcí de zhǔ",
+   "en": "the Most Merciful"
+  },
+  "رحم|رَحْمَة": {
+   "zh": "慈憫",
+   "py": "címǐn",
+   "en": "mercy"
+  },
+  "رحم|رَحْمَن": {
+   "zh": "至仁的主",
+   "py": "zhìrén de zhǔ",
+   "en": "the Most Gracious"
+  },
+  "رحم|رَحِمَ": {
+   "zh": "憐憫",
+   "py": "liánmǐn",
+   "en": "had mercy"
+  },
+  "رحم|أَرْحام": {
+   "zh": "子宮",
+   "py": "zǐgōng",
+   "en": "wombs",
+   "note": "Definition gives both 'kinship' and 'wombs'; 2:228 means wombs (the app sentence uses 'kinship')."
+  },
+  "رحم|مَرْحَمَة": {
+   "zh": "慈愛",
+   "py": "cí'ài",
+   "en": "compassion"
+  },
+  "رحم|راحِم": {
+   "zh": "憐憫者",
+   "py": "liánmǐnzhě",
+   "en": "merciful one"
+  },
+  "رحم|أَرْحَم": {
+   "zh": "最仁慈的",
+   "py": "zuì réncí de",
+   "en": "most merciful of all"
+  },
+  "خلق|خَلَقَ": {
+   "zh": "創造",
+   "py": "chuàngzào",
+   "en": "created"
+  },
+  "خلق|خَلْق": {
+   "zh": "創造",
+   "py": "chuàngzào",
+   "en": "creation"
+  },
+  "خلق|خَلاق": {
+   "zh": "福分",
+   "py": "fúfèn",
+   "en": "share"
+  },
+  "خلق|خُلُق": {
+   "zh": "品德",
+   "py": "pǐndé",
+   "en": "character"
+  },
+  "خلق|خالِق": {
+   "zh": "創造者",
+   "py": "chuàngzàozhě",
+   "en": "the Creator"
+  },
+  "خلق|خَلّاق": {
+   "zh": "創造萬物的主",
+   "py": "chuàngzào wànwù de zhǔ",
+   "en": "the Creator of All"
+  },
+  "نزل|أَنزَلَ": {
+   "zh": "降下",
+   "py": "jiàngxià",
+   "en": "sent down"
+  },
+  "نزل|نَزَّلَ": {
+   "zh": "陸續降下",
+   "py": "lùxù jiàngxià",
+   "en": "sent down in parts"
+  },
+  "نزل|تَنزِيل": {
+   "zh": "逐步降示",
+   "py": "zhúbù jiàngshì",
+   "en": "sending down in parts"
+  },
+  "نزل|نَزَلَ": {
+   "zh": "降臨",
+   "py": "jiànglín",
+   "en": "came down"
+  },
+  "نزل|تَنَزَّلَ": {
+   "zh": "陸續降臨",
+   "py": "lùxù jiànglín",
+   "en": "kept coming down"
+  },
+  "نزل|مُنزِل": {
+   "zh": "東道主",
+   "py": "dōngdàozhǔ",
+   "en": "host"
+  },
+  "نزل|مَنازِل": {
+   "zh": "停留處",
+   "py": "tíngliúchù",
+   "en": "stopping places",
+   "note": "In 10:5 منازل are the moon's stations (phases)."
+  },
+  "ولد|وَلَد": {
+   "zh": "孩子",
+   "py": "háizi",
+   "en": "child"
+  },
+  "ولد|والِد": {
+   "zh": "父親",
+   "py": "fùqīn",
+   "en": "father"
+  },
+  "ولد|وَلَدَ": {
+   "zh": "生育",
+   "py": "shēngyù",
+   "en": "had a child"
+  },
+  "ولد|والِدَة": {
+   "zh": "母親",
+   "py": "mǔqīn",
+   "en": "mother"
+  },
+  "ولد|مَوْلُود": {
+   "zh": "新生兒",
+   "py": "xīnshēng'ér",
+   "en": "newborn",
+   "note": "In 2:233 المولود له means 'the one the child is born to', i.e. the father."
+  },
+  "ولد|وَلِيد": {
+   "zh": "小孩",
+   "py": "xiǎohái",
+   "en": "little child"
+  },
+  "ولد|والِدانِ": {
+   "zh": "父母",
+   "py": "fùmǔ",
+   "en": "parents"
+  },
+  "قرب|قَرِيب": {
+   "zh": "近的",
+   "py": "jìn de",
+   "en": "near"
+  },
+  "قرب|قَرِبَ": {
+   "zh": "接近",
+   "py": "jiējìn",
+   "en": "came near"
+  },
+  "قرب|أَقْرَب": {
+   "zh": "最親近的",
+   "py": "zuì qīnjìn de",
+   "en": "closest"
+  },
+  "قرب|قُرْبَى": {
+   "zh": "親屬",
+   "py": "qīnshǔ",
+   "en": "relatives"
+  },
+  "قرب|مُقَرَّب": {
+   "zh": "親近者",
+   "py": "qīnjìnzhě",
+   "en": "brought near"
+  },
+  "قرب|مَقْرَبَة": {
+   "zh": "親緣",
+   "py": "qīnyuán",
+   "en": "kinship"
+  },
+  "قرب|اقْتَرَبَ": {
+   "zh": "靠近",
+   "py": "kàojìn",
+   "en": "drew near"
+  },
+  "قرب|قُرْبان": {
+   "zh": "供品",
+   "py": "gòngpǐn",
+   "en": "offering"
+  },
+  "قرب|قَرَّبَ": {
+   "zh": "獻上",
+   "py": "xiànshàng",
+   "en": "offered"
+  },
+  "نعم|نِعْمَة": {
+   "zh": "恩典",
+   "py": "ēndiǎn",
+   "en": "blessing"
+  },
+  "نعم|نَعِيم": {
+   "zh": "幸福",
+   "py": "xìngfú",
+   "en": "bliss"
+  },
+  "نعم|أَنْعَمَ": {
+   "zh": "施恩",
+   "py": "shī'ēn",
+   "en": "gave blessings"
+  },
+  "نعم|نِعْمَ": {
+   "zh": "多麼好",
+   "py": "duōme hǎo",
+   "en": "how good"
+  },
+  "نعم|أَنْعام": {
+   "zh": "牲畜",
+   "py": "shēngchù",
+   "en": "farm animals"
+  },
+  "نعم|نَعْمَة": {
+   "zh": "安逸",
+   "py": "ānyì",
+   "en": "easy life"
+  },
+  "نعم|ناعِمَة": {
+   "zh": "歡樂的",
+   "py": "huānlè de",
+   "en": "joyful"
+  },
+  "نعم|نَعَّمَ": {
+   "zh": "使享福",
+   "py": "shǐ xiǎngfú",
+   "en": "gave comfort"
+  },
+  "نعم|نَعْماء": {
+   "zh": "福樂",
+   "py": "fúlè",
+   "en": "good times"
+  },
+  "بين|بَيْن": {
+   "zh": "之間",
+   "py": "zhījiān",
+   "en": "between"
+  },
+  "بين|بَيِّنَة": {
+   "zh": "明證",
+   "py": "míngzhèng",
+   "en": "clear proof",
+   "note": "In 2:99 بيّنات is an adjective ('clear verses'), not the noun 'proof'."
+  },
+  "بين|بَيَّنَ": {
+   "zh": "說明",
+   "py": "shuōmíng",
+   "en": "made clear"
+  },
+  "بين|مُبِين": {
+   "zh": "明顯的",
+   "py": "míngxiǎn de",
+   "en": "clear"
+  },
+  "بين|تَبَيَّنَ": {
+   "zh": "變得清楚",
+   "py": "biàn de qīngchu",
+   "en": "became clear"
+  },
+  "بين|بَيان": {
+   "zh": "解釋",
+   "py": "jiěshì",
+   "en": "explaining"
+  },
+  "بين|تِبْيان": {
+   "zh": "詳盡說明",
+   "py": "xiángjìn shuōmíng",
+   "en": "full explanation"
+  },
+  "سمو|سَماء": {
+   "zh": "天空",
+   "py": "tiānkōng",
+   "en": "sky"
+  },
+  "سمو|اسْم": {
+   "zh": "名字",
+   "py": "míngzi",
+   "en": "name"
+  },
+  "سمو|مُسَمًّى": {
+   "zh": "指定的",
+   "py": "zhǐdìng de",
+   "en": "appointed"
+  },
+  "سمو|سَمَّى": {
+   "zh": "取名",
+   "py": "qǔmíng",
+   "en": "named"
+  },
+  "سمو|سَمِيّ": {
+   "zh": "同名者",
+   "py": "tóngmíngzhě",
+   "en": "namesake"
+  },
+  "نفس|نَفْس": {
+   "zh": "靈魂",
+   "py": "línghún",
+   "en": "soul"
+  },
+  "نفس|تَنَفَّسَ": {
+   "zh": "呼吸",
+   "py": "hūxī",
+   "en": "breathed"
+  },
+  "نفس|تَنافَسَ": {
+   "zh": "競爭",
+   "py": "jìngzhēng",
+   "en": "competed"
+  },
+  "نفس|مُتَنافِس": {
+   "zh": "競爭者",
+   "py": "jìngzhēngzhě",
+   "en": "competitor"
+  },
+  "هدي|هَدَى": {
+   "zh": "引導",
+   "py": "yǐndǎo",
+   "en": "guided"
+  },
+  "هدي|هُدًى": {
+   "zh": "指引",
+   "py": "zhǐyǐn",
+   "en": "guidance"
+  },
+  "هدي|اهْتَدَى": {
+   "zh": "找到正路",
+   "py": "zhǎodào zhènglù",
+   "en": "found the right way"
+  },
+  "هدي|مُهْتَدٍ": {
+   "zh": "遵循正道者",
+   "py": "zūnxún zhèngdào zhě",
+   "en": "rightly guided one"
+  },
+  "هدي|هَدْي": {
+   "zh": "獻牲",
+   "py": "xiànshēng",
+   "en": "sacrificial animal",
+   "note": "Definition also gives 'way of life'; 2:196 means the Hajj sacrificial animal."
+  },
+  "هدي|أَهْدَى": {
+   "zh": "更正確的",
+   "py": "gèng zhèngquè de",
+   "en": "better guided"
+  },
+  "هدي|هَدِيَّة": {
+   "zh": "禮物",
+   "py": "lǐwù",
+   "en": "gift"
+  },
+  "رسل|رَسُول": {
+   "zh": "使者",
+   "py": "shǐzhě",
+   "en": "messenger"
+  },
+  "رسل|أَرْسَلَ": {
+   "zh": "派遣",
+   "py": "pàiqiǎn",
+   "en": "sent"
+  },
+  "رسل|رِسالَة": {
+   "zh": "訊息",
+   "py": "xùnxī",
+   "en": "message",
+   "note": "Definition says a written letter; in 72:28 رسالات are the Lord's messages delivered by the messengers, not letters."
+  },
+  "رسل|مُرْسَل": {
+   "zh": "被派遣者",
+   "py": "bèi pàiqiǎn zhě",
+   "en": "one who is sent"
+  },
+  "رسل|مُرْسَلَة": {
+   "zh": "被派出的",
+   "py": "bèi pàichū de",
+   "en": "those sent forth"
+  },
+  "رسل|مُرْسِل": {
+   "zh": "派遣者",
+   "py": "pàiqiǎnzhě",
+   "en": "sender"
+  },
+  "وقي|اتَّقَى": {
+   "zh": "敬畏真主",
+   "py": "jìngwèi zhēnzhǔ",
+   "en": "feared Allah"
+  },
+  "وقي|مُتَّقي": {
+   "zh": "敬畏者",
+   "py": "jìngwèizhě",
+   "en": "one who fears Allah"
+  },
+  "وقي|تَقْوَى": {
+   "zh": "敬畏之心",
+   "py": "jìngwèi zhī xīn",
+   "en": "fear of Allah"
+  },
+  "وقي|وَقَى": {
+   "zh": "保護",
+   "py": "bǎohù",
+   "en": "protected"
+  },
+  "وقي|أَتْقَى": {
+   "zh": "最敬畏的",
+   "py": "zuì jìngwèi de",
+   "en": "fears Allah most"
+  },
+  "وقي|واق": {
+   "zh": "保護者",
+   "py": "bǎohùzhě",
+   "en": "protector"
+  },
+  "أخر|آخِر": {
+   "zh": "最後的",
+   "py": "zuìhòu de",
+   "en": "last",
+   "note": "Verse word الآخرة means 'the Hereafter' (the last home); gloss gives the base 'last'."
+  },
+  "أخر|آخَر": {
+   "zh": "另一個",
+   "py": "lìng yī gè",
+   "en": "another"
+  },
+  "أخر|أَخَّرَ": {
+   "zh": "推遲",
+   "py": "tuīchí",
+   "en": "delayed",
+   "note": "In 82:5 أخّرت means what a soul 'left behind' (deeds left undone, or left after death)."
+  },
+  "أخر|تَأَخَّرَ": {
+   "zh": "落後",
+   "py": "luòhòu",
+   "en": "fell behind"
+  },
+  "أخر|مُسْتَأْخِر": {
+   "zh": "落後者",
+   "py": "luòhòuzhě",
+   "en": "one who lags behind"
+  },
+  "كذب|كَذَّبَ": {
+   "zh": "說是謊言",
+   "py": "shuō shì huǎngyán",
+   "en": "called it a lie"
+  },
+  "كذب|مُكَذِّب": {
+   "zh": "否認者",
+   "py": "fǒurènzhě",
+   "en": "denier of truth"
+  },
+  "كذب|كِذّاب": {
+   "zh": "極力否認",
+   "py": "jílì fǒurèn",
+   "en": "total denial"
+  },
+  "كذب|كَذَبَ": {
+   "zh": "說謊",
+   "py": "shuōhuǎng",
+   "en": "lied"
+  },
+  "كذب|كَذِب": {
+   "zh": "謊言",
+   "py": "huǎngyán",
+   "en": "lie"
+  },
+  "كذب|تَكْذِيب": {
+   "zh": "否認",
+   "py": "fǒurèn",
+   "en": "denial"
+  },
+  "كذب|كاذِب": {
+   "zh": "說謊者",
+   "py": "shuōhuǎngzhě",
+   "en": "liar"
+  },
+  "كذب|كَذّاب": {
+   "zh": "說謊成性者",
+   "py": "shuōhuǎng chéngxìng zhě",
+   "en": "big liar"
+  },
+  "ملك|مَلَك": {
+   "zh": "天使",
+   "py": "tiānshǐ",
+   "en": "angel"
+  },
+  "ملك|مُلْك": {
+   "zh": "王國",
+   "py": "wángguó",
+   "en": "kingdom"
+  },
+  "ملك|مَلَكَ": {
+   "zh": "擁有",
+   "py": "yōngyǒu",
+   "en": "owned",
+   "note": "In 72:21 أملك means 'have power over (to cause harm or good)'."
+  },
+  "ملك|مَلِك": {
+   "zh": "君王",
+   "py": "jūnwáng",
+   "en": "king"
+  },
+  "ملك|مالِك": {
+   "zh": "主宰",
+   "py": "zhǔzǎi",
+   "en": "Master"
+  },
+  "ملك|مَمْلُوك": {
+   "zh": "被擁有的",
+   "py": "bèi yōngyǒu de",
+   "en": "owned"
+  },
+  "ظلم|ظالِم": {
+   "zh": "不義者",
+   "py": "bùyìzhě",
+   "en": "wrongdoer"
+  },
+  "ظلم|ظَلَمَ": {
+   "zh": "虧待",
+   "py": "kuīdài",
+   "en": "did wrong to"
+  },
+  "ظلم|ظُلْمَة": {
+   "zh": "黑暗",
+   "py": "hēi'àn",
+   "en": "darkness"
+  },
+  "ظلم|أَظْلَم": {
+   "zh": "更不義的",
+   "py": "gèng bùyì de",
+   "en": "more unjust"
+  },
+  "ظلم|أَظْلَمَ": {
+   "zh": "變暗",
+   "py": "biàn'àn",
+   "en": "grew dark"
+  },
+  "ظلم|مَظْلُوم": {
+   "zh": "受冤屈的",
+   "py": "shòu yuānqū de",
+   "en": "wronged"
+  },
+  "ظلم|مُظْلِم": {
+   "zh": "黑暗的",
+   "py": "hēi'àn de",
+   "en": "dark"
+  },
+  "عبد|عَبْد": {
+   "zh": "僕人",
+   "py": "púrén",
+   "en": "servant"
+  },
+  "عبد|عَبَدَ": {
+   "zh": "崇拜",
+   "py": "chóngbài",
+   "en": "worshipped"
+  },
+  "عبد|عابِد": {
+   "zh": "崇拜者",
+   "py": "chóngbàizhě",
+   "en": "worshipper",
+   "note": "Definition says 'one who worships Allah'; in 109:4 it is the negated 'worshipper of what you worship' (idols)."
+  },
+  "عبد|عابِدَة": {
+   "zh": "女崇拜者",
+   "py": "nǚ chóngbàizhě",
+   "en": "woman who worships"
+  },
+  "عبد|عِبادَة": {
+   "zh": "崇拜",
+   "py": "chóngbài",
+   "en": "worship"
+  },
+  "دعو|دَعا": {
+   "zh": "呼喚",
+   "py": "hūhuàn",
+   "en": "called"
+  },
+  "دعو|دُعاء": {
+   "zh": "祈禱",
+   "py": "qídǎo",
+   "en": "asking Allah",
+   "note": "In 71:6 دعائي is Nuh calling his people, not a prayer to Allah; gloss follows the definition."
+  },
+  "دعو|دَعْوَة": {
+   "zh": "呼求",
+   "py": "hūqiú",
+   "en": "call"
+  },
+  "دعو|داعٍ": {
+   "zh": "呼求者",
+   "py": "hūqiúzhě",
+   "en": "caller"
+  },
+  "دعو|ادَّعَى": {
+   "zh": "聲稱",
+   "py": "shēngchēng",
+   "en": "claimed",
+   "note": "In 67:27 تدّعون is usually explained as 'you kept calling for (it)'; gloss follows the definition's first sense."
+  },
+  "دعو|داعِي": {
+   "zh": "召喚者",
+   "py": "zhàohuànzhě",
+   "en": "the one who calls"
+  },
+  "بصر|بَصَر": {
+   "zh": "視力",
+   "py": "shìlì",
+   "en": "sight"
+  },
+  "بصر|بَصِير": {
+   "zh": "全明的主",
+   "py": "quánmíng de zhǔ",
+   "en": "the All-Seeing"
+  },
+  "بصر|أَبْصَرَ": {
+   "zh": "看到",
+   "py": "kàndào",
+   "en": "saw"
+  },
+  "بصر|مُبْصِرَة": {
+   "zh": "明亮的",
+   "py": "míngliàng de",
+   "en": "bright",
+   "note": "In 17:59 مبصرة means the she-camel was a 'clear, visible' sign; 'bright' fits 17:12 (the app sentence)."
+  },
+  "بصر|بَصِيرَة": {
+   "zh": "洞察力",
+   "py": "dòngchálì",
+   "en": "insight",
+   "note": "In 75:14 many exegetes read بصيرة as 'a witness (against himself)'."
+  },
+  "بصر|بُصِّرَ": {
+   "zh": "得以看見",
+   "py": "déyǐ kànjiàn",
+   "en": "was made to see"
+  },
+  "بصر|مُبْصِر": {
+   "zh": "看得清的",
+   "py": "kàn de qīng de",
+   "en": "seeing clearly"
+  },
+  "بصر|تَبْصِرَة": {
+   "zh": "啟發",
+   "py": "qǐfā",
+   "en": "eye-opener"
+  },
+  "خرج|أَخْرَجَ": {
+   "zh": "帶出來",
+   "py": "dài chūlái",
+   "en": "brought out"
+  },
+  "خرج|خَرَجَ": {
+   "zh": "出來",
+   "py": "chūlái",
+   "en": "came out"
+  },
+  "خرج|إِخْراج": {
+   "zh": "帶出",
+   "py": "dàichū",
+   "en": "bringing out"
+  },
+  "خرج|مُخْرِج": {
+   "zh": "帶出者",
+   "py": "dàichūzhě",
+   "en": "one who brings out"
+  },
+  "خرج|خارِج": {
+   "zh": "出來的",
+   "py": "chūlái de",
+   "en": "coming out"
+  },
+  "خرج|مُخْرَج": {
+   "zh": "出口",
+   "py": "chūkǒu",
+   "en": "exit"
+  },
+  "خرج|مَخْرَج": {
+   "zh": "出路",
+   "py": "chūlù",
+   "en": "way out"
+  },
+  "خرج|اسْتَخْرَجَ": {
+   "zh": "搜出",
+   "py": "sōuchū",
+   "en": "found and took out"
+  },
+  "قدر|قَدِير": {
+   "zh": "全能的主",
+   "py": "quánnéng de zhǔ",
+   "en": "the All-Powerful"
+  },
+  "قدر|قادِر": {
+   "zh": "有能力的",
+   "py": "yǒu nénglì de",
+   "en": "able",
+   "note": "In 77:23 most exegetes take القادرون as 'the ones who measure out (determine)', tied to قدرنا; gloss follows the definition 'able'."
+  },
+  "قدر|قَدَّرَ": {
+   "zh": "計劃",
+   "py": "jìhuà",
+   "en": "planned",
+   "note": "Definition is 'set its measure and prepared it'; in 74:18 قدّر is the disbeliever plotting/calculating a scheme."
+  },
+  "قدر|قَدَرَ": {
+   "zh": "定量",
+   "py": "dìngliàng",
+   "en": "measured out",
+   "note": "Definition gives 'was able' first; 77:23 فقدرنا uses the other sense, 'We determined/measured'."
+  },
+  "قدر|قَدَر": {
+   "zh": "前定",
+   "py": "qiándìng",
+   "en": "Allah's decree",
+   "note": "In 77:22 قدر معلوم means 'a fixed term' (of pregnancy), not destiny in general."
+  },
+  "قدر|قَدْر": {
+   "zh": "尊貴",
+   "py": "zūnguì",
+   "en": "honor",
+   "note": "Definition is 'measure and rank'; ليلة القدر is also widely explained as 'Night of Decree'."
+  },
+  "قدر|مِقْدار": {
+   "zh": "數量",
+   "py": "shùliàng",
+   "en": "amount"
+  },
+  "قدر|تَقْدِير": {
+   "zh": "精確衡量",
+   "py": "jīngquè héngliáng",
+   "en": "careful measuring"
+  },
+  "قدر|مُقْتَدِر": {
+   "zh": "大能的主",
+   "py": "dànéng de zhǔ",
+   "en": "the Fully Able"
+  },
+  "قدر|قُدُور": {
+   "zh": "大鍋",
+   "py": "dàguō",
+   "en": "cooking pots"
+  },
+  "قرأ|قُرْآن": {
+   "zh": "古蘭經",
+   "py": "Gǔlánjīng",
+   "en": "Quran"
+  },
+  "قرأ|قَرَأَ": {
+   "zh": "讀",
+   "py": "dú",
+   "en": "read"
+  },
+  "قرأ|قُرُوء": {
+   "zh": "每月週期",
+   "py": "měiyuè zhōuqī",
+   "en": "monthly cycles",
+   "note": "Means women's monthly (menstrual) cycles, or the clean intervals between them per some scholars; the definition keeps it general."
+  },
+  "قرأ|أَقْرَأَ": {
+   "zh": "教誦讀",
+   "py": "jiāo sòngdú",
+   "en": "taught to recite"
+  },
+  "سمع|سَمِعَ": {
+   "zh": "聽見",
+   "py": "tīngjiàn",
+   "en": "heard"
+  },
+  "سمع|سَمِيع": {
+   "zh": "全聰的主",
+   "py": "quáncōng de zhǔ",
+   "en": "the All-Hearing"
+  },
+  "سمع|سَمْع": {
+   "zh": "聽覺",
+   "py": "tīngjué",
+   "en": "hearing"
+  },
+  "سمع|اسْتَمَعَ": {
+   "zh": "傾聽",
+   "py": "qīngtīng",
+   "en": "listened"
+  },
+  "سمع|مُسْتَمِع": {
+   "zh": "傾聽者",
+   "py": "qīngtīngzhě",
+   "en": "listener"
+  },
+  "سمع|سَمّاع": {
+   "zh": "愛聽的人",
+   "py": "ài tīng de rén",
+   "en": "eager listener"
+  },
+  "غفر|غَفُور": {
+   "zh": "至赦的主",
+   "py": "zhìshè de zhǔ",
+   "en": "the Most Forgiving"
+  },
+  "غفر|غَفَرَ": {
+   "zh": "饒恕",
+   "py": "ráoshù",
+   "en": "forgave"
+  },
+  "غفر|مَغْفِرَة": {
+   "zh": "寬恕",
+   "py": "kuānshù",
+   "en": "forgiveness"
+  },
+  "غفر|اسْتَغْفَرَ": {
+   "zh": "求饒恕",
+   "py": "qiú ráoshù",
+   "en": "asked forgiveness"
+  },
+  "غفر|غُفْران": {
+   "zh": "赦宥",
+   "py": "shèyòu",
+   "en": "pardon"
+  },
+  "غفر|غَفّار": {
+   "zh": "多赦的主",
+   "py": "duōshè de zhǔ",
+   "en": "the Ever-Forgiving"
+  },
+  "غفر|غافِر": {
+   "zh": "饒恕者",
+   "py": "ráoshùzhě",
+   "en": "forgiver"
+  },
+  "غفر|مُسْتَغْفِر": {
+   "zh": "求饒恕的人",
+   "py": "qiú ráoshù de rén",
+   "en": "one who asks forgiveness"
+  },
+  "نور|نار": {
+   "zh": "火",
+   "py": "huǒ",
+   "en": "fire"
+  },
+  "نور|نُور": {
+   "zh": "光",
+   "py": "guāng",
+   "en": "light"
+  },
+  "نور|مُنِير": {
+   "zh": "照亮的",
+   "py": "zhàoliàng de",
+   "en": "giving light"
+  },
+  "بني|بَنُون": {
+   "zh": "兒子們",
+   "py": "érzimen",
+   "en": "sons"
+  },
+  "بني|ابْن": {
+   "zh": "兒子",
+   "py": "érzi",
+   "en": "son",
+   "note": "In 17:26 ابن السبيل means 'traveller' (lit. 'son of the road')."
+  },
+  "بني|بَنَى": {
+   "zh": "建造",
+   "py": "jiànzào",
+   "en": "built"
+  },
+  "بني|بِناء": {
+   "zh": "建築",
+   "py": "jiànzhù",
+   "en": "building"
+  },
+  "بني|مَبْنِيَّة": {
+   "zh": "建好的",
+   "py": "jiànhǎo de",
+   "en": "built"
+  }
+ }
+}

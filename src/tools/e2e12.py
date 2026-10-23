@@ -54,16 +54,19 @@ async def main():
         ix = await p.evaluate("kids.findIndex(k => k.name === 'يوسف')")
         await p.evaluate("(i) => { kid = i; store.set('kid', i); onKid(); }", ix); await p.wait_for_timeout(300)
         ok(await p.evaluate("tier()") == 'small', 'يوسف (6) plays with choices')
-        r = await p.evaluate("""() => { const box = document.createElement('div'); document.body.appendChild(box); mcq(box, ['بدر', 'أحد', 'الخندق'], 'بدر', () => {});
-          const sb = box.nextElementSibling; const has = !!(sb && sb.classList.contains('optsay')); if (sb) sb.click(); box.children[0].click();
-          const gone = !(box.nextElementSibling && box.nextElementSibling.classList.contains('optsay')); box.remove(); return [has, gone]; }""")
-        ok(r == [True, True], 'under nine, «🔊 اسمع الخيارات» reads the options; it goes once he chooses')
+        r = await p.evaluate("""async () => { const box = document.createElement('div'); document.body.appendChild(box); let chosen = null; mcq(box, ['بدر', 'أحد', 'الخندق'], 'بدر', ok => { chosen = ok; });
+          const sb = box.nextElementSibling; const has = !!(sb && sb.classList.contains('optsay')); if (sb) sb.click();
+          const b0 = box.children[0], b1 = box.children[1]; b0.click(); const lit = b0.dataset.s === 'arm' && chosen === null;
+          b1.click(); const moved = b1.dataset.s === 'arm' && b0.dataset.s !== 'arm' && chosen === null;
+          b1.click(); const picked = chosen !== null;
+          const gone = !(box.nextElementSibling && (box.nextElementSibling.classList.contains('optsay') || box.nextElementSibling.classList.contains('optip'))); box.remove(); return [has, lit, moved, picked, gone]; }""")
+        ok(r == [True, True, True, True, True], 'under nine: «🔊 اسمع الخيارات»; the first touch says an option and lights it, the second chooses it; the help goes once he chooses (%s)' % r)
         q = await p.evaluate("(() => { const id = POOL.fill()[0]; return GEN.fill(id).q; })()")
         ok('الكلمة الناقصة' in (q or ''), 'the fill-in card says what to type: ' + str(q))
 
         # the parent board: no Arabic voice on this device; a free recording is not marked word by word
         await p.evaluate("""async () => { await recPut({id: 'free1', kid, kidName: 'يوسف', kind: 'نص حر', ref: 'من اختياري', text: '⟨اقرأ|اقرئي⟩ أي نصٍّ ⟨تحفظه|تحفظينه⟩', date: today(), type: 'audio/webm', blob: new Blob([new Uint8Array(3000)], {type: 'audio/webm'}), status: 'pending', notes: [], source: 'local'}); }""")
-        await p.click('#whoBtn'); await p.click('#ksDad'); await p.wait_for_selector('#sheet:not([hidden]) #pinIn'); await p.fill('#pinIn', '1234'); await p.click('#pinOk')
+        await p.click('#whoBtn'); await p.click('#ksParent'); await p.click('#ksDad'); await p.wait_for_selector('#sheet:not([hidden]) #pinIn'); await p.fill('#pinIn', '1234'); await p.click('#pinOk')
         await p.wait_for_selector('#ddTabs'); await p.wait_for_timeout(600)
         ok('لا يوجد صوتٌ عربي' in await p.inner_text('#ddBody'), 'the parent is told the device has no Arabic voice')
         await p.click('#ddTabs [data-k="rec"]'); await p.wait_for_timeout(600)

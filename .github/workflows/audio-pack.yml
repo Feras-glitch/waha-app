@@ -53,3 +53,5 @@ jobs:
             gh release create "$TAG" --prerelease --target "$GITHUB_SHA" --title "حزمة التلاوة ($TAG)" --notes-file "$RUNNER_TEMP/pack/audio/SOURCES.txt"
           fi
           gh release upload "$TAG" "$RUNNER_TEMP/waha-audio.zip" --clobber
+          # the builds check the pack against src/tools/audio.sha256: a new pack is used only once its fingerprint is recorded there
+          echo "::notice::بصمة الحزمة الجديدة: $(sha256sum "$RUNNER_TEMP/waha-audio.zip" | cut -d' ' -f1). سجّلوها في src/tools/audio.sha256 لتستعملها النسخ."
