@@ -39,8 +39,34 @@ def check_markers(name, s):
     return 0
 
 
+KZ_EXTRACT = r"""
+const fs = require('fs'), vm = require('vm'); const ctx = {}; vm.createContext(ctx);
+vm.runInContext(fs.readFileSync(process.argv[1], 'utf8') + '\n;this.__L = LESSONS; this.__A = AXES;', ctx);
+const axes = {}; ctx.__A.forEach(a => { axes[a.id] = String(a.name || '').replace(/[:\s]+$/, ''); });
+const lessons = ctx.__L.map(l => ({ id: l.id, ax: l.ax, title: l.title, take: l.take || '',
+  secret: (l.secret || []).filter(s => typeof s === 'string'), verses: (l.verses || []).map(v => ({ t: v.t, n: v.n, a: v.a })),
+  quiz: (l.quiz || []).map(q => ({ q: q.q, o: q.o, why: q.why || '' })) }));
+process.stdout.write(JSON.stringify({ axes, lessons }));
+"""
+
+
+def kunuz_for_trip():
+    """The treasure chambers' lessons and questions, for the oasis daily trip (game «kz»). Read from parts/data.js, so one source."""
+    import shutil, subprocess, json as _j
+    if not shutil.which('node'):
+        raise SystemExit('node is needed to build (it reads the chambers from parts/data.js)')
+    r = subprocess.run(['node', '-e', KZ_EXTRACT, P('parts', 'data.js')], capture_output=True, text=True)
+    if r.returncode:
+        raise SystemExit('reading parts/data.js failed:\n' + r.stderr[:800])
+    return _j.loads(r.stdout)
+
+
 def build(verbose=True, icon=''):
     page, data, app = rd('parts', 'waha', 'page.html'), rd('parts', 'waha', 'data.json'), rd('parts', 'waha', 'app.js')
+    import json as _j
+    D = _j.loads(data)
+    D['kunuz'] = kunuz_for_trip()
+    data = _j.dumps(D, ensure_ascii=False, separators=(',', ':'))
     css, bridge, post = rd('parts', 'waha.css'), rd('parts', 'waha_bridge.js'), rd('parts', 'waha_post.js')
     miss = check_markers('page', page) + check_markers('app', app) + check_markers('data', data)
     if '</script' in data:

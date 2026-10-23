@@ -25,4 +25,38 @@
   var cur = ids.indexOf(want || FAM.cur);
   lsSet('oasis:kid', cur >= 0 ? cur : 0);
   window.KZ_IDS = ids;
+
+  /* the two other sections, read for the oasis (scene counters, «سطر اليوم», «تقرير الجمعة»); nothing here writes to them */
+  function dayStart(t) { var d = t ? new Date(t) : new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); }
+  function dayKey(t) { var d = new Date(t); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function hsUser(id) { var us = lsGet('waha.hasaniya_v13_users'); return Array.isArray(us) ? us.filter(function (u) { return u && u.id === 'kz_' + id; })[0] || null : null; }
+  window.KZ_SECTIONS = {
+    /* since: start of the period (default: today) */
+    kunuz: function (i, since) {
+      var id = ids[i], d = id && lsGet('kb-kid-' + id), prog = (d && d.prog) || {}, from = since || dayStart();
+      var all = Object.keys(prog), fresh = all.filter(function (k) { return prog[k] && +prog[k].d >= from; });
+      return { gems: all.length, fresh: fresh };
+    },
+    hasaniya: function (i, since) {
+      var id = ids[i], u = id && hsUser(id), st = (u && u.state) || {}, from = since || dayStart();
+      var ss = st.stationStatus || {}, stamps = st.stampDates || {}, vs = st.verseStats || {};
+      var days = (st.activeDays || []).filter(function (k) { return k >= dayKey(from); });
+      return {
+        stations: Object.keys(ss).filter(function (k) { return ss[k] === 'completed'; }).length,
+        points: st.points || 0,
+        days: days.length,
+        verses: Object.keys(vs).filter(function (k) { var s = vs[k] || {}; return Math.max(+s.lastCorrect || 0, +s.lastWrong || 0) >= from; }).length,
+        stamped: Object.keys(stamps).filter(function (k) { return +stamps[k] >= from; }).length
+      };
+    },
+    /* misses since a time: «كنوز البيان» questions (lesson|question) and Hasaniya verses answered wrongly last */
+    misses: function (i, since) {
+      var id = ids[i], out = [], from = since || 0; if (!id) return out;
+      var d = lsGet('kb-kid-' + id), qm = (d && d.qmiss) || {};
+      Object.keys(qm).forEach(function (k) { if (+qm[k] > from) out.push({ g: 'kz', id: k, t: +qm[k] }); });
+      var u = hsUser(id), vs = (u && u.state && u.state.verseStats) || {};
+      Object.keys(vs).forEach(function (k) { var s = vs[k] || {}; if (+s.lastWrong > from && +s.lastWrong > (+s.lastCorrect || 0)) out.push({ g: 'hsq', id: k, t: +s.lastWrong }); });
+      return out;
+    }
+  };
 })();
