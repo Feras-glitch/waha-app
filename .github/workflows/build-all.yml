@@ -70,12 +70,7 @@ jobs:
       - name: Recitation pack
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          if gh release download "$AUDIO_TAG" -p waha-audio.zip -D "$RUNNER_TEMP" --clobber; then
-            unzip -q -o "$RUNNER_TEMP/waha-audio.zip" -d web && du -sh web/audio
-          else
-            echo "::warning::حزمة التلاوة ($AUDIO_TAG) لم تُنشر بعد، فتُبنى هذه النسخة بلا تلاوة. شغّلوا «Audio pack» من صفحة Actions."
-          fi
+        run: bash src/tools/audio_fetch.sh
       - name: Copy web app into Android assets
         run: |
           mkdir -p android/app/src/main/assets/www
@@ -145,12 +140,7 @@ jobs:
       - name: Recitation pack
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          if gh release download "$AUDIO_TAG" -p waha-audio.zip -D "$RUNNER_TEMP" --clobber; then
-            unzip -q -o "$RUNNER_TEMP/waha-audio.zip" -d web && du -sh web/audio
-          else
-            echo "::warning::حزمة التلاوة ($AUDIO_TAG) لم تُنشر بعد، فتُبنى هذه النسخة بلا تلاوة."
-          fi
+        run: bash src/tools/audio_fetch.sh
       - name: Web zip
         run: |
           mkdir -p out
@@ -185,12 +175,7 @@ jobs:
       - name: Recitation pack
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          if gh release download "$AUDIO_TAG" -p waha-audio.zip -D "$RUNNER_TEMP" --clobber; then
-            unzip -q -o "$RUNNER_TEMP/waha-audio.zip" -d web && du -sh web/audio
-          else
-            echo "::warning::حزمة التلاوة ($AUDIO_TAG) لم تُنشر بعد، فتُبنى هذه النسخة بلا تلاوة. شغّلوا «Audio pack» من صفحة Actions."
-          fi
+        run: bash src/tools/audio_fetch.sh
       - name: Prepare site
         run: |
           rm -rf site && mkdir -p site

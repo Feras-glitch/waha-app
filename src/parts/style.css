@@ -366,3 +366,10 @@ details.adult p{margin:.5rem 0 0;font-size:.95rem;color:var(--ink-2);max-width:6
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation:none!important;transition:none!important}
 }
+/* folded sections of the child's home (2.10): a summary line that opens them */
+details.fold{border-top:1px solid var(--line);padding-top:8px}
+details.fold>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;min-height:48px}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary::before{content:'◂';color:var(--ink-2);transition:transform .15s}
+details.fold[open]>summary::before{transform:rotate(-90deg)}
+details.fold>summary .h2{margin:0}

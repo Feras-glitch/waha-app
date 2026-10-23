@@ -53,7 +53,7 @@ async def main():
         await shot(p, 'v02-voice-one')
         await p.click('[data-act="pVoice"]'); await p.click('[data-act="parent"]'); await p.click('[data-act="backKid"]')
         await p.wait_for_selector('.hello')
-        await p.click('[data-open="ghayth"]'); await p.click('[data-step="1"]')
+        await p.evaluate("document.querySelectorAll('details.fold').forEach(d => d.open = true)"); await p.click('[data-open="ghayth"]'); await p.click('[data-step="1"]')
         t = await text(p)
         ok('اسمعي الشرح بصوت ماما' in t, 'lesson offers the family voice (f)')
         await p.click('[data-act="narPlay"]'); await p.wait_for_timeout(600)
@@ -132,7 +132,7 @@ async def main():
         ok(await p.locator('.report .rc-tab').count() >= 1, 'diagnostic table present')
         await no_markers(p, 'report')
         await shot(p, 'v07-report')
-        await p.click('[data-act="exReport"]'); await p.check('#cOk')
+        await p.click('[data-act="exReport"]'); await p.check('#cOk'); await p.fill('#fpIn', '1234')
         async with p.expect_download() as dli:
             await p.click('.modal [data-m="1"]')
         dl = await dli.value; rp = os.path.join(DL, 'report.html'); await dl.save_as(rp)

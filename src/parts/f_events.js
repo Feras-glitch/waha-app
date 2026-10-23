@@ -20,12 +20,12 @@ var ACT={
   kfAv:function(t,ds){KF.name=(document.getElementById('kfName')||{}).value||KF.name;KF.av=ds.v;renderKidForm();},
   kfC:function(t,ds){KF.name=(document.getElementById('kfName')||{}).value||KF.name;KF.c=ds.v;renderKidForm();},
   kfNoPhoto:function(){KF.name=(document.getElementById('kfName')||{}).value||KF.name;KF.newPhoto=null;KF.dropPhoto=true;if(URLS['photo-tmp']){try{URL.revokeObjectURL(URLS['photo-tmp']);}catch(e){}delete URLS['photo-tmp'];}renderKidForm();},
-  kidAdd:function(){kidForm(null);},
+  kidAdd:function(){kidForm(null);}, setupStart:function(t,ds){setupStart(ds.id);}, voiceTest:function(){voiceTest();},
   kidEdit:function(t,ds){kidForm(ds.id);},
   kidDel:function(t,ds){kidDelete(ds.id);},
   kidReset:function(t,ds){kidResetProgress(ds.id);},
   pKids:function(){pKids();}, pProg:function(t,ds){pProg(ds.id);}, pApproved:function(){pApproved();}, pCode:function(){pCode();},
-  pWeekly:function(){pWeekly();}, setWeekly:function(t,ds){setWeekly(ds.id);}, passWeekly:function(t,ds){passWeekly(ds.id);}, pImport:function(){pImport();}, extDel:function(t,ds){extDel(ds.id);},
+  pWeekly:function(){pWeekly();}, setWeekly:function(t,ds){setWeekly(ds.id);}, setWeeklyFrom:function(t,ds){setWeeklyFrom(ds.v);}, passWeekly:function(t,ds){passWeekly(ds.id);}, pImport:function(){pImport();}, extDel:function(t,ds){extDel(ds.id);},
   pFrom:function(){pFrom();}, fromAdd:function(t,ds){fromAdd(+ds.i);}, fromAll:function(){fromAll();},
   pBackup:function(){pBackup();}, backupMake:function(){backupMake();}, pWork:function(t,ds){pWork(ds.id);},
   rub:function(t,ds){ if(!RV) return; RV.r[ds.k]=+ds.v; [].slice.call(t.parentNode.children).forEach(function(b){b.classList.toggle('on',b===t);}); },
@@ -60,7 +60,7 @@ var ACT={
   /* printing can also save the page as a file or send it (Android's print screen), so it is the parent's step, logged like an export */
   print:async function(){
     if(!(await freshParent('الطباعة قد تحفظ الصفحة ملفًّا أو ترسلها، فتحتاج رمز وليّ الأمر.'))) return;
-    (FAM.waLog=FAM.waLog||[]).push({d:Date.now(),name:'طباعة: '+String(document.title||'').slice(0,60),kid:KID?KID.id:null}); if(FAM.waLog.length>200) FAM.waLog=FAM.waLog.slice(-200); saveFam();
+    logOut('طباعة: '+String(document.title||'').slice(0,60),KID?KID.id:null);
     try{window.print();}catch(e){}
   },
   install:function(){doInstall();},
@@ -68,7 +68,7 @@ var ACT={
   diag:needKid(function(){startDiag();}), pReport:function(t,ds){pReport(ds.id,ds.v);}, exReport:function(t,ds){exReport(ds.id,ds.v);},
   pFamily:function(){pFamily();}, pFamilyOne:function(t,ds){pFamily(ds.id);}, fsDone:function(t,ds){fsDone(ds.id);}, fsSkip:function(){fsSkip();},
   presentMag:function(t,ds){presentMag(ds.id);}, presentRadio:function(){presentRadio();},
-  waha:needKid(function(){wahaGo({kid:KID.id});}), pWaha:function(){wahaGo({dad:1,kid:KID&&KID.id});},
+  waha:needKid(function(){wahaGo({kid:KID.id});}), pWaha:function(){wahaGo({dad:1,kid:KID&&KID.id});}, pHasaniya:function(){hasaniyaParent();},
   rm:needKid(function(){rmView();}), rmOne:needKid(function(t,ds){rmOne(ds.id);}), rmPick:function(t,ds){rmPick(+ds.i);},
   lab:needKid(function(){labView();}), labPair:needKid(function(t,ds){labPair(ds.id);}), labRec:needKid(function(t,ds){labRec(ds.id);}),
   pVoice:function(){pVoice();}, pVoiceOne:function(t,ds){pVoiceOne(ds.id);}, pVoiceG:function(t,ds){if(NV) pVoiceOne(NV.id,ds.v);},
@@ -81,13 +81,13 @@ var ACT={
   rdIdea:function(t,ds){ var x=RIDDLE_IDEAS[+ds.v], q=document.getElementById('f-q'); if(!x||!q||!CUR) return;
     if((q.value||'').trim()&&!confirmIdea) { confirmIdea=true; return toast('في اللغز كتابةٌ الآن. ⟨اضغط|اضغطي⟩ الفكرة مرةً أخرى لتحلّ محلّها.'); }
     confirmIdea=false; q.value=G(x[1]); onWorkField(q); if(!(CUR.title||'').trim()){var ti=document.getElementById('f-title'); if(ti){ti.value=x[0];onWorkField(ti);}} q.focus(); },
-  rzG:function(t,ds){rzStart(ds.v);}, rzPick:function(t,ds){rzPick(+ds.v);}, rzReveal:function(){RZ.revealed=true;rzView();}, rzHint:function(){RZ.hint=true;rzView();}, rzSelf:function(t,ds){rzSelf(ds.v==='1');},
+  rzG:function(t,ds){rzStart(ds.v);}, rzPick:function(t,ds){rzPick(+ds.v);}, rzReveal:function(){RZ.revealed=true;rzView();}, rzHint:function(){RZ.hint=true;rzView();}, rzSelf:function(t,ds){rzSelf(ds.v==='1');}, rzTell:function(){rzTell();},
   radio:needKid(function(){radioView();}), radioF:function(t,ds){radioView(ds.v);},
   radioAll:function(){radioPlay(0);}, radioPlay:function(t,ds){radioPlay(+ds.v);}
 };
 var confirmIdea=false;
-var GUEST_ACTS=['vplay','rzG','rzPick','rzReveal','rzHint','rzSelf'];
-var PARENT_ACTS=['pWaha','pReport','exReport','pFamily','pFamilyOne','fsDone','fsSkip','pVoice','pVoiceOne','pVoiceG','narRec','narDel','pGarden','pCerts','exCert','exRiddle','pKids','pProg','pApproved','pCode','pWeekly','setWeekly','passWeekly','pImport','extDel','pFrom','fromAdd','fromAll','pBackup','backupMake','pWork','rub','approve','returnWork','unapprove','pDelWork',
+var GUEST_ACTS=['vplay','rzG','rzPick','rzReveal','rzHint','rzSelf','rzTell'];
+var PARENT_ACTS=['pWaha','pHasaniya','pReport','exReport','pFamily','pFamilyOne','fsDone','fsSkip','pVoice','pVoiceOne','pVoiceG','narRec','narDel','pGarden','pCerts','exCert','exRiddle','pKids','pProg','pApproved','pCode','pWeekly','setWeekly','setWeeklyFrom','passWeekly','pImport','extDel','pFrom','fromAdd','fromAll','pBackup','backupMake','pWork','rub','approve','returnWork','unapprove','pDelWork',
   'exTeacher','exGift','exContrib','manualReply','kidAdd','kidEdit','kidDel','kidReset','magExport','magBack','magPublishLocal','pMag'];
 function route(g){
   if(!KID&&g!=='parent') return who();
@@ -108,7 +108,6 @@ APP.addEventListener('click',function(e){
   if(ds.act){
     var fn=ACT[ds.act]; if(!fn) return;
     if(PARENT_ACTS.indexOf(ds.act)>=0&&!parentOn()) return needParent(function(){fn(t,ds);});
-    if(PARENT_ACTS.indexOf(ds.act)>=0) parentTouch();
     return fn(t,ds);
   }
   /* leaving for the child's pages ends the parent's session (the next parent step asks for the PIN again) */
@@ -188,16 +187,37 @@ window.appBack=function(){
   return false;
 };
 
+/* moving between the three sections replaces the page instead of adding to the history, so Back never cycles between them */
+document.addEventListener('click',function(e){ var a=e.target.closest&&e.target.closest('#oasisLink'); if(a){ e.preventDefault(); PARENT_UNTIL=0; toOasis(); } },true);
+/* a tablet put aside for more than a minute, a page left for another, or one brought back from the browser's cache: the parents'
+   session is over, and the corner gives way to the child's pages */
+(function(){ var hid=0, was=false;
+  function end(){ var on=parentOn(); PARENT_UNTIL=0; if(on||was){ was=false; if(!GUEST&&FAM.pin){ try{ backKid(); }catch(e){} } } }
+  document.addEventListener('visibilitychange',function(){ if(document.hidden){ hid=Date.now(); was=parentOn(); } else if(hid&&Date.now()-hid>60000){ hid=0; end(); } });
+  window.addEventListener('pagehide',function(){ was=parentOn(); PARENT_UNTIL=0; });
+  window.addEventListener('pageshow',function(e){ if(e.persisted) end(); });
+})();
+/* the back of a browser, or of the web app installed on Android, steps back inside this section as the Android app's button does:
+   one guard entry in the history catches it; where there is nowhere left to go back to, the browser is let go */
+(function(){ if(window.AndroidBridge||!window.history||!history.pushState) return;
+  function guard(){ if(window.__kzLeaving) return; try{ history.pushState({wahaBack:1},'',location.href); }catch(e){} }
+  if(!(history.state&&history.state.wahaBack)) guard();
+  window.addEventListener('popstate',function(){ if(window.__kzLeaving) return; var done=false; try{ done=window.appBack(); }catch(e){} if(done) guard(); });
+})();
+
 /* ---------- start ---------- */
 (async function start(){
   await idbOpen();
   for(var i=0;i<FAM.kids.length;i++){ if(FAM.kids[i].photo) await mediaURL('photo-'+FAM.kids[i].id); }
-  if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){ try{navigator.serviceWorker.register('../sw.js').catch(function(){});}catch(e){} }
+  if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)&&!window.AndroidBridge){ try{navigator.serviceWorker.register('../sw.js').catch(function(){});}catch(e){} }
   var hr=(location.hash||'').replace('#','');
   if(hr.indexOf('r=')===0) return riddleGuest(parseRiddleHash(hr)||{bad:1});
   IN_KUNUZ=!!hr;
   if(!FAM.pin) return setupWelcome();
-  if(hr==='parent'){ if(FAM.cur&&kidById(FAM.cur)) selectKid(FAM.cur); return needParent(parentHome); }
+  if(hr==='parent'){ if(FAM.cur&&kidById(FAM.cur)) selectKid(FAM.cur);
+    /* a session opened with the code on another board comes along (the parents' hub, 2.8) */
+    try{ var pu=+sessionStorage.getItem('kz-parent-until')||0; sessionStorage.removeItem('kz-parent-until'); if(pu>Date.now()) PARENT_UNTIL=Math.min(pu,Date.now()+15*60*1000); }catch(e){}
+    return needParent(parentHome); }
   if(!(FAM.cur&&kidById(FAM.cur))) return who();
   selectKid(FAM.cur);
   var h=(location.hash||'').replace('#','');

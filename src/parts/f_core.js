@@ -39,7 +39,8 @@ function lsSet(k,v){
 }
 function uid(p){return (p||'')+Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
 function isF(){return !!(KID&&KID.g==='f');}
-function Gx(s,f){return String(s).replace(/⟨([^|⟨⟩]*)\|([^⟨⟩]*)⟩/g,function(m,a,b){return f?b:a;});}
+/* the gender markers; and the «·» separator beside a number becomes «|», since next to ١٢٣ it reads as a zero («الكلّ · ١» as «الكلّ ١٠») */
+function Gx(s,f){return String(s).replace(/⟨([^|⟨⟩]*)\|([^⟨⟩]*)⟩/g,function(m,a,b){return f?b:a;}).replace(/([٠-٩]) ?·/g,'$1 |').replace(/· ?(?=[٠-٩])/g,'| ');}
 function G(s){return Gx(s,isF());}
 function gOf(kid){return !!(kid&&kid.g==='f');}
 function clip(s,n){s=String(s||'').trim();return s.length>n?s.slice(0,n-1)+'…':s;}
@@ -149,6 +150,7 @@ function kidSave(){if(!KID||!KD) return; KD.prog=prog; KD.st=ST; lsSet(kidKey(KI
 window.addEventListener('storage',function(e){
   try{
     if(e.storageArea!==localStorage||!e.key||e.newValue==null) return;
+    if(e.key==='kb-epoch'){ location.reload(); return; }       /* a restore made in another tab */
     if(e.key===FKEY){
       var f=JSON.parse(e.newValue); if(!f||typeof f!=='object'||!Array.isArray(f.kids)) return;
       f.mags=f.mags||[]; f.weekly=f.weekly||{}; f.ext=f.ext||{}; f.pinResets=f.pinResets||[]; FAM=f;
@@ -230,10 +232,14 @@ var PIN_LOCK_KEY='kb-pin-lock', PIN_LOCK_MAX=15*60000;
 function pinLock(){try{var o=JSON.parse(localStorage.getItem(PIN_LOCK_KEY)||'{}')||{};return {fails:+o.fails||0,until:+o.until||0};}catch(e){return {fails:0,until:0};}}
 function pinLockLeft(){var o=pinLock(),u=o.until-Date.now(); if(u>PIN_LOCK_MAX){o.until=Date.now()+PIN_LOCK_MAX;try{localStorage.setItem(PIN_LOCK_KEY,JSON.stringify(o));}catch(e){} u=PIN_LOCK_MAX;} return u>0?u:0;}
 function pinFail(){var o=pinLock(); o.fails++; if(o.fails%5===0) o.until=Date.now()+Math.min(PIN_LOCK_MAX,60000*Math.pow(2,o.fails/5-1)); try{localStorage.setItem(PIN_LOCK_KEY,JSON.stringify(o));}catch(e){}}
-function pinOk(){try{localStorage.removeItem(PIN_LOCK_KEY);}catch(e){} LAST_PIN=Date.now(); parentTouch();}
+/* a right PIN clears the lock. It opens the parents' session only when typed at the corner's door (pinSubmit): a PIN typed for one
+   export or one print is spent on that step and opens nothing else */
+function pinOk(){try{localStorage.removeItem(PIN_LOCK_KEY);}catch(e){} LAST_PIN=Date.now();}
 function pinLockMsg(){var s=Math.ceil(pinLockLeft()/1000); return 'محاولاتٌ خاطئةٌ كثيرة. أعيدوا المحاولة بعد '+(s>=60?n2a(Math.ceil(s/60))+' دقيقة':n2a(s)+' ثانية')+'.';}
 function parentOn(){return Date.now()<PARENT_UNTIL;}
-function parentTouch(){PARENT_UNTIL=Date.now()+15*60*1000;}
+/* the session lasts fifteen minutes from its PIN at most; using the corner does not extend it */
+function parentStart(){PARENT_UNTIL=Date.now()+15*60*1000;}
+function parentTouch(){}
 async function hashPin(pin,salt){
   var txt=salt+':'+pin;
   try{
@@ -246,7 +252,7 @@ async function hashPin(pin,salt){
 }
 function needParent(next){
   if(!FAM.pin) return setupWelcome();
-  if(parentOn()){parentTouch();return next();}
+  if(parentOn()) return next();
   AFTER_PIN=next; pinGate();
 }
 function pinGate(){
@@ -265,7 +271,7 @@ async function pinSubmit(){
   if(pinLockLeft()){inp.value='';err.textContent=pinLockMsg();return;}
   if(!inp.value.trim()){err.textContent='اكتبوا الرمز.';try{inp.focus();}catch(e){}return;}
   var h=await hashPin(inp.value.trim(),FAM.salt||'');
-  if(h===FAM.pin){pinOk();resetCancelByPin();var n=AFTER_PIN;AFTER_PIN=null;return n?n():parentHome();}
+  if(h===FAM.pin){pinOk();parentStart();resetCancelByPin();var n=AFTER_PIN;AFTER_PIN=null;return n?n():parentHome();}
   pinFail(); inp.value='';
   err.textContent=pinLockLeft()?pinLockMsg():'الرمز غير صحيح.';
   try{inp.focus();}catch(e){}
@@ -273,18 +279,44 @@ async function pinSubmit(){
 /* before anything leaves the device (a file, a backup, a print) the PIN is typed for that very step: an open parent corner is not enough.
    It is asked in a dialog, so the page under it (a certificate, a report) stays as it is. */
 async function freshParent(why){
-  if(Date.now()-LAST_PIN<30000) return true;
+  return !!(await pinAsk({title:'رمز وليّ الأمر',c:'plum',ok:'تابعوا',html:'<p>'+(why||'هذه الخطوة تُخرج شيئًا من الجهاز، فتحتاج رمز وليّ الأمر الآن.')+'</p>'}));
+}
+/* a dialog (a consent sheet, or the PIN alone) that ends with the PIN typed for this step. Every time: a PIN typed a moment ago for
+   something else does not count. After a reset made by waiting out the 72 hours, nothing leaves for thirty days unless the recovery
+   code that existed before the reset is typed instead (whoever waited may not be the parent). Returns the dialog's value, or false */
+function exportHold(){ return +FAM.exportHold>Date.now()?+FAM.exportHold:0; }
+async function holdLift(code){
+  var p=FAM.recPrev; if(!p||!p.salt) return false;
+  if((await hashPin(rcNorm(code),p.salt))!==p.h) return false;
+  FAM.exportHold=0; (FAM.pinLog=FAM.pinLog||[]).push({t:Date.now(),k:'hold-lift'}); saveFam(); return true;
+}
+async function pinAsk(o){
   if(!FAM.pin) return false;
   var msg='';
   for(;;){
-    var r=await ask({title:'رمز وليّ الأمر',c:'plum',ok:'تابعوا',
-      html:'<p>'+(why||'هذه الخطوة تُخرج شيئًا من الجهاز، فتحتاج رمز وليّ الأمر الآن.')+'</p><label class="lbl" for="fpIn">الرمز</label>'+
-        '<input id="fpIn" class="pin-in" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off">'+(msg?'<p class="form-err" role="alert">'+msg+'</p>':''),
-      check:function(el){var v=el.querySelector('#fpIn').value.trim(); if(pinLockLeft()) return modalErr(el,pinLockMsg()); if(!v) return modalErr(el,'اكتبوا الرمز.'); return {p:v};}});
+    var hold=exportHold();
+    var field=hold?'<div class="warn-box"><strong>الإخراج موقوفٌ حتى '+fmtDate(hold)+'</strong>: أُعيد ضبط الرمز بالانتظار دون رمز الاسترداد. لرفع الإيقاف الآن اكتبوا رمز الاسترداد القديم (الذي كان قبل إعادة الضبط).</div>'+
+        '<label class="lbl" for="fpIn">رمز الاسترداد القديم</label><input id="fpIn" dir="ltr" lang="en" autocomplete="off" autocapitalize="characters" spellcheck="false">'
+      :'<label class="lbl" for="fpIn">رمز وليّ الأمر لهذه الخطوة</label><input id="fpIn" class="pin-in" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off">';
+    var r=await ask({title:o.title,c:o.c,ok:o.ok,danger:o.danger,cancel:o.cancel,
+      html:(o.html||'')+field+(msg?'<p class="form-err" role="alert">'+msg+'</p>':''),
+      check:function(el){
+        var v=o.check?o.check(el):true; if(v===false) return false;
+        var p=(el.querySelector('#fpIn').value||'').trim();
+        if(pinLockLeft()) return modalErr(el,pinLockMsg());
+        if(!p) return modalErr(el,hold?'اكتبوا رمز الاسترداد القديم.':'اكتبوا الرمز.');
+        return {v:v,p:p};
+      }});
     if(!r) return false;
-    if((await hashPin(r.p,FAM.salt||''))===FAM.pin){pinOk();resetCancelByPin();return true;}
-    pinFail(); msg=pinLockLeft()?pinLockMsg():'الرمز غير صحيح.';
+    if(hold){ if(await holdLift(r.p)) return r.v; }
+    else if((await hashPin(r.p,FAM.salt||''))===FAM.pin){pinOk();resetCancelByPin();return r.v;}
+    pinFail(); msg=pinLockLeft()?pinLockMsg():(hold?'رمز الاسترداد غير صحيح.':'الرمز غير صحيح.');
   }
+}
+/* every way out of the device, from all three sections, goes into one list («ما خرج من الجهاز» in the corner) */
+function logOut(name,kidId){
+  (FAM.waLog=FAM.waLog||[]).push({d:Date.now(),name:String(name).slice(0,120),kid:kidId||null,app:'kunuz'});
+  if(FAM.waLog.length>200) FAM.waLog=FAM.waLog.slice(-200); saveFam();
 }
 /* ---------- forgotten PIN: the recovery code, or a request that waits 72 hours ----------
    No server and no e-mail: the proof is the recovery code shown once when the PIN was made (the parent mails it to himself or writes it down).
@@ -338,6 +370,10 @@ function resetSeen(F){
   var r=F&&F.resetReq, now=Date.now(); if(!r) return false;
   var max=Math.max(+r.max||0,+r.at||0);
   if(now<max-2*3600e3){ r.due=Math.max(+r.due||0,now+RESET_WAIT); r.days=[]; r.back=(+r.back||0)+1; }
+  /* the Android app has a clock the user cannot set (time since the device started): seen again with the wall clock further ahead
+     than that clock moved, the request was sped up by hand, and its wait starts again */
+  var mono=0; try{ mono=window.AndroidBridge&&AndroidBridge.elapsed?+AndroidBridge.elapsed():0; }catch(e){}
+  if(mono){ var o=r.mono; if(o&&mono>=o.m&&now-o.w>(mono-o.m)+10*60000){ r.due=Math.max(+r.due||0,now+RESET_WAIT); r.days=[]; r.fwd=(+r.fwd||0)+1; } r.mono={w:now,m:mono}; }
   r.max=Math.max(max,now); var t=new Date(now), d=t.getFullYear()+'-'+(t.getMonth()+1)+'-'+t.getDate();
   r.days=Array.isArray(r.days)?r.days:[]; if(r.days.indexOf(d)<0) r.days=r.days.concat(d).slice(-10);
   return true;
@@ -404,6 +440,7 @@ function resetDo(){
   if(!resetReady()) return resetPage();
   WORKS.forEach(function(w){ if(w.status==='approved'){w.status='sent';w.updated=Date.now();} });
   FAM.mags.forEach(function(m){ if(m.status!=='published') m.status='draft'; });
+  FAM.recPrev=FAM.rec||null; FAM.exportHold=Date.now()+30*864e5; (FAM.pinLog=FAM.pinLog||[]).push({t:Date.now(),k:'reset-wait'});
   FAM.pin=null; FAM.resetReq=null; FAM.pinResets.push(Date.now()); saveWorks(); saveFam();
   setupPin(true);
 }
@@ -423,11 +460,36 @@ function installHTML(){
 async function doInstall(){ if(!INSTALL_EVT) return; INSTALL_EVT.prompt(); try{await INSTALL_EVT.userChoice;}catch(e){} INSTALL_EVT=null; var b=document.getElementById('installBtn'); if(b) b.hidden=true; }
 
 /* ---------- first run ---------- */
+/* the family's first screen belongs to the whole app, not to this section: the header says «واحة اللسان العربي» until setup is done */
+function brandAsApp(on){ var n=document.querySelector('#homeBtn .b-name'), b=document.querySelector('#homeBtn .b-sub'); if(!n||!b) return; on=on||SETUP;
+  if(on){ if(!n.dataset.kz){ n.dataset.kz=n.textContent; b.dataset.kz=b.textContent; } n.textContent='واحة اللسان العربي'; b.textContent='تطبيق العائلة: الواحة، و«كنوز البيان»، والمنظومة الحسنية'; }
+  else if(n.dataset.kz){ n.textContent=n.dataset.kz; b.textContent=b.dataset.kz; } }
+/* the end of the first setup: who starts, a test of the Arabic voice (without one, the 🔊 buttons are silent), another child */
+var SETUP=false;
+function setupDone(){
+  L=null;
+  go('<div class="ax-page narrow" style="--ax:var(--olive)"><header class="page-head center-head"><h1 class="h1">تمّ الإعداد: من يبدأ؟</h1>'+
+    '<p class="lead">اختاروا الطفل الذي يلعب الآن، فتُفتح له واحته. وتعودون إلى لوحاتكم من «من يلعب؟ ← 👪 للوالدين».</p></header>'+
+    '<div class="who">'+FAM.kids.map(function(k){return '<button class="who-card" type="button" data-act="setupStart" data-id="'+k.id+'" style="--ax:var(--'+(k.c||'lapis')+')">'+avatarHTML(k,'l')+'<span class="who-n">'+esc(k.name)+'</span></button>';}).join('')+'</div>'+
+    '<section><h2 class="h2">هل في الجهاز صوتٌ عربي؟</h2><p>الصغار يسمعون الأسئلة والخيارات بالقارئ الآلي. جرّبوه الآن: إن لم تسمعوا جملةً عربية واضحة فثبّتوا صوتًا عربيًّا من إعدادات «تحويل النص إلى كلام» في الجهاز.</p>'+
+      '<div class="actions"><button class="btn ghost" type="button" data-act="voiceTest">🔊 جرّبوا الصوت</button></div><p class="muted" id="vtFb" role="status"></p></section>'+
+    '<div class="actions"><button class="btn ghost" type="button" data-act="kidAdd">➕ أضيفوا طفلًا آخر</button></div></div>');
+}
+function setupStart(id){ SETUP=false; PARENT_UNTIL=0; selectKid(id); toOasis(); }
+function voiceTest(){
+  var fb=document.getElementById('vtFb'), say=function(t){ if(fb) fb.textContent=t; };
+  if(!hasTTS) return say('لا يدعم هذا المتصفح القراءة الآلية. جرّبوا تطبيق أندرويد أو متصفحًا آخر.');
+  loadVoices();
+  try{ speechSynthesis.cancel(); var u=new SpeechSynthesisUtterance('السلام عليكم، أنا رفيقكم في واحة اللسان العربي'); u.lang='ar-SA'; if(arVoice) u.voice=arVoice; u.rate=.92; speechSynthesis.speak(u); }catch(e){}
+  say(arVoice?'هل سمعتم الجملة بالعربية؟ إن سمعتموها فالصوت جاهز.':'لم نجد صوتًا عربيًّا في الجهاز، فقد تُقرأ الجملة بصوتٍ غير عربي أو لا تُقرأ. ثبّتوا صوتًا عربيًّا من إعدادات «تحويل النص إلى كلام».');
+}
 function setupWelcome(){
   L=null;
   go('<div class="ax-page" style="--ax:var(--lapis)">'+
     '<header class="page-head"><span class="eyebrow">نسخة العائلة</span><h1 class="h1">أهلًا بكم في «واحة اللسان العربي»</h1>'+
-    '<p class="lead">تطبيقٌ عائلي يتعلّم فيه أطفالكم العربية من محفوظهم من القرآن والحديث والشعر، ويكشفون أسرار البيان في خزائن «كنوز البيان»، ويسجّلون أصواتهم، ويكتبون ويرسمون، ويصنعون مجلّتهم الخاصة.</p></header>'+
+    '<p class="lead">تطبيقٌ عائلي يتعلّم فيه أطفالكم العربية من محفوظهم من القرآن والحديث والشعر، ويكشفون أسرار البيان في خزائن «كنوز البيان»، ويسجّلون أصواتهم، ويكتبون ويرسمون، ويصنعون مجلّتهم الخاصة.</p>'+
+    '<div class="actions"><button class="btn" type="button" data-act="setupPin">ابدؤوا: أنشئوا رمز وليّ الأمر</button>'+
+    '<label class="btn ghost file-btn">عندنا نسخةٌ احتياطية<input type="file" accept=".json,application/json" data-file="restore" hidden></label></div></header>'+
     '<section class="promise"><h2 class="h2">'+ICON.shield.replace('<svg','<svg class="ic"')+' وعدُنا لكم</h2><ul class="checks">'+
       '<li><strong>كلّ شيءٍ يبقى على هذا الجهاز:</strong> أسماء الأطفال وأصواتهم ورسومهم وصورهم. لا حساب، ولا خادم، ولا رفع إلى الإنترنت.</li>'+
       '<li><strong>لا يخرج عملٌ إلا بأيديكم:</strong> أنتم من يُصدر الملف ويرسله، بعد تنبيهٍ وموافقةٍ صريحة في كل مرة، حتى في الإهداءات.</li>'+
@@ -435,15 +497,14 @@ function setupWelcome(){
       '<li><strong>الصورة الشخصية للطفل</strong>، إن أضفتموها، تبقى هنا ولا تدخل أي ملفٍ يُرسَل.</li></ul></section>'+
     installHTML()+
     '<aside class="didyou"><span class="eyebrow">رمز وليّ الأمر</span><p>سننشئ الآن رمزًا من الأرقام يحمي ركن وليّ الأمر: الاعتماد والتصدير والإعدادات، ثم يظهر لكم <strong>رمز استرداد</strong> ترسلونه إلى بريدكم، فبه وحده يُعاد ضبط الرمز إن نُسي.</p></aside>'+
-    '<div class="actions"><button class="btn" type="button" data-act="setupPin">أنشئوا الرمز</button>'+
-    '<label class="btn ghost file-btn">عندنا نسخةٌ احتياطية<input type="file" accept=".json,application/json" data-file="restore" hidden></label></div></div>');
+    '</div>');
 }
 function setupPin(afterReset){
-  L=null; SETPIN_RESET=!!afterReset;
+  L=null; SETPIN_RESET=!!afterReset; var change=!!FAM.pin&&!afterReset;
   go('<div class="ax-page narrow" style="--ax:var(--plum)">'+
     '<header class="page-head center-head"><span class="ch-ico big">'+ICON.lock+'</span><h1 class="h1">'+(afterReset?'رمزٌ جديد':'رمز وليّ الأمر')+'</h1>'+
     '<p class="lead">من أربعة أرقامٍ إلى ستة. اختاروا رمزًا لا يعرفه الأطفال، ولا يُحفظ إلا على هذا الجهاز.</p></header>'+
-    '<form class="form" id="setPinForm" autocomplete="off" novalidate><label for="p1">الرمز</label><input id="p1" class="pin-in" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" required>'+
+    '<form class="form" id="setPinForm" autocomplete="off" novalidate>'+(change?'<label for="p0">الرمز الحالي</label><input id="p0" class="pin-in" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" required>':'')+'<label for="p1">'+(change?'الرمز الجديد':'الرمز')+'</label><input id="p1" class="pin-in" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" required>'+
     '<label for="p2">أعيدوا كتابة الرمز</label><input id="p2" class="pin-in" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" required>'+
     '<p class="form-err" id="setPinErr" role="alert"></p><div class="actions"><button class="btn" type="submit">احفظوا الرمز</button></div></form></div>');
 }
@@ -452,7 +513,17 @@ async function setPinSubmit(){
   a=a.trim(); b=b.trim();
   if(!/^\d{4,6}$/.test(a)){err.textContent='الرمز من أربعة أرقامٍ إلى ستة، أرقامٌ فقط.';return;}
   if(a!==b){err.textContent='الرمزان غير متطابقين.';return;}
-  FAM.salt=uid('s'); FAM.pin=await hashPin(a,FAM.salt); saveFam(); parentTouch();
+  /* changing the PIN (not making the first one, nor one after a reset) needs the current PIN typed here, and is logged and shown
+     for thirty days in every consent sheet, like a reset */
+  var p0=document.getElementById('p0'), change=!!p0;
+  if(change){
+    if(pinLockLeft()){err.textContent=pinLockMsg();return;}
+    if((await hashPin((p0.value||'').trim(),FAM.salt||''))!==FAM.pin){pinFail();p0.value='';err.textContent=pinLockLeft()?pinLockMsg():'الرمز الحالي غير صحيح.';return;}
+    pinOk();
+  }
+  FAM.salt=uid('s'); FAM.pin=await hashPin(a,FAM.salt);
+  if(change){ (FAM.pinLog=FAM.pinLog||[]).push({t:Date.now(),k:'change'}); FAM.pinResets=FAM.pinResets||[]; FAM.pinResets.push(Date.now()); }
+  saveFam(); parentStart();
   try{if(navigator.storage&&navigator.storage.persist) navigator.storage.persist();}catch(e){}
   var cont=function(){ if(!FAM.kids.length) return kidForm(null); toast('حُفظ الرمز الجديد.'); parentHome(); };
   /* a new family, or a PIN made after a reset, gets a new recovery code (the old one, if any, has been used or is unknown) */
@@ -528,8 +599,9 @@ async function kidFormSubmit(){
   if(URLS['photo-tmp']){try{URL.revokeObjectURL(URLS['photo-tmp']);}catch(e){} delete URLS['photo-tmp'];}
   var more=!!(document.getElementById('kfMore')||{}).checked;
   saveFam(); var first=FAM.kids.length===1&&isNew; KF=null;
-  if(first&&more){ selectKid(k.id); toast('حُفظ ملفّ '+k.name+'. والآن الطفل الثاني.'); return kidForm(null); }
+  if(first&&more){ SETUP=true; selectKid(k.id); toast('حُفظ ملفّ '+k.name+'. والآن الطفل الثاني.'); return kidForm(null); }
   if(first){PARENT_UNTIL=0;selectKid(k.id);if(!IN_KUNUZ) return toOasis();toast(Gx('⟨أهلًا بك|أهلًا بكِ⟩ يا ',k.g==='f')+k.name+'!');return home();}
+  if(SETUP){ toast('حُفظ ملفّ '+k.name+'.'); return setupDone(); }
   toast('حُفظ ملفّ '+k.name+'.'); pKids();
 }
 function shrinkImage(file,max,q){
@@ -591,14 +663,14 @@ function home(){
       '</div></section>'+
     '<section><h2 class="h2">الخزائن '+axWord()+'</h2><p class="lead" style="margin:0 0 12px">'+gemsWord(LESSONS.length)+' من أسرار العربية، جمعناها من كتب علماء أحبّوها، من الخليل بن أحمد إلى الدكتور فاضل السامرائي وعارف حجاوي وقناة «تأمَّل».</p><div class="chambers">'+AXES.map(chamberCard).join('')+'</div></section>'+
     toolsHTML()+
-    '<section class="doors">'+
+    (function(x){ return x ? '<section class="doors">'+x+'</section>' : ''; })(wahaDoor()+rmDoor())+   /* the way back to the oasis and Ramadan's door stay in sight */
+    '<details class="fold"><summary><span class="h2">المزيد: ورشة الخيال، ورفّ الكنوز</span></summary><section class="doors">'+
       '<button class="door" type="button" data-view="workshop" style="--ax:var(--plum)"><span class="door-t">ورشة الخيال</span><span class="door-d">تمارين كتابةٍ تحوّل ما ⟨تعلّمته|تعلّمتِه⟩ إلى صورٍ من خيالك.</span></button>'+
       '<button class="door" type="button" data-view="shelf" style="--ax:var(--teal)"><span class="door-t">رفّ الكنوز</span><span class="door-d">أغنيةٌ وقنواتٌ وكتبٌ تُكمل الرحلة، للوالدين والأطفال.</span></button>'+
-      wahaDoor()+rmDoor()+
-    '</section>'+
-    '<section><h2 class="h2">سلسلة العلماء</h2>'+
+    '</section></details>'+
+    '<details class="fold"><summary><span class="h2">سلسلة العلماء</span></summary><section>'+
       '<p class="lead" style="margin:0 0 12px">من صاحب أول معجمٍ عربي إلى صاحب «لمسات بيانية»: كلٌّ منهم بنى على من سبقه. ⟨اضغط|اضغطي⟩ على اسم درسٍ ⟨لتفتحه|لتفتحيه⟩.</p>'+
-      '<ol class="chain">'+SCH.map(schItem).join('')+'</ol></section>');
+      '<ol class="chain">'+SCH.map(schItem).join('')+'</ol></section></details>');
 }
 function doorBtn(act,c,ic,t,d){
   return '<button class="sdoor" type="button" data-act="'+act+'" style="--ax:var(--'+c+')"><span class="ch-ico">'+ICON[ic]+'</span><span class="door-t">'+t+'</span><span class="door-d">'+d+'</span></button>';

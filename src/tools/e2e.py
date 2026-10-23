@@ -165,7 +165,7 @@ async def main():
         await page.fill('#pinIn', '1234'); await page.click('#pinForm button[type=submit]')
         await page.wait_for_selector('.wlist')
         t = await text(page)
-        ok('بانتظار مراجعتكم · ٣' in t, 'parent sees 3 pending')
+        ok('بانتظار مراجعتكم | ٣' in t, 'parent sees 3 pending')
         await shot(page, '09-parent')
         # approve lamsa with rubric
         await page.locator('.wrow', has_text='الغيث').first.click()
@@ -200,7 +200,7 @@ async def main():
         await shot(page, '12-consent', full=False)
         await page.click('.modal [data-m="1"]')
         ok('ضعوا علامة الموافقة' in (await page.inner_text('#mErr')), 'consent requires checkbox')
-        await page.check('#cOk')
+        await page.check('#cOk'); await page.fill('#fpIn', '1234')
         async with page.expect_download() as dli:
             await page.click('.modal [data-m="1"]')
         dl = await dli.value
@@ -294,7 +294,7 @@ async def main():
         await page.wait_for_selector('.mz-cover')
         await page.click('[data-act="magExport"]')
         await page.wait_for_selector('.modal .consent')
-        await page.check('#cOk')
+        await page.check('#cOk'); await page.fill('#fpIn', '1234')
         async with page.expect_download() as dli:
             await page.click('.modal [data-m="1"]')
         dl = await dli.value
@@ -313,7 +313,7 @@ async def main():
         await page.click('[data-act="pApproved"]')
         await page.locator('.wrow', has_text='هلال').first.click()
         await page.click('[data-act="exContrib"]')
-        await page.check('#cAnon'); await page.check('#cOk')
+        await page.check('#cAnon'); await page.check('#cOk'); await page.fill('#fpIn', '1234')
         async with page.expect_download() as dli:
             await page.click('.modal [data-m="1"]')
         dl = await dli.value
@@ -382,7 +382,7 @@ async def main():
         n = await page.locator('.pl-row').count()
         ok(n >= 3, 'radio has %d items' % n)
         await page.click('[data-act="radioAll"]'); await page.wait_for_timeout(700)
-        ok('على الهواء · ١' in (await page.inner_text('#plNow')), 'radio playing first')
+        ok('على الهواء: ١' in (await page.inner_text('#plNow')), 'radio playing first')
         await shot(page, '20-radio')
         # gift
         await page.click('#homeBtn'); await page.click('[data-act="studio"]')
@@ -396,7 +396,7 @@ async def main():
         await enter_parent(page)
         await page.locator('.wrow', has_text='جدّتي').first.click()
         await page.click('[data-act="approve"]'); await page.wait_for_selector('.pub')
-        await page.click('[data-act="exGift"]'); await page.check('#cOk')
+        await page.click('[data-act="exGift"]'); await page.check('#cOk'); await page.fill('#fpIn', '1234')
         async with page.expect_download() as dli:
             await page.click('.modal [data-m="1"]')
         dl = await dli.value
@@ -409,7 +409,7 @@ async def main():
         await page.wait_for_selector('.modal #bk1')
         await page.fill('#bk1', 'abc12'); await page.fill('#bk2', 'abc12'); await page.click('.modal [data-m="1"]')
         ok('ستة أحرف' in (await page.inner_text('#mErr')), 'short backup password rejected')
-        await page.fill('#bk1', 'kunuz-2026'); await page.fill('#bk2', 'kunuz-2026')
+        await page.fill('#bk1', 'kunuz-2026'); await page.fill('#bk2', 'kunuz-2026'); await page.fill('#fpIn', '1234')
         async with page.expect_download() as dli:
             await page.click('.modal [data-m="1"]')
         dl = await dli.value
