@@ -120,6 +120,8 @@ hp = os.path.join(DIST, 'hasaniya', 'index.html')
 h = open(hp, encoding='utf-8').read()
 for old, new in (('<link rel="manifest" href="manifest.json">', '<link rel="manifest" href="../manifest.json">'),
                  ('<script src="js/android-shim.js"></script>', '<script src="js/waha-early.js"></script>\n<script src="js/android-shim.js"></script>'),
+                 # the product's own fonts (bundled, offline), so the three sections read alike
+                 ('<link rel="manifest" href="../manifest.json">', '<link rel="manifest" href="../manifest.json">\n<link rel="stylesheet" href="../fonts/fonts.css">'),
                  ('<script src="js/app.js"></script>', '<script src="js/app.js"></script>\n<script src="js/waha-late.js"></script>')):
     if h.count(old) != 1:
         raise SystemExit('hasaniya/index.html changed upstream; adapter hook not found: ' + old)
@@ -137,6 +139,17 @@ needs = json.loads(re.search(r'var KZ_HS_NEEDS = (\[[^\]]*\])', late).group(1).r
 missing = [n for n in needs if not re.search(r'(^|\n)\s*(async\s+)?(function\s+%s\s*\(|(const|let|var)\s+%s\b)' % (n, n), hs_src)]
 if missing:
     raise SystemExit('hasaniya upstream no longer defines what the adapter relies on: ' + ', '.join(missing))
+# the girls' labels: every masculine phrase the adapter rewrites must still be in the Hasaniya (index.html or its scripts)
+hs_all = hs_src + open(hp, encoding='utf-8').read()
+fem = re.search(r'var HS_FEM = \[(.*?)\n  \];', late, re.S)
+pairs = re.findall(r"\['([^']+)', '([^']+)'\]", fem.group(1)) if fem else []
+if not pairs:
+    raise SystemExit('hasaniya_late.js: HS_FEM not found')
+names = re.search(r'var HS_NAMES = \[(.*?)\n  \];', late, re.S)
+pairs += re.findall(r"\['([^']+)', '([^']+)'\]", names.group(1)) if names else []
+gone = [m for m, f in pairs if m not in hs_all]
+if gone:
+    raise SystemExit("hasaniya: these labels are no longer in the Hasaniya, update HS_FEM in hasaniya_late.js: " + ' · '.join(gone))
 
 # ---------- one service worker ----------
 assets, digest = ['./'], hashlib.sha256()

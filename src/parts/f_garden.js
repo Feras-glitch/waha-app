@@ -1,5 +1,5 @@
 /* ================= phase 2: the garden of Bayan & certificates ================= */
-/* Everything is derived from the child's own record: lessons (prog), tests and streak (st), approved works,
+/* Everything is derived from the child's own record: lessons (prog), tests and the days of «جوهرة اليوم» (st), approved works,
    magazines, teacher approvals, workshop writings. Certificates are stored once earned (d.certs) so they never vanish. */
 
 function kidData(kidId){ if(KID&&KID.id===kidId&&KD){KD.prog=prog;KD.st=ST;return KD;} return kidLoad(kidId); }
@@ -9,15 +9,19 @@ function cnt(n,f){return n===1?f[0]:n===2?f[1]:(n<=10?n2a(n)+' '+f[2]:n2a(n)+' '
 
 function kidStats(kidId){
   var d=kidData(kidId), P=d.prog, S=d.st, t=today();
-  var s={d:d,gems:0,perfect:0,axN:{},axHave:{},axDone:{},best:{},fullBest:null,bestStreak:(S.daily&&S.daily.best)||0,alive:false,
+  var s={kid:kidId,d:d,gems:0,perfect:0,axN:{},axHave:{},axDone:{},best:{},fullBest:null,weeks:(S.daily&&S.daily.wk)||0,alive:false,
     approved:0,firstWork:null,teacher:0,firstTeacher:null,writings:0,mags:0,editorMag:null,weekly:0,riddles:0};
   LESSONS.forEach(function(l){ s.axN[l.ax]=(s.axN[l.ax]||0)+1; if(P[l.id]){ s.gems++; s.axHave[l.ax]=(s.axHave[l.ax]||0)+1; if(P[l.id].p) s.perfect++; } });
   AXES.forEach(function(a){ s.axDone[a.id]=(s.axHave[a.id]||0)===s.axN[a.id]; });
-  (S.tests||[]).forEach(function(x){
-    if(x.m==='axis'&&x.ax&&(!s.best[x.ax]||x.p>s.best[x.ax].p)) s.best[x.ax]={p:x.p,d:x.d};
-    if(x.m==='full'&&(!s.fullBest||x.p>s.fullBest.p)) s.fullBest={p:x.p,d:x.d};
+  var lastAx={}, lastFull=null;
+  (S.tests||[]).slice().sort(function(a,b){return dateOf(a.d)-dateOf(b.d);}).forEach(function(x){
+    /* a chamber's mastery counts the first attempt, or one at least a week after the attempt before it on that chamber:
+       retaking the same questions the same afternoon until they pass is not mastery */
+    if(x.m==='axis'&&x.ax){ var pv=lastAx[x.ax]; lastAx[x.ax]=x.d; if((!pv||dateOf(x.d)-dateOf(pv)>=7*864e5)&&(!s.best[x.ax]||x.p>s.best[x.ax].p)) s.best[x.ax]={p:x.p,d:x.d}; }
+    /* the full test follows the same rule: its first attempt, or one a week after the attempt before it */
+    if(x.m==='full'){ var pf=lastFull; lastFull=x.d; if((!pf||dateOf(x.d)-dateOf(pf)>=7*864e5)&&(!s.fullBest||x.p>s.fullBest.p)) s.fullBest={p:x.p,d:x.d}; }
   });
-  var D=S.daily||{}; s.alive=D.last===t||D.last===addDays(t,-1);
+  s.alive=true;   // the fountain never stops: a garden takes nothing back
   var mine=WORKS.filter(function(w){return w.kid===kidId;});
   var appr=mine.filter(function(w){return w.status==='approved';}).sort(function(a,b){return (a.approvedAt||a.updated)-(b.approvedAt||b.updated);});
   s.approved=appr.length; s.firstWork=appr[0]||null;
@@ -35,7 +39,7 @@ var AX_PATRON={lamasat:'في رحاب «لمسات بيانية» للدكتور
   nahw:'في رحاب «دلائل الإعجاز» لعبد القاهر الجرجاني، و«معاني النحو» للدكتور فاضل السامرائي',asrar:'في رحاب «العين» للخليل بن أحمد، و«الخصائص» لابن جني',
   aliya:'في رحاب «اللغة العالية» لعارف حجاوي',taammal:'في رحاب قناة «تأمَّل» لشادي داود',
   asma:'في رحاب «المقصد الأسنى» للغزالي، و«لمسات بيانية» للدكتور فاضل السامرائي'};
-var CERT_K={x:['شهادات الإتقان','تُنال باختبارٍ حقيقي: ثمانون في المئة أو أكثر من المحاولة الأولى.','إتقان'],
+var CERT_K={x:['شهادات الإتقان','تُنال باختبارٍ حقيقي: ثمانون في المئة أو أكثر بأوّل جوابٍ في كلّ سؤال، في أوّل اختبار أو بعد أسبوعٍ من الاختبار الذي قبله.','إتقان'],
   c:['شهادات الإتمام','تُنال بإكمال الدروس وجمع الجواهر.','إتمام'],
   w:['شهادات الإبداع والمواظبة','تُنال بالعمل والصبر، وباعتماد وليّ الأمر والمعلّم.','تقدير']};
 var CERTS=[];
@@ -43,12 +47,12 @@ AXES.forEach(function(a){
   CERTS.push({id:'mx-'+a.id,k:'x',c:a.c,t:'شهادة إتقان',sub:'خزانة «'+a.name+'»',patron:AX_PATRON[a.id],
     ok:function(s){var b=s.best[a.id];return b&&b.p>=80?{d:b.d,sc:b.p}:null;},
     body:function(n,aw){return 'تشهد «كنوز البيان» بأنّ ⟨الطالب|الطالبة⟩ '+n+' ⟨اجتاز|اجتازت⟩ اختبار خزانة «'+a.name+'» بدرجة '+n2a(aw.sc)+'٪ من المحاولة الأولى، ⟨فاستحقّ|فاستحقّت⟩ شهادة الإتقان.';},
-    need:function(s){var b=s.best[a.id];return '⟨اجتز|اجتازي⟩ «اختبار الخزانة» بثمانين في المئة أو أكثر.'+(b?' أفضل درجةٍ حتى الآن: '+n2a(b.p)+'٪.':'');},
+    need:function(s){var b=s.best[a.id];return '⟨اجتز|اجتازي⟩ «اختبار الخزانة» بثمانين في المئة أو أكثر (في أول محاولة، أو بعد أسبوعٍ من المحاولة التي قبلها).'+(b?' أفضل درجةٍ حتى الآن: '+n2a(b.p)+'٪.':'');},
     prog:function(s){var b=s.best[a.id];return [b?Math.min(b.p,80):0,80];}});
 });
 CERTS.push({id:'mx-full',k:'x',c:'gold',t:'شهادة الإتقان الشامل',sub:'الخزائن '+axWord(),patron:'من الخليل بن أحمد إلى الدكتور فاضل السامرائي',
   ok:function(s){var b=s.fullBest;return b&&b.p>=80?{d:b.d,sc:b.p}:null;},
-  body:function(n,aw){return 'تشهد «كنوز البيان» بأنّ ⟨الطالب|الطالبة⟩ '+n+' ⟨اجتاز|اجتازت⟩ الاختبار الشامل في الخزائن '+axWord()+' بدرجة '+n2a(aw.sc)+'٪ من المحاولة الأولى، ⟨فاستحقّ|فاستحقّت⟩ شهادة الإتقان الشامل.';},
+  body:function(n,aw){return 'تشهد «كنوز البيان» بأنّ ⟨الطالب|الطالبة⟩ '+n+' ⟨اجتاز|اجتازت⟩ الاختبار الشامل في الخزائن '+axWord()+' بدرجة '+n2a(aw.sc)+'٪، بأوّل جوابٍ في كلّ سؤال، ⟨فاستحقّ|فاستحقّت⟩ شهادة الإتقان الشامل.';},
   need:function(s){var b=s.fullBest;return '⟨اجتز|اجتازي⟩ «الاختبار الشامل» بثمانين في المئة أو أكثر.'+(b?' أفضل درجةٍ حتى الآن: '+n2a(b.p)+'٪.':'');},
   prog:function(s){var b=s.fullBest;return [b?Math.min(b.p,80):0,80];}});
 AXES.forEach(function(a){
@@ -69,12 +73,13 @@ var GEM_N=LESSONS.length;
     need:function(){return '⟨اجمع|اجمعي⟩ '+cnt(g[0],['جوهرة','جوهرتين','جواهر','جوهرة'])+'.';},
     prog:function(s){return [Math.min(s.gems,g[0]),g[0]];}});
 });
-[[7,'سبعة أيامٍ متتالية'],[30,'ثلاثون يومًا متتالية']].forEach(function(x){
-  CERTS.push({id:'s-'+x[0],k:'w',c:'olive',t:'شهادة المواظبة',sub:x[1],
-    ok:function(s){return s.bestStreak>=x[0]?{}:null;},
-    body:function(n){return 'تشهد «كنوز البيان» بأنّ ⟨الطالب|الطالبة⟩ '+n+' ⟨واظب|واظبت⟩ على «جوهرة اليوم» '+(x[0]===7?'سبعة أيامٍ متتالية':'ثلاثين يومًا متتالية')+'، وأحبّ الأعمال أدومها وإن قلّ.';},
-    need:function(s){return '⟨أجب|أجيبي⟩ عن «جوهرة اليوم» '+(x[0]===7?'سبعة أيامٍ':'ثلاثين يومًا')+' متتالية.'+(s.bestStreak?' أطول سلسلةٍ لك: '+daysWord(s.bestStreak)+'.':'');},
-    prog:function(s){return [Math.min(s.bestStreak,x[0]),x[0]];}});
+/* steadiness is counted in weeks of four days, not in days without a break: a missed day costs nothing */
+[[2,'أسبوعان','أسبوعين'],[8,'ثمانية أسابيع','ثمانية أسابيع']].forEach(function(x){
+  CERTS.push({id:'s-w'+x[0],k:'w',c:'olive',t:'شهادة المواظبة',sub:x[1]+'، في كلٍّ منها أربعة أيام',
+    ok:function(s){return s.weeks>=x[0]?{}:null;},
+    body:function(n){return 'تشهد «كنوز البيان» بأنّ ⟨الطالب|الطالبة⟩ '+n+' ⟨واظب|واظبت⟩ على «جوهرة اليوم» أربعة أيامٍ في الأسبوع، '+x[2]+'، وأحبّ الأعمال أدومها وإن قلّ.';},
+    need:function(s){return '⟨أتمّ|أتمّي⟩ '+x[2]+' في كلٍّ منها أربعة أيامٍ من «جوهرة اليوم»، ولا يلزم أن تتتابع الأسابيع.'+(s.weeks?' حتى الآن: '+n2a(Math.min(s.weeks,x[0]))+' من '+n2a(x[0])+'.':'');},
+    prog:function(s){return [Math.min(s.weeks,x[0]),x[0]];}});
 });
 CERTS.push({id:'w-1',k:'w',c:'rose',t:'⟨شهادة المبدع الصغير|شهادة المبدعة الصغيرة⟩',sub:'أوّل عملٍ معتمد',
   ok:function(s){return s.firstWork?{d:s.firstWork.approvedAt,x:titleOf(s.firstWork)}:null;},
@@ -121,7 +126,7 @@ function gardenItems(s){
   var it=[], certs=s.d.certs||{};
   LESSONS.forEach(function(l){ if(s.d.prog[l.id]) it.push('f:'+l.id); });
   AXES.forEach(function(a){ if(s.axDone[a.id]) it.push('t:'+a.id); if(certs['mx-'+a.id]) it.push('x:'+a.id); });
-  [3,7,14].forEach(function(n,i){ if(s.bestStreak>=n) it.push('b'+(i+1)); });
+  [1,4,8].forEach(function(n,i){ if(s.weeks>=n) it.push('b'+(i+1)); });
   [1,3,6,10,15].forEach(function(n,i){ if(s.approved>=n) it.push('u'+(i+1)); });
   [1,2,3,4].forEach(function(n){ if(s.mags>=n) it.push('l'+n); });
   [1,2,3,4,5].forEach(function(n){ if(s.writings>=n) it.push('v'+n); });
@@ -129,7 +134,10 @@ function gardenItems(s){
   var rmN=Object.keys(s.d.rm||{}).length; [10,20,30].forEach(function(n,i){ if(rmN>=n) it.push('r'+(i+1)); });
   if(s.weekly) it.push('n');
   if(certs['mx-full']) it.push('pk');
-  return it;
+  /* what was earned stays: a work returned or a reading removed later does not take its butterfly or its nightingale back */
+  var keep=Array.isArray(s.d.gkeep)?s.d.gkeep:[], add=it.filter(function(x){return keep.indexOf(x)<0;});
+  if(add.length&&s.kid){ s.d.gkeep=keep.concat(add); try{ saveKidData(s.kid,s.d); }catch(e){} }
+  return keep.concat(add);
 }
 var GWORD={f:['وردةٌ','وردتان','ورود','وردة'],t:['شجرةٌ','شجرتان','أشجار','شجرة'],x:['شجرةٌ مثمرة','شجرتان مثمرتان','أشجارٍ مثمرة','شجرةً مثمرة'],
   b:['طائرٌ','طائران','طيور','طائرًا'],u:['فراشةٌ','فراشتان','فراشات','فراشةً'],l:['فانوسٌ','فانوسان','فوانيس','فانوسًا'],
@@ -257,7 +265,7 @@ var GLEG=[
   ['🌷','وردةٌ لكلّ جوهرة','وسطها ذهبيّ إن ⟨أجبتَ|أجبتِ⟩ بلا خطأ.',function(s,c){return [s.gems,LESSONS.length];}],
   ['🌳','شجرةٌ لكلّ خزانةٍ ⟨تكملها|تكملينها⟩','في حوضها، بلون الخزانة.',function(s){return [AXES.filter(function(a){return s.axDone[a.id];}).length,AXES.length];}],
   ['🍎','ثمارٌ على الشجرة حين ⟨تتقن|تتقنين⟩ الخزانة','ثمانون في المئة أو أكثر في «اختبار الخزانة».',function(s,c){return [AXES.filter(function(a){return c['mx-'+a.id];}).length,AXES.length];}],
-  ['🐦','طيورٌ على السور','حين ⟨تواظب|تواظبين⟩ على «جوهرة اليوم» ٣ أيام، ثم ٧، ثم ١٤.',function(s){return [[3,7,14].filter(function(n){return s.bestStreak>=n;}).length,3];}],
+  ['🐦','طيورٌ على السور','طائرٌ حين ⟨تتمّ|تتمّين⟩ أوّل أسبوعٍ فيه أربعة أيامٍ من «جوهرة اليوم»، ثم عند الأسبوع الرابع، ثم الثامن.',function(s){return [[1,4,8].filter(function(n){return s.weeks>=n;}).length,3];}],
   ['🦋','فراشاتٌ تطير','كلما اعتمد وليّ أمرك أعمالًا ⟨لك|لكِ⟩: ١ ثم ٣ ثم ٦ ثم ١٠ ثم ١٥.',function(s){return [[1,3,6,10,15].filter(function(n){return s.approved>=n;}).length,5];}],
   ['⭐','نجومٌ في السماء','نجمةٌ كلما اعتمد المعلّم عملًا ⟨لك|لكِ⟩.',function(s){return [Math.min(s.teacher,5),5];}],
   ['🏮','فوانيس في الأقواس','فانوسٌ لكلّ مجلةٍ تصدر وفيها عملٌ ⟨لك|لكِ⟩.',function(s){return [Math.min(s.mags,4),4];}],
@@ -287,7 +295,7 @@ function gardenView(kidId,asParent){
     (fresh.length?'<p class="tip new-tip">✨ جديدٌ في حديقتك: '+gardenNews(fresh)+'.</p>':'')+
     (!its.length&&!asParent?'<p class="tip">🌱 حديقتك تنتظر أول وردة: ⟨أكمل|أكملي⟩ درسًا واحدًا، ⟨وتعال|وتعالَي⟩ ⟨لتراها|لتريها⟩ تنبت هنا.</p>':'')+
     '<div class="garden">'+gardenSVG(s,its,{id:'gv',fresh:fresh,label:'حديقة '+k.name})+'</div>'+
-    (s.alive?'':'<p class="muted small center">النافورة تجري ما دامت سلسلة «جوهرة اليوم» قائمة.</p>')+
+
     '<section><h2 class="h2">'+(asParent?'كيف تنمو الحديقة؟':'كيف تنمو حديقتك؟')+'</h2><ul class="gleg">'+GLEG.map(function(g){
       var p=g[3](s,c), done=p[0]>=p[1];
       return '<li class="'+(done?'done':'')+'"><span class="gl-e" aria-hidden="true">'+g[0]+'</span><span class="gl-m"><span class="gl-t">'+g[1]+'</span><span class="gl-d">'+g[2]+'</span>'+
@@ -335,7 +343,7 @@ function certView(id,kidId,asParent){
   if(!asParent&&!aw.seen){aw.seen=true;saveKidData(k.id,d);}
   go('<div class="ax-page cert-page" style="--ax:var(--'+c.c+')"><div class="ph-top no-print"><button class="back" type="button" data-act="certs"'+(asParent?' data-k="'+k.id+'"':'')+'>'+BACK+' '+(asParent?'شهادات '+esc(k.name):'شهاداتي')+'</button></div>'+
     certHTML(c,aw,k.name,gOf(k))+
-    '<div class="actions no-print"><button class="btn" type="button" data-act="print">اطبعها</button>'+
+    '<div class="actions no-print"><button class="btn" type="button" data-act="print">'+(asParent?'اطبعوها':'⟨اطبعها|اطبعيها⟩ (برمز وليّ الأمر)')+'</button>'+
       (asParent?'<button class="btn ghost" type="button" data-act="exCert" data-id="'+id+'" data-k="'+k.id+'">'+ICON.share+' أرسلوها</button>':'')+'</div>'+
     (asParent?'':'<p class="muted small no-print">⟨تريد|تريدين⟩ أن تراها جدّتك؟ ⟨اطلب|اطلبي⟩ من وليّ أمرك أن يرسلها من «ركن وليّ الأمر».</p>')+'</div>');
 }

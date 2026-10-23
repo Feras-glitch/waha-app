@@ -7,12 +7,14 @@ import filecmp, os, shutil, sys
 SRC = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REPO = os.path.dirname(SRC)
 DIST = os.path.join(SRC, 'dist')
-KEEP = {'tests'}
+KEEP = {'tests', 'audio'}   # web/audio/: the recitation pack, put there by CI (audio-pack.yml), never built from src/
 
 
 def plan(web):
     want = set()
-    for base, _, files in os.walk(DIST):
+    for base, dirs, files in os.walk(DIST, topdown=True):
+        if os.path.relpath(base, DIST) == '.':
+            dirs[:] = [d for d in dirs if d not in KEEP]
         for f in files:
             want.add(os.path.relpath(os.path.join(base, f), DIST))
     have = set()

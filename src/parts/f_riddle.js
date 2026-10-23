@@ -74,6 +74,18 @@ function rzIntro(){
     '<div class="actions center-actions"><button class="btn" type="button" data-act="rzG" data-v="m">أنا ولد</button><button class="btn" type="button" data-act="rzG" data-v="f">أنا بنت</button></div>'+
     '<p class="muted small center">نسأل لنخاطبك بالصيغة الصحيحة فقط، ولا يُحفظ شيء.</p></div>');
 }
+/* telling the riddle's author sends the typed name out through WhatsApp: on a family's device (one of our children may be the one
+   solving it) that is the parent's step, with the PIN and logged; on a friend's device nothing of ours is involved */
+async function rzTell(){
+  var R=RZ.r, url='https://wa.me/?text='+encodeURIComponent('حللتُ لغزك «'+R.t+'»! الجواب: «'+R.a+'»'+(KID.name?' — '+KID.name:''));
+  if(FAM&&FAM.pin){
+    var ok=await pinAsk({title:'رسالةٌ تخرج من الجهاز',c:'teal',ok:'أرسلوها',
+      html:'<p>ستُفتح واتساب برسالةٍ إلى صاحب اللغز'+(KID.name?' فيها الاسم «'+esc(KID.name)+'»':'')+'. وبعد إرسالها لا تبقى في يدكم.</p>'});
+    if(!ok) return;
+    try{ logOut('رسالة واتساب إلى صاحب لغزٍ مُهدى'+(KID.name?' باسم '+KID.name:''),null); }catch(e){}
+  }
+  try{ window.open(url,'_blank','noopener'); }catch(e){}
+}
 function rzStart(g){
   var n=((document.getElementById('rzName')||{}).value||'').trim().slice(0,20);
   KID.g=g==='f'?'f':'m'; KID.name=n; rzView();
@@ -86,7 +98,7 @@ function rzView(){
       return '<button class="'+cls+'" type="button" data-act="rzPick" data-v="'+i+'"'+(RZ.done||RZ.wrong[i]?' disabled':'')+'>'+esc(o)+'</button>';}).join('')+'</div>':'';
   var fb='';
   if(RZ.done) fb='<div class="fb-ok"><strong>'+praise()+'</strong> الجواب: «'+esc(R.a)+'».'+(R.y?'<p>'+esc(R.y)+'</p>':'')+'</div>'+
-    '<div class="actions"><a class="btn" href="https://wa.me/?text='+encodeURIComponent('حللتُ لغزك «'+R.t+'»! الجواب: «'+R.a+'»'+(KID.name?' — '+KID.name:''))+'" target="_blank" rel="noopener">⟨أخبر|أخبري⟩ '+Gx(R.n?esc(R.n):'⟨صاحب|صاحبة⟩ اللغز',f)+' ⟨بأنك|بأنكِ⟩ ⟨حللته|حللتِه⟩</a>'+
+    '<div class="actions"><button class="btn" type="button" data-act="rzTell">⟨أخبر|أخبري⟩ '+Gx(R.n?esc(R.n):'⟨صاحب|صاحبة⟩ اللغز',f)+' ⟨بأنك|بأنكِ⟩ ⟨حللته|حللتِه⟩</button>'+
     '<a class="btn ghost" href="'+escA(location.pathname)+'">ما «كنوز البيان»؟</a></div>';
   else if(RZ.selfNo) fb='<div class="fb-no">لا بأس! اللغز الجيّد يُتعب العقل قليلًا، ⟨وقد عرفتَ|وقد عرفتِ⟩ الجواب الآن: «'+esc(R.a)+'».</div>'+(R.y?'<p>'+esc(R.y)+'</p>':'')+
     '<div class="actions"><a class="btn ghost" href="'+escA(location.pathname)+'">ما «كنوز البيان»؟</a></div>';

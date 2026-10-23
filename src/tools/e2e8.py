@@ -36,6 +36,11 @@ async def corner(p):
 async def ready_kid(p):
     await p.evaluate("store.set('cmp:'+kid,{kind:'camel',name:'ناجي'}); store.set('planted:'+kid, Date.now()); go('home')"); await p.wait_for_timeout(400)
 FAMJS = "JSON.parse(localStorage.getItem('kb-family-v1'))"
+STUDY = """(ids)=>{ ids.forEach((id, i) => { const k='kb-kid-'+id; const d=JSON.parse(localStorage.getItem(k)||'{}'); d.prog=d.prog||{};
+    if (i === 0){ d.prog.sadd={p:true,d:Date.now()}; d.prog.rih={p:false,d:Date.now()}; } localStorage.setItem(k,JSON.stringify(d));
+    const us=JSON.parse(localStorage.getItem('waha.hasaniya_v13_users')||'[]'); let u=us.find(x=>x.id==='kz_'+id); if(!u){u={id:'kz_'+id,name:'',state:{}};us.push(u);}
+    u.state=Object.assign({stationStatus:{},stampDates:{},verseStats:{},activeDays:[]},u.state||{}); u.state.stationStatus.s1='completed';
+    u.state.verseStats.s2v4={correct:1,wrong:0,lastWrong:0,lastCorrect:Date.now()}; localStorage.setItem('waha.hasaniya_v13_users',JSON.stringify(us)); }); }"""
 
 async def main():
     async with async_playwright() as pw:
@@ -52,17 +57,31 @@ async def main():
         await corner(p); await p.click('[data-act="pKids"]'); await p.click('[data-act="kidAdd"]'); await add_kid(p, 'يوسف', 'm', 2020)
         ids = await p.evaluate(FAMJS + ".kids.map(k=>k.id)")
 
-        # ---- one daily trip from the three sections
+        # ---- one daily trip from the three sections, asking only what was studied there
         await oasis(p, 'هند'); await ready_kid(p)
+        none = await p.evaluate("Array.from({length:8},()=>buildTrip(false).map(c=>c.g))")
+        ok(all('kz' not in t and 'hsq' not in t for t in none), 'nothing studied in the chambers or the Hasaniya: no question from them')
+        await p.evaluate(STUDY, ids); await oasis(p, 'هند'); await ready_kid(p)
+        ok(await p.evaluate("POOL.hsq().length + POOL.kz().length") == 0, 'what was studied today is asked from tomorrow (a recall, not a copy)')
+        await p.evaluate("(() => { studied(); const k = 'studiedDay:' + kid; const f = store.get(k, {}); Object.keys(f).forEach(x => f[x] -= 1); store.set(k, f); STUDIED[kid] = null; })()")
+        hs = await p.evaluate("POOL.hsq()")
+        ok(hs and all(x.startswith('s1v') or x.startswith('s2v4|') for x in hs), 'the Hasaniya questions come from the completed station and the answered verse (%s)' % hs[:4])
+        ok(await p.evaluate("POOL.kz().every(x => ['sadd', 'rih'].includes(x.split('|')[0]))"), 'the chamber questions come from lessons whose gem was earned')
         trips = await p.evaluate("Array.from({length:12},()=>buildTrip(false).map(c=>c.g==='learn'?'learn:'+String(c.id).split('|')[0]:c.g))")
-        ok(all('kz' in t for t in trips) and all('hsq' in t for t in trips), 'every trip of a ten-year-old has a chamber question and a Hasaniya question')
-        ok(all(t.index('learn:kz') < t.index('kz') for t in trips if 'learn:kz' in t), 'a new chamber question comes after its lesson')
-        kzq = await p.evaluate("(()=>{const c=buildTrip(false).find(c=>c.g==='kz'); return c&&{html:c.html,why:c.why,q:c.q};})()")
+        ok(all(t.count('kz') + t.count('hsq') == 1 for t in trips), 'every trip of a ten-year-old has one question from the chambers or the Hasaniya, not more')
+        both = await p.evaluate("(() => { const n0 = dayN; const seenG = new Set(); for (const d of [0, 1]){ dayN = t => t == null ? n0() + d : n0(t); for (let i = 0; i < 6; i++) buildTrip(false).forEach(c => { if (c.g === 'kz' || c.g === 'hsq') seenG.add(c.g); }); } dayN = n0; return [...seenG].sort(); })()")
+        ok(both == ['hsq', 'kz'], 'the two take turns by day (%s)' % both)
+        voc = await p.evaluate("Array.from({length:10},()=>buildTrip(false).filter(c=>VOCAB_G.includes(c.g)).length)")
+        ok(min(voc) >= 2, 'two new words from the memorised part in every trip (%s)' % voc)
+        ok(not any('learn:kz' in t and t.index('learn:kz') < t.index('kz') for t in trips), 'a chamber question is asked first; its lesson comes only after a wrong answer')
+        kzq = await p.evaluate("(()=>{ for (let i = 0; i < 40; i++){ const c = buildTrip(false).find(c=>c.g==='kz'); if (c) return {html:c.html,why:c.why,q:c.q}; } return null; })()")
         ok(kzq and '💎' in kzq['html'] and kzq['why'], 'chamber question carries its lesson title and its «why»')
         ok(await p.locator('.ktile', has_text='كنوز البيان').count() == 1, 'chambers tile for a ten-year-old')
         await oasis(p, 'يوسف'); await ready_kid(p)
-        small = await p.evaluate("Array.from({length:8},()=>buildTrip(false).map(c=>c.g))")
-        ok(all('kz' not in t for t in small) and all('hsq' in t for t in small), 'a six-year-old: Hasaniya in every trip, no chambers')
+        await p.evaluate("(() => { studied(); const k = 'studiedDay:' + kid; const f = store.get(k, {}); Object.keys(f).forEach(x => f[x] -= 1); store.set(k, f); STUDIED[kid] = null; })()")
+        small = await p.evaluate("(() => { const n0 = dayN; const out = []; for (const d of [0, 1]){ dayN = t => t == null ? n0() + d : n0(t); out.push(Array.from({length:6},()=>buildTrip(false).map(c=>c.g))); } dayN = n0; return out; })()")
+        ok(all('kz' not in t for day in small for t in day), 'a six-year-old: no chambers')
+        ok(sorted([all(t.count('hsq') == 1 for t in day) for day in small]) == [False, True] and all(t.count('hsq') == 0 for day in small for t in day if t.count('hsq') != 1), 'a six-year-old: one Hasaniya question every other day')
         ok(await p.locator('.ktile', has_text='كنوز البيان').count() == 0, 'no chambers tile under eight')
         await p.evaluate("store.set(`libOpen:${kid}`, true); go('home')"); await p.wait_for_timeout(300)
         ok(await p.locator('.ktile', has_text='كنوز البيان').count() == 1, '…unless the parent opens it')
@@ -79,15 +98,15 @@ async def main():
             const w=JSON.parse(localStorage.getItem('kb-works-v1')||'[]'); w.push({id:'w1',kid:ids[0],type:'read',status:'sent',title:'قراءة'}); localStorage.setItem('kb-works-v1',JSON.stringify(w)); }""", ids)
         await oasis(p, 'هند')
         cnt = await p.inner_text('.kscene .cnt')
-        ok('💎 2' in cnt and '🐪 1' in cnt, 'the scene counts gems and Hasaniya stations (%s)' % cnt)
+        ok('💎 ٢' in cnt and '🐪 ١' in cnt, 'the scene counts gems and Hasaniya stations, in ١٢٣ (%s)' % cnt)
         await shot(p, 'u01-scene')
         # misses elsewhere come back here
         n = await p.evaluate("importMisses()")
         mk = await p.evaluate("[mget('kz','sadd|0'), mget('hsq','s1v1|0'), seen('kz').includes('sadd|0')]")
         ok(n >= 2 and mk[0]['wrong'] == 1 and mk[1]['wrong'] == 1 and mk[2], 'a miss in the chambers and in the Hasaniya enters the oasis review')
         ok(await p.evaluate("importMisses()") == 0, 'each miss is taken once')
-        picks = await p.evaluate("Array.from({length:30},()=>genPick('kz', new Set()).id).filter(x=>x==='sadd|0').length")
-        ok(picks >= 10, 'the missed chamber question is favoured in the trip (%d/30)' % picks)
+        due = await p.evaluate("(() => { const m = mget('kz','sadd|0'); return [m.due - dayN(), (() => { const n0 = dayN; dayN = t => t == null ? n0() + 1 : n0(t); const r = buildTrip(false).some(c => c.g === 'kz' && c.id === 'sadd|0' && c.kind === 'review'); dayN = n0; return r; })()]; })()")
+        ok(due == [0, True] or due == [1, True], 'the missed chamber question comes back as a review the next day (%s)' % due)
         # a real miss inside a chamber lesson is recorded
         right = await p.evaluate("DATA.kunuz.lessons.filter(l=>l.ax==='furuq')[0].quiz.map(q=>kzPlain(q.o[0]))")
         await p.goto('about:blank'); await p.goto(KZ + '#kunuz'); await p.wait_for_selector('.hello')
@@ -106,55 +125,63 @@ async def main():
 
         # ---- the parent: one daily line, one approvals summary
         await oasis(p, 'هند')
-        await p.click('#whoBtn'); await p.click('#ksDad'); await p.wait_for_selector('#pinIn'); await p.fill('#pinIn', '1234'); await p.click('#pinOk')
+        await p.click('#whoBtn'); await p.click('#ksParent'); await p.click('#ksDad'); await p.wait_for_selector('#pinIn'); await p.fill('#pinIn', '1234'); await p.click('#pinOk')
         await p.wait_for_selector('#ddBody'); await p.wait_for_timeout(600)
         t = await p.inner_text('#ddBody')
         ok('💎 كنوز البيان: «' in t and '🐪 الحسنية:' in t and 'ختمت محطة' in t, 'daily line covers the chambers and the Hasaniya')
         ok('بانتظار اعتمادك' in t and 'في «كنوز البيان»' in t, 'one place shows what waits for approval')
         await shot(p, 'u02-today', True)
 
-        # ---- monthly measure: fixed questions, no teaching, a curve for the parent
+        # ---- monthly measure: what stays of what was learned two weeks ago or more; no feedback, no comparison praise
         await p.evaluate("store.set(`tripsDone:${kid}`, 1); store.set(`trip:${kid}:${today()}`, {v:TRIP_V,cards:[],i:0,res:[],done:true}); LIB=false; go('kid')"); await p.wait_for_timeout(500)
-        ok(await p.locator('#msGo').count() == 1, "the measure appears once the day's trip is done")
+        ok(await p.locator('#msGo').count() == 0, 'nothing learned two weeks ago yet: no measure')
+        await p.evaluate("""(() => { const d = dayN() - 20; ['uk', 'rl', 'drv', 'fill', 'dct'].forEach(g => (POOL[g]() || []).slice(0, 4).forEach(id => { store.set(MK(g, id), {n: 2, ok: 1, streak: 1, wrong: 1, f: d, t: Date.now() - 20 * 864e5}); const s = seen(g); s.push(id); store.set(`seen:${kid}:${g}`, s); }));
+            (POOL.uk() || []).slice(4, 8).forEach(id => { store.set(MK('uk', id), {n: 1, ok: 1, streak: 1, wrong: 0, f: dayN() - 3, t: Date.now()}); const s = seen('uk'); s.push(id); store.set(`seen:${kid}:uk`, s); }); go('kid'); })()""")
+        await p.wait_for_timeout(500)
+        ok(await p.locator('#msGo').count() == 1, "the measure appears once the day's trip is done and two weeks have passed on what was learned")
         form1 = await p.evaluate("msForm().map(x=>x.g+'|'+x.id)")
-        ok(len(form1) == 12 and len({x.split('|')[0] for x in form1}) == 6, 'twelve questions from six games for a ten-year-old (%s)' % sorted({x.split('|')[0] for x in form1}))
+        recent = await p.evaluate("(POOL.uk() || []).slice(4, 8).map(id => 'uk|' + id)")
+        ok(len(form1) == 12 and not (set(form1) & set(recent)), 'twelve questions, all from what was met two weeks ago or more (%d)' % len(form1))
         before = await p.evaluate("(f)=>f.map(x=>{const [g,...r]=x.split('|'); return JSON.stringify(mget(g, r.join('|')));})", form1)
         await p.click('#msGo'); await p.wait_for_selector('#kidMs .opt')
         await shot(p, 'u03-measure')
+        marks = []
         for i in range(12):
             await p.wait_for_selector('#kidMs .opt:not([disabled]), #kidMs .bigplay')
             if await p.locator('#kidMs .bigplay').count(): break
             if i % 3 == 0: await p.locator('#kidMs .tiny', has_text='لا أعرف').click()
-            else: await p.locator('#kidMs .opt').first.click()
+            else:
+                await p.locator('#kidMs .opt').first.click()
+                marks.append(await p.evaluate("[...document.querySelectorAll('#kidMs .opt')].map(b => b.dataset.s || '').join(',')"))
             await p.wait_for_timeout(550)
         await p.wait_for_selector('#kidMs .bigplay')
+        ok(marks and all('ok' not in m and 'bad' not in m for m in marks), 'no answer is marked right or wrong during the measure')
         h = await p.evaluate("msHistory()")
-        ok(len(h) == 1 and h[0]['n'] == 12 and 0 <= h[0]['ok'] <= 8, 'measure recorded (%s/%s)' % (h and h[0]['ok'], h and h[0]['n']))
-        after = await p.evaluate("(f)=>f.map(x=>{const [g,...r]=x.split('|'); return JSON.stringify(mget(g, r.join('|')));})", form1)
+        ok(len(h) == 1 and h[0]['n'] == 12 and h[0]['kind'] == 'ret', 'measure recorded (%s/%s)' % (h and h[0]['ok'], h and h[0]['n']))
+        after = await p.evaluate("(f)=>f.map(x=>{const [g,...r]=x.split('|'); return JSON.stringify(mget(g, r.join('|')));})", [x for x in form1])
         ok(before == after, 'the measure leaves the mastery records untouched')
+        ok('أكثر من المرة الماضية' not in await p.inner_text('#kidMs') and 'مما تعلّمتِه' in await p.inner_text('#kidMs'), 'the child is thanked for what she remembered, with no comparison')
         await shot(p, 'u04-measure-end')
         await p.evaluate("go('kid')"); await p.wait_for_timeout(300)
         ok(await p.locator('#msGo').count() == 0, 'not again before thirty days')
         await p.evaluate("(()=>{const h=msHistory(); h[0].day-=31; h[0].date='2026-09-20'; store.set(`ms:${kid}`,h); go('kid');})()"); await p.wait_for_timeout(300)
         ok(await p.locator('#msGo').count() == 1, 'due again after thirty days')
-        ok(await p.evaluate("msForm().map(x=>x.g+'|'+x.id)") == form1, 'the same questions every month')
         await p.click('#msGo')
         for i in range(12):
             await p.wait_for_selector('#kidMs .opt:not([disabled]), #kidMs .bigplay')
             if await p.locator('#kidMs .bigplay').count(): break
-            await p.evaluate("(()=>{const c=[...document.querySelectorAll('#kidMs .opt')]; const q=GEN[MS.items[MS.i].g](MS.items[MS.i].id); const r=c.find(b=>b.textContent===q.a); (r||c[0]).click();})()")
+            await p.evaluate("(()=>{const c=[...document.querySelectorAll('#kidMs .opt')]; const q=GEN[MS.items[MS.i].g](MS.items[MS.i].id); const r=c.find(b=>b.__o===q.a); (r||c[0]).click();})()")
             await p.wait_for_timeout(550)
         await p.wait_for_selector('#kidMs .bigplay')
         h = await p.evaluate("msHistory()")
-        ok(len(h) == 2 and h[1]['ok'] > h[0]['ok'], 'second measure higher (%s → %s)' % (h[0]['ok'], h[1]['ok']))
-        ok('أكثر من المرة الماضية' in await p.inner_text('#kidMs'), 'the child hears the progress (girl: «أجبتِ»)' if 'أجبتِ' in await p.inner_text('#kidMs') else 'progress message')
+        ok(len(h) == 2 and h[1]['ok'] == h[1]['n'], 'second measure recorded (%s/%s)' % (h[-1]['ok'], h[-1]['n']))
         # parent sees the curve and the first/last table; the Friday report mentions it
         # the parent's session ended when the oasis went back to the child's pages, so the board asks for the PIN again
-        await p.click('#whoBtn'); await p.click('#ksDad'); await p.wait_for_selector('#sheet:not([hidden]) #pinIn')
+        await p.click('#whoBtn'); await p.click('#ksParent'); await p.click('#ksDad'); await p.wait_for_selector('#sheet:not([hidden]) #pinIn')
         await p.fill('#pinIn', '1234'); await p.click('#pinOk'); await p.wait_for_selector('#ddTabs')
         await p.locator('#ddTabs button', has_text='التقدّم').click(); await p.wait_for_timeout(400)
         t = await p.inner_text('#ddBody')
-        ok('قياس الشهر' in t and 'أول قياس' in t and 'كنوز البيان' in t, 'parent sees the measure curve and the sections')
+        ok('ما بقي مما تعلّمه' in t and 'مصادفة' in t and 'كنوز البيان' in t, 'parent sees what stays, with its uncertainty, and the sections')
         await shot(p, 'u05-parent-measure', True)
         await p.locator('#ddTabs button', has_text='تقرير الجمعة').click(); await p.wait_for_timeout(600)
         wk = await p.input_value('#wkText')

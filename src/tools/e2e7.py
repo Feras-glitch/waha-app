@@ -81,7 +81,7 @@ async def main():
 
         # the current PIN cancels it — in the oasis …
         await fresh(p, URL); await p.wait_for_selector('#whoBtn'); await p.wait_for_timeout(500)
-        await p.click('#whoBtn'); await p.click('#ksDad'); await p.wait_for_selector('#pinIn')
+        await p.click('#whoBtn'); await p.click('#ksParent'); await p.click('#ksDad'); await p.wait_for_selector('#pinIn')
         await p.fill('#pinIn', '5678'); await p.click('#pinOk'); await p.wait_for_timeout(600)
         ok((await p.evaluate(FAM)).get('resetReq') is None, 'the PIN in the oasis cancels the request')
         await fresh(p, URL); await p.wait_for_selector('#whoBtn'); await p.wait_for_timeout(400)
@@ -112,9 +112,10 @@ async def main():
         f = await p.evaluate(FAM)
         ok(len(f['pinResets']) == 1 and f.get('resetReq') is None, 'waited reset recorded (approvals revoked as before)')
         await fresh(p, HS); await p.wait_for_selector('#kzHome'); await p.wait_for_timeout(400)
-        await p.evaluate("exportProgress()"); await p.wait_for_selector('#pinPopup.active'); await p.fill('#pinInput', '2468'); await p.evaluate("submitPin()")
-        await p.wait_for_selector('#kzSheet')
-        ok('أُعيد ضبط رمز وليّ الأمر' in await p.inner_text('#kzSheet'), 'the consent sheet shows the recent reset')
+        await p.evaluate("exportProgress()"); await p.wait_for_selector('#kzSheet')
+        st = await p.inner_text('#kzSheet')
+        ok('تغيّر رمز وليّ الأمر' in st, 'the consent sheet shows the recent reset')
+        ok('موقوف' in st, 'and, after a reset made by waiting, holds the export until the old recovery code is typed')
         await shot(p, 'p05-consent-after-reset')
         await p.locator('#kzSheet button', has_text='إلغاء').click()
 

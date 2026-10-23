@@ -24,6 +24,8 @@ concurrency:
 
 env:
   ELECTRON_VERSION: 37.3.1
+  # حزمة التلاوة (audio-pack.yml): تُوضع في web/audio/ قبل بناء كل نسخة. إن لم تُنشر بعدُ بُنيت النسخ بلا تلاوة
+  AUDIO_TAG: audio-v1
 
 jobs:
   test:
@@ -65,10 +67,14 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
+      - name: Recitation pack
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash src/tools/audio_fetch.sh
       - name: Copy web app into Android assets
         run: |
           mkdir -p android/app/src/main/assets/www
-          cp -r web/index.html web/sw.js web/manifest.json web/js web/fonts web/kunuz web/hasaniya android/app/src/main/assets/www/
+          cp -r web/index.html web/sw.js web/manifest.json web/js web/fonts web/kunuz web/hasaniya $( [ -d web/audio ] && echo web/audio ) android/app/src/main/assets/www/
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -131,10 +137,14 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 20
+      - name: Recitation pack
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash src/tools/audio_fetch.sh
       - name: Web zip
         run: |
           mkdir -p out
-          (cd web && zip -qr ../out/waha-web.zip index.html sw.js manifest.json js fonts kunuz hasaniya)
+          (cd web && zip -qr ../out/waha-web.zip index.html sw.js manifest.json js fonts kunuz hasaniya $( [ -d audio ] && echo audio ))
       - name: Windows and Linux (Electron)
         run: bash desktop/package.sh "$ELECTRON_VERSION" desk
       - name: Check that the Linux version opens the app
@@ -162,10 +172,14 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
+      - name: Recitation pack
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash src/tools/audio_fetch.sh
       - name: Prepare site
         run: |
           rm -rf site && mkdir -p site
-          cp -r web/index.html web/sw.js web/manifest.json web/js web/fonts web/kunuz web/hasaniya site/
+          cp -r web/index.html web/sw.js web/manifest.json web/js web/fonts web/kunuz web/hasaniya $( [ -d web/audio ] && echo web/audio ) site/
           touch site/.nojekyll
       - uses: peaceiris/actions-gh-pages@v4
         with:

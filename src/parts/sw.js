@@ -17,7 +17,7 @@ self.addEventListener('install', function (e) {
 self.addEventListener('activate', function (e) {
   e.waitUntil(caches.keys().then(function (ks) {
     return Promise.all(ks.filter(function (k) { return OLD.test(k) && k !== CACHE; }).map(function (k) { return caches.delete(k); }));
-  }).then(function () { return self.clients.claim(); }));
+  }).then(function () { return self.clients.claim(); }).then(function () { return manifestKeep().catch(function () {}); }));
 });
 
 /* the page for a navigation: the section's own index.html */
@@ -28,11 +28,83 @@ function pageFor(u) {
   if (/^hasaniya\//.test(rest)) return './hasaniya/index.html';
   return './index.html';
 }
+/* the recitation pack (audio/): too large to keep at the first visit, so a file is kept the first time it is heard, in a store
+   of its own that a new version of the app does not empty. A player asks for parts of a file (Range); they are cut from the
+   kept copy. A whole surah starts at once from the network while it is being kept */
+var AUDIO = 'wahaudio-1';
+function part(res, range) {
+  return res.blob().then(function (b) {
+    var n = b.size, m = /^bytes=(\d*)-(\d*)$/.exec((range || '').trim());
+    var h = { 'Content-Type': 'audio/mpeg', 'Accept-Ranges': 'bytes' };
+    if (!m || (m[1] === '' && m[2] === '')) { h['Content-Length'] = String(n); return new Response(b, { status: 200, headers: h }); }
+    var s = m[1] === '' ? Math.max(0, n - +m[2]) : +m[1], t = (m[1] !== '' && m[2] !== '') ? Math.min(+m[2], n - 1) : n - 1;
+    if (s >= n || t < s) return new Response('', { status: 416, headers: { 'Content-Range': 'bytes */' + n } });
+    h['Content-Range'] = 'bytes ' + s + '-' + t + '/' + n; h['Content-Length'] = String(t - s + 1);
+    return new Response(b.slice(s, t + 1), { status: 206, headers: h });
+  });
+}
+/* what the pack holds (audio/manifest.js) is kept with it. The first visit is not yet served by this worker, so the list is fetched
+   once here too; otherwise a first launch offline would have no recitation. A changed list means a new pack: the files kept from
+   the old one are dropped, so a corrected verse is heard as corrected */
+var MANIFEST = new URL('audio/manifest.js', self.location.href).href;
+function manifestKeep(res) {
+  return (res ? Promise.resolve(res) : fetch(MANIFEST, { cache: 'no-cache' })).then(function (r) {
+    if (!r || r.status !== 200) {
+      if (r && r.status === 404) return caches.delete(AUDIO);   // no pack in this version
+      return;
+    }
+    return r.clone().text().then(function (txt) {
+      return caches.open(AUDIO).then(function (c) {
+        return c.match(MANIFEST, { ignoreSearch: true }).then(function (old) { return old ? old.text() : null; }).then(function (was) {
+          var drop = (was !== null && was !== txt) ? c.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return c.delete(k); })); }) : Promise.resolve();
+          return drop.then(function () { return c.put(MANIFEST, new Response(txt, { headers: { 'Content-Type': 'text/javascript' } })); });
+        });
+      });
+    });
+  });
+}
+var KEEPING = {};   // one download per file, however many parts the player asks for meanwhile
+function keep(c, key) {
+  if (!KEEPING[key]) KEEPING[key] = fetch(key).then(function (res) { return res && res.status === 200 ? c.put(key, res.clone()).then(function () { return res; }) : res; })
+    .then(function (res) { delete KEEPING[key]; return res; }, function (err) { delete KEEPING[key]; throw err; });
+  return KEEPING[key].then(function (res) { return res && res.clone(); });
+}
+function audio(e, u) {
+  var r = e.request, key = u.origin + u.pathname, range = r.headers.get('range');
+  return caches.open(AUDIO).then(function (c) {
+    return c.match(key).then(function (hit) {
+      if (hit) return part(hit, range);
+      /* a whole surah: one download that plays as it arrives and is kept at the same time (a seek before it is kept asks the network
+         for that part only) */
+      if (/\/audio\/o\//.test(u.pathname)) {
+        if (KEEPING[key] || (range && !/^bytes=0-$/.test(range.trim()))) return fetch(r);
+        var once = fetch(key).then(function (res) {
+          if (res && res.status === 200) e.waitUntil(c.put(key, res.clone()).catch(function () {}).then(function () { delete KEEPING[key]; }));
+          else delete KEEPING[key];
+          return res;
+        }, function (err) { delete KEEPING[key]; throw err; });
+        KEEPING[key] = once;
+        return once;
+      }
+      return keep(c, key).then(function (res) { return res && res.status === 200 ? part(res.clone(), range) : res; }).catch(function () { return fetch(r); });
+    });
+  });
+}
+
 self.addEventListener('fetch', function (e) {
   var r = e.request;
   if (r.method !== 'GET' || !/^https?:/.test(r.url)) return;
   var u = new URL(r.url);
   if (u.origin !== self.location.origin) return;
+  if (/\/audio\/[^?#]+\.mp3$/.test(u.pathname)) { e.respondWith(audio(e, u)); return; }
+  /* what the pack holds: asked of the network first, so a new pack (or none) is seen at once; the kept copy serves offline */
+  if (/\/audio\/manifest\.js$/.test(u.pathname)) {
+    e.respondWith(fetch(r.url, { cache: 'no-cache' }).then(function (res) {
+      if (res && (res.status === 200 || res.status === 404)) e.waitUntil(manifestKeep(res.clone()).catch(function () {}));
+      return res;
+    }).catch(function () { return caches.match(MANIFEST, { cacheName: AUDIO, ignoreSearch: true }); }));
+    return;
+  }
   var nav = r.mode === 'navigate';
   e.respondWith(caches.open(CACHE).then(function (c) {
     return c.match(r, { ignoreSearch: nav }).then(function (hit) {
