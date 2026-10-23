@@ -76,7 +76,7 @@ async def main():
           d.st.tests.push({d:'2026-10-20',m:'axis',ax:'nahw',p:90,n:10});
           d.st.tests.push({d:'2026-10-21',m:'axis',ax:'lamasat',p:70,n:10});
           d.st.tests.push({d:ds,m:'full',p:83,n:18});
-          d.st.daily={last:ds,streak:8,best:8};
+          d.st.daily={last:ds,days:[ds],wk:4};
           d.w={'w-rih':'أنا الرياح أسوق السحاب إلى الأرض العطشى','w-shayb':'اشتعل الليل نجومًا فوق المدينة الهادئة'};
           localStorage.setItem(k,JSON.stringify(d));
         }""")

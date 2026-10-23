@@ -16,6 +16,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="stylesheet" href="../fonts/fonts.css">
 <script src="../js/android-shim.js"></script>
+<script src="../audio/manifest.js"></script>
 <style>
 /* Layout: a one-column "treasury" (max 760px) under an illuminated lapis band.
    Home → four chambers → lessons; each lesson is a 4-step path: اللغز · السرّ · التحدّي · الجوهرة.
@@ -166,6 +167,8 @@ h1:focus,h2:focus{outline:none}
 .orn{color:var(--ax);font-size:1.05em}
 .verse figcaption{display:flex;flex-wrap:wrap;justify-content:center;gap:2px 14px;font-size:.88rem;color:var(--ink-2);margin-top:4px}
 .verse figcaption a{color:var(--ax);text-underline-offset:4px}
+.vplay{font:inherit;font-size:.9rem;color:var(--ax);background:none;border:1.5px solid currentColor;border-radius:999px;padding:6px 14px;min-height:40px;cursor:pointer}
+.vplay.on{background:var(--ax);color:#fff;border-color:var(--ax)}
 
 .secret{display:flex;flex-direction:column;gap:14px}
 .secret>p{margin:0;max-width:64ch}
@@ -599,6 +602,7 @@ img.drawn{max-width:100%;border-radius:12px;border:1px solid var(--line)}
 .kr-m p{margin:0}
 .kr-n{font-family:var(--font-display);font-weight:700;font-size:1.1rem}
 .kr-a{display:flex;gap:8px}
+.who-turn{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px;padding:10px 12px;border-radius:14px;background:color-mix(in srgb,var(--gold) 12%,transparent)}
 .cands{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
 .cand{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--line);flex-wrap:wrap}
 .cand.on{border-color:var(--gold);box-shadow:0 0 0 2px color-mix(in srgb,var(--gold) 30%,transparent)}
@@ -1748,7 +1752,7 @@ function doneCount(list){return (list||LESSONS).filter(function(l){return prog[l
 var hasTTS='speechSynthesis' in window, arVoice=null, voicesReady=false;
 function loadVoices(){try{var vs=speechSynthesis.getVoices();if(vs&&vs.length){voicesReady=true;arVoice=vs.filter(function(v){return /^ar/i.test(v.lang);})[0]||null;}}catch(e){}}
 if(hasTTS){loadVoices();try{speechSynthesis.onvoiceschanged=loadVoices;}catch(e){}}
-function stopSpeak(){narStop();if(hasTTS){try{speechSynthesis.cancel();}catch(e){}}}
+function stopSpeak(){if(typeof vStop==='function') vStop(); narStop();if(hasTTS){try{speechSynthesis.cancel();}catch(e){}}}
 function speak(btn){
   if(!hasTTS||!L) return;
   try{
@@ -1780,11 +1784,29 @@ function go(html){
   if(h){h.setAttribute('tabindex','-1');try{h.focus({preventScroll:true});}catch(e){}}
   renderTray();
 }
-function verse(v){
+/* the recitation of a verse: in the app, from the recitation pack it carries (../audio, the teaching voice of al-Husary), so
+   nothing is fetched from a website; a file that leaves the app (magazine, card) links to quran.com instead.
+   The Android app opens no website, so there a verse the pack lacks has no listening link at all. */
+function vAud(v){var A=window.WAHA_AUDIO,r=A&&A.h&&A.h[v.s],b=v.a2||v.a,x; if(!r) return false;
+  for(x=v.a;x<=b;x++){ if(!r.some(function(p){return x>=p[0]&&x<=p[1];})) return false; } return true;}
+function verse(v,o){
+  var out=!!(o&&o.out), link='<a href="https://quran.com/'+v.s+'/'+v.a+(v.a2?'-'+v.a2:'')+'" target="_blank" rel="noopener">⟨استمع|استمعي⟩ للتلاوة ↗</a>';
   return '<figure class="verse"><blockquote><span class="orn">﴿</span> '+fmt(v.t)+' <span class="orn">﴾</span></blockquote>'+
     '<figcaption><span>'+(v.p?'من ':'')+'سورة '+v.n+' · '+(v.a2?((v.a2-v.a===1?'الآيتان ':'الآيات ')+n2a(v.a)+'–'+n2a(v.a2)):'الآية '+n2a(v.a))+'</span>'+
-    (v.nolink?'':'<a href="https://quran.com/'+v.s+'/'+v.a+(v.a2?'-'+v.a2:'')+'" target="_blank" rel="noopener">⟨استمع|استمعي⟩ للتلاوة ↗</a>')+'</figcaption></figure>';
+    (v.nolink?'':(!out&&vAud(v)?'<button class="vplay" type="button" data-act="vplay" data-s="'+v.s+'" data-a="'+v.a+'" data-b="'+(v.a2||v.a)+'">▶ ⟨استمع|استمعي⟩ للتلاوة</button>':
+      (out||!window.AndroidBridge?link:'')))+'</figcaption></figure>';
 }
+var VP={a:null,b:null,h:'',q:[],i:0,s:0};
+function p3(n){return ('00'+n).slice(-3);}
+function vStop(){ var a=VP.a; VP.a=null; if(a){a.onended=a.onerror=null; try{a.pause();}catch(e){}} if(VP.b){VP.b.classList.remove('on'); VP.b.innerHTML=VP.h;} VP.b=null; }
+function vStep(){ var au=VP.a; if(!au) return; if(VP.i>=VP.q.length){ vStop(); return; }
+  au.src='../audio/h/'+p3(VP.s)+p3(VP.q[VP.i])+'.mp3';
+  au.onended=function(){ if(VP.a!==au) return; VP.i++; vStep(); };
+  au.onerror=function(){ if(VP.a!==au) return; vStop(); toast('تعذّر تشغيل التلاوة على هذا الجهاز.'); };
+  au.play().catch(function(){ if(VP.a===au) vStop(); }); }
+function vPlay(btn){ var same=VP.b===btn; stopSpeak(); if(same) return;
+  var a=+btn.dataset.a, b=+btn.dataset.b, x; VP.q=[]; for(x=a;x<=b;x++) VP.q.push(x);
+  VP.s=+btn.dataset.s; VP.i=0; VP.b=btn; VP.h=btn.innerHTML; btn.classList.add('on'); btn.innerHTML=G('■ ⟨أوقف|أوقفي⟩ التلاوة'); VP.a=new Audio(); vStep(); }
 function block(b){
   if(typeof b==='string') return '<p>'+fmt(b)+'</p>';
   if(b.v) return verse(b.v);
@@ -2073,13 +2095,18 @@ var bankById={};
 BANK.forEach(function(b){if(!b.ax&&b.l) b.ax=lessonById[b.l].ax; bankById[b.id]=b;});
 
 /* ---------- records (per device) ---------- */
-function freshST(){return {items:{},tests:[],daily:{last:'',streak:0,best:0}};}
+function freshST(){return {items:{},tests:[],daily:{last:'',days:[],wk:0}};}
 var ST=freshST();
 function saveST(){kidSave();}
 function pad(n){return ('0'+n).slice(-2);}
 function dstr(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
 function today(){return dstr(new Date());}
 function addDays(s,n){var p=s.split('-');return dstr(new Date(+p[0],+p[1]-1,+p[2]+n));}
+/* the week runs from Saturday to Friday. Four days of «جوهرة اليوم» fill it, chosen as the child likes; a missed day takes nothing away */
+var WEEK_GOAL=4;
+function weekOf(s){var p=s.split('-');return addDays(s,-((new Date(+p[0],+p[1]-1,+p[2]).getDay()+1)%7));}
+function weekDaysN(D,s){var w=weekOf(s||today());return ((D&&D.days)||[]).filter(function(x){return weekOf(x)===w;}).length;}
+function weekLine(n){return n>=WEEK_GOAL?'⟨أتممتَ|أتممتِ⟩ أسبوعك ✓':'هذا الأسبوع: '+n2a(n)+' من '+n2a(WEEK_GOAL)+' أيام';}
 var GAPS=[1,2,4,7,14];
 function record(id,sc){
   var r=ST.items[id]||{n:0,c:0,w:0,box:0,due:'',last:0};
@@ -2092,7 +2119,6 @@ function dueList(){var t=today();return BANK.filter(function(b){var r=ST.items[b
 function norm(s){return String(s||'').replace(/[ً-ْٰـ]/g,'').replace(/[\s،,.\-]/g,'').replace(/ى/g,'ي').replace(/[أإآ]/g,'ا');}
 function hashStr(s){var h=0;for(var i=0;i<s.length;i++){h=(h*31+s.charCodeAt(i))>>>0;}return h;}
 function escA(s){return esc(s).replace(/"/g,'&quot;');}
-function daysWord(n){return n===0?'⟨لم تبدأ|لم تبدئي⟩ بعد':n===1?'يومٌ واحد':n===2?'يومان':(n<=10?n2a(n)+' أيام':n2a(n)+' يومًا');}
 function qWord(n){return n===1?'سؤالٌ واحد':n===2?'سؤالان':(n<=10?n2a(n)+' أسئلة':n2a(n)+' سؤالًا');}
 function numA(x){return n2a(Math.round(x*10)/10).replace('.','٫');}
 var KIND={mcq:'سؤال',verse:'المحقّق البياني',two:'سؤالٌ وسببه',match:'⟨صِل|صِلي⟩ بين العمودين',type:'⟨اكتب|اكتبي⟩ الإجابة'};
@@ -2275,16 +2301,17 @@ function detective(){startAssess('det',shuffle(BANK.filter(function(b){return !!
 function review(){startAssess('review',shuffle(dueList()).slice(0,10));}
 function markDaily(){
   var t=today(),D=ST.daily; if(D.last===t) return;
-  D.streak=(D.last===addDays(t,-1))?(D.streak||0)+1:1; D.last=t; D.best=Math.max(D.best||0,D.streak); saveST();
+  D.days=(D.days||[]).filter(function(x){return x>=addDays(t,-70)&&x!==t;}); D.days.push(t); D.last=t;
+  if(weekDaysN(D,t)===WEEK_GOAL) D.wk=(D.wk||0)+1; saveST();
 }
-function streakNow(){var D=ST.daily,t=today();return (D.last===t||D.last===addDays(t,-1))?(D.streak||0):0;}
+function weekNow(){return weekDaysN(ST.daily);}
 function dailyItem(){var el=BANK.filter(function(b){return b.k!=='match';});return el[hashStr(today())%el.length];}
 function daily(){ if(ST.daily.last===today()) return dailyDone(); startAssess('daily',[dailyItem()]); }
 function dailyDone(){
-  L=null; var due=dueList().length, sk=streakNow();
+  L=null; var due=dueList().length, wn=weekNow();
   go('<div class="ax-page" style="--ax:var(--gold)"><button class="back" type="button" data-home>'+BACK+' الخزائن</button>'+
-    '<header class="page-head"><h1 class="h1">جوهرة اليوم</h1><p class="lead">⟨أجبتَ عن سؤال اليوم. عُد غدًا لجوهرةٍ جديدة، ولا تقطع|أجبتِ عن سؤال اليوم. عودي غدًا لجوهرةٍ جديدة، ولا تقطعي⟩ السلسلة!</p></header>'+
-    '<div class="tiles"><div class="tile"><b>'+n2a(sk)+'</b><span>سلسلتك بالأيام</span></div><div class="tile"><b>'+n2a(ST.daily.best||0)+'</b><span>أطول سلسلة</span></div>'+
+    '<header class="page-head"><h1 class="h1">جوهرة اليوم</h1><p class="lead">⟨أجبتَ عن سؤال اليوم. عُد|أجبتِ عن سؤال اليوم. عودي⟩ غدًا لجوهرةٍ جديدة. '+(wn>=WEEK_GOAL?'⟨أتممتَ|أتممتِ⟩ أسبوعك، وما زاد فهو خير.':'أربعة أيامٍ في الأسبوع ⟨تُتمّ|تُتمّين⟩ بها أسبوعك، ⟨تختارها|تختارينها⟩ كما ⟨تشاء|تشائين⟩.')+'</p></header>'+
+    '<div class="tiles"><div class="tile"><b>'+n2a(wn)+' من '+n2a(WEEK_GOAL)+'</b><span>أيام هذا الأسبوع</span></div><div class="tile"><b>'+n2a(ST.daily.wk||0)+'</b><span>أسابيع ⟨أتممتها|أتممتِها⟩</span></div>'+
     '<div class="tile"><b>'+n2a(due)+'</b><span>تنتظر المراجعة</span></div><div class="tile"><b>'+n2a(doneCount())+'</b><span>جواهر الدروس</span></div></div>'+
     '<div class="actions">'+(due?'<button class="btn" type="button" data-go="review">المراجعة الذكية</button>':'<button class="btn" type="button" data-go="det">المحقّق البياني</button>')+
     '<button class="btn ghost" type="button" data-home>الخزائن</button></div></div>');
@@ -2317,10 +2344,10 @@ function majlisEnd(){
 
 /* ---------- home block ---------- */
 function toolsHTML(){
-  var due=dueList().length, dn=ST.daily.last===today(), sk=streakNow();
+  var due=dueList().length, dn=ST.daily.last===today(), wn=weekNow();
   return '<section><h2 class="h2">⟨تمرّن واختبر|تمرّني واختبري⟩ نفسك</h2><div class="tools">'+
     '<button class="tool hi" type="button" data-go="daily" style="--ax:var(--gold)"><span class="tool-t">جوهرة اليوم</span>'+
-      '<span class="tool-d">'+(dn?'⟨أجبتَ عن سؤال اليوم. عُد|أجبتِ عن سؤال اليوم. عودي⟩ غدًا لجوهرةٍ جديدة.':'سؤالٌ واحد كل يوم من الخزائن كلها.')+'</span><span class="tool-n">سلسلتك: '+daysWord(sk)+'</span></button>'+
+      '<span class="tool-d">'+(dn?'⟨أجبتَ عن سؤال اليوم. عُد|أجبتِ عن سؤال اليوم. عودي⟩ غدًا لجوهرةٍ جديدة.':'سؤالٌ واحد كل يوم من الخزائن كلها.')+'</span><span class="tool-n">'+weekLine(wn)+'</span></button>'+
     '<button class="tool" type="button" data-go="det" style="--ax:var(--lapis)"><span class="tool-t">المحقّق البياني</span><span class="tool-d">آياتٌ لم تمرّ بك في الدروس: ⟨اكتشف|اكتشفي⟩ الكلمة المناسبة بما ⟨تعلّمته|تعلّمتِه⟩.</span></button>'+
     '<button class="tool" type="button" data-go="full" style="--ax:var(--teal)"><span class="tool-t">الاختبار الشامل</span><span class="tool-d">'+qTotalWord(AXES.length*3)+' من الخزائن '+axWord()+' بأنواعٍ مختلفة، والدرجة من المحاولة الأولى.</span></button>'+
     '<button class="tool" type="button" data-go="review" style="--ax:var(--rose)"><span class="tool-t">المراجعة الذكية</span><span class="tool-d">ما ⟨أخطأتَ|أخطأتِ⟩ فيه يعود إليك في أيامٍ متباعدة حتى ⟨تتقنه|تتقنيه⟩.</span><span class="tool-n">'+(due?qWord(due)+' تنتظرك اليوم':'لا شيء ينتظرك اليوم')+'</span></button>'+
@@ -2466,7 +2493,7 @@ function kidKey(id){return 'kb-kid-'+id;}
 function kidLoad(id){
   var d=lsGet(kidKey(id),null)||{};
   d.prog=d.prog||{}; d.st=d.st&&typeof d.st==='object'?d.st:freshST();
-  d.st.items=d.st.items||{}; d.st.tests=d.st.tests||[]; d.st.daily=d.st.daily||{last:'',streak:0,best:0}; d.w=d.w||{}; d.certs=d.certs||{}; d.st.diag=d.st.diag||[]; d.rm=d.rm||{};
+  d.st.items=d.st.items||{}; d.st.tests=d.st.tests||[]; d.st.daily=d.st.daily||{last:'',days:[],wk:0}; if(!d.st.daily.days) d.st.daily.days=d.st.daily.last?[d.st.daily.last]:[]; d.w=d.w||{}; d.certs=d.certs||{}; d.st.diag=d.st.diag||[]; d.rm=d.rm||{};
   return d;
 }
 function selectKid(id){
@@ -2893,6 +2920,8 @@ function home(){
     banners+='<section class="banner gold">'+avatarHTML(wkk,'m')+'<div class="bn-t"><span class="eyebrow">'+Gx('⟨قارئ|قارئة⟩ الأسبوع',gOf(wkk))+'</span>'+
       '<p>'+(me?'⟨أنتَ قارئ|أنتِ قارئة⟩ هذا الأسبوع! اختار وليّ أمرك ⟨قراءتك|قراءتكِ⟩: «'+esc(titleOf(wkw))+'».':Gx(esc(wkk.name)+' ⟨قارئ|قارئة⟩ هذا الأسبوع: «',gOf(wkk))+esc(titleOf(wkw))+'».')+'</p>'+
       '<audio controls preload="none" data-src="'+wkw.audio+'"></audio></div></section>';
+  } else if(Object.keys(FAM.weekly).length&&typeof weeklyTurn==='function'){
+    var tk=weeklyTurn(); if(tk&&tk.id===KID.id) banners+='<button class="banner gold" type="button" data-act="studio">'+ICON.radio+'<div class="bn-t"><strong>هذا الأسبوع دورك في «قارئ الأسبوع»</strong><span>⟨سجّل|سجّلي⟩ قراءةً جميلة في «قراءتي»، ⟨واعرضها|واعرضيها⟩ على وليّ أمرك ليختارها.</span></div></button>';
   }
   if(back.length) banners+='<button class="banner rose" type="button" data-act="works" data-v="returned">'+ICON.talk+'<div class="bn-t"><strong>'+(back.length===1?'عاد إليك عملٌ بملاحظة':'عادت إليك '+n2a(back.length)+' أعمال بملاحظات')+'</strong><span>⟨افتحه|افتحيه⟩ ⟨واقرأ|واقرئي⟩ الملاحظة، ثم ⟨عدّله|عدّليه⟩ ⟨وأرسله|وأرسليه⟩ من جديد.</span></div></button>';
   if(fresh.length) banners+='<button class="banner ok" type="button" data-act="works" data-v="approved">'+ICON.check+'<div class="bn-t"><strong>'+(fresh.length===1?'اعتمد وليّ أمرك عملًا ⟨لك|لكِ⟩':'اعتمد وليّ أمرك '+n2a(fresh.length)+' من أعمالك')+'</strong><span>«'+esc(clip(titleOf(fresh[0]),40))+'»'+(fresh.length>1?' وغيره':'')+'</span></div></button>';
@@ -3375,7 +3404,7 @@ function parentHome(){
     '<section><h2 class="h2">أدوات</h2><div class="tools">'+
       ptool('pApproved','teal','check','الأعمال المعتمدة',n2a(appr.length)+' عمل · إرسالٌ إلى المعلّم، وقرار النشر، والإهداء')+
       ptool('pCode','lapis','talk','ردّ المعلّم','ألصقوا الرمز الذي أرسله المعلّم، أو أدخلوا ردّه بأنفسكم')+
-      ptool('pWeekly','gold','radio','قارئ الأسبوع',wk?Gx(esc(kidById(wk.kid).name)+' ⟨قارئ|قارئة⟩ هذا الأسبوع',gOf(kidById(wk.kid))):'اختاروا أجمل قراءةٍ هذا الأسبوع')+
+      ptool('pWeekly','gold','radio','قارئ الأسبوع',wk?Gx(esc(kidById(wk.kid).name)+' ⟨قارئ|قارئة⟩ هذا الأسبوع',gOf(kidById(wk.kid))):(weeklyTurn()?'تكريمٌ بالتناوب · هذا الأسبوع دور '+esc(weeklyTurn().name):'تكريمٌ يدور على الأطفال'))+
       ptool('pFamily','olive','users','جلسة العائلة','بطاقة هذا الأسبوع: '+plain(Gx(lessonById[fsCurrent().l].title,0)))+
       ptool('pWaha','olive','palm','لوحة الواحة','تقدّم الأطفال في «واحة اللسان العربي»، ورسائلهم وأخبارهم وتسجيلاتهم للمراجعة')+
       ptool('pVoice','teal','mic','صوت البيت','سجّلوا شرح الدروس بصوتكم ليسمعه الأطفال · '+n2a(Object.keys(FAM.nar||{}).length)+' تسجيلًا')+
@@ -3599,19 +3628,38 @@ async function manualReply(id){
   applyReply({w:w,d:r.d,r:null,n:r.n,tn:r.tn});
 }
 
-/* ---------- weekly reader ---------- */
+/* ---------- weekly reader: an honour that goes round the children in turn, so brothers and sisters are not set against each other ---------- */
+var READ_TYPES=['read','lamsa','hikma','story','kalima'];
+function weeklyOrder(){
+  var n={},last={}; Object.keys(FAM.weekly).forEach(function(w){var x=FAM.weekly[w]; if(!kidById(x.kid)) return; n[x.kid]=(n[x.kid]||0)+1; last[x.kid]=Math.max(last[x.kid]||0,x.d||0);});
+  return FAM.kids.map(function(k,i){return {k:k,i:i};}).sort(function(a,b){return (n[a.k.id]||0)-(n[b.k.id]||0)||(last[a.k.id]||0)-(last[b.k.id]||0)||a.i-b.i;}).map(function(x){return x.k;});
+}
+function weeklyTurn(){
+  var cur=FAM.weekly[weekKey()]; if(cur&&kidById(cur.kid)) return kidById(cur.kid);
+  var pass=(FAM.wkPass||{})[weekKey()]||[], o=weeklyOrder(), left=o.filter(function(k){return pass.indexOf(k.id)<0;});
+  return left[0]||o[0]||null;
+}
+function passWeekly(id){ var wk=weekKey(), p=((FAM.wkPass||{})[wk]||[]).slice(); if(p.indexOf(id)<0) p.push(id); FAM.wkPass={}; FAM.wkPass[wk]=p; saveFam(); pWeekly(); }
 function pWeekly(){
   L=null;
-  var since=weekStart().getTime(), cur=FAM.weekly[weekKey()];
-  var c=WORKS.filter(function(w){return w.audio&&w.status==='approved'&&(w.created>=since||(w.approvedAt||0)>=since)&&['read','lamsa','hikma','story','kalima'].indexOf(w.type)>=0;})
-    .sort(function(a,b){return rubTotal(b.rubric||b.trub)-rubTotal(a.rubric||a.trub);});
-  go('<div class="ax-page" style="--ax:var(--gold)"><button class="back" type="button" data-act="parent">'+BACK+' ركن وليّ الأمر</button>'+
-    '<header class="page-head"><h1 class="h1">قارئ الأسبوع</h1><p class="lead">قراءات هذا الأسبوع المعتمدة (من السبت)، مرتّبةً بتقييمكم وتقييم المعلّم. اختاروا واحدةً تظهر على شاشة الأطفال جميعًا طوال الأسبوع.</p></header>'+
-    (c.length?'<ul class="cands">'+c.map(function(w){var k=kidById(w.kid),r=w.rubric||w.trub,on=cur&&cur.work===w.id;
-      return '<li class="cand'+(on?' on':'')+'">'+(k?avatarHTML(k,'m'):'')+'<div class="cd-m"><p class="cd-t">'+esc(titleOf(w))+' <span class="muted">· '+(k?esc(k.name):'')+' · '+typeOf(w).n+'</span></p>'+
+  var since=weekStart().getTime(), cur=FAM.weekly[weekKey()], k=weeklyTurn();
+  var head='<div class="ax-page" style="--ax:var(--gold)"><button class="back" type="button" data-act="parent">'+BACK+' ركن وليّ الأمر</button>'+
+    '<header class="page-head"><h1 class="h1">قارئ الأسبوع</h1>';
+  if(!k){ go(head+'<p class="lead">أضيفوا ملفّ طفلٍ أولًا.</p></header></div>'); return; }
+  var g=gOf(k), nm=esc(k.name);
+  var c=WORKS.filter(function(w){return w.kid===k.id&&w.audio&&w.status==='approved'&&READ_TYPES.indexOf(w.type)>=0;})
+    .map(function(w){return {w:w,now:w.created>=since||(w.approvedAt||0)>=since};})
+    .sort(function(a,b){return (b.now-a.now)||(rubTotal(b.w.rubric||b.w.trub)-rubTotal(a.w.rubric||a.w.trub))||((b.w.approvedAt||0)-(a.w.approvedAt||0));});
+  var others=weeklyOrder().filter(function(x){return x.id!==k.id;}), nx=others[0];
+  go(head+'<p class="lead">'+Gx('تكريمٌ يدور على الأطفال واحدًا بعد واحد، فلا يتسابق الإخوة ولا يُقارَن بعضهم ببعض. هذا الأسبوع (من السبت) دور '+nm+': اختاروا أجمل ⟨قراءاته|قراءاتها⟩ المعتمدة، فتظهر على شاشة الأطفال جميعًا طوال الأسبوع.',g)+'</p></header>'+
+    '<div class="who-turn">'+avatarHTML(k,'m')+'<strong>'+Gx('⟨قارئ|قارئة⟩ هذا الأسبوع: ',g)+nm+'</strong>'+(nx?'<span class="muted small"> · بعده في الدور: '+esc(nx.name)+'</span>':'')+'</div>'+
+    (c.length?'<ul class="cands">'+c.map(function(x){var w=x.w,r=w.rubric||w.trub,on=cur&&cur.work===w.id;
+      return '<li class="cand'+(on?' on':'')+'"><div class="cd-m"><p class="cd-t">'+esc(titleOf(w))+' <span class="muted">· '+typeOf(w).n+(x.now?' · هذا الأسبوع':'')+'</span></p>'+
         (r?'<p class="rub-line">'+rubStars(r)+'</p>':'<p class="muted small">بلا تقييم بعد</p>')+'<audio controls preload="none" data-src="'+w.audio+'"></audio></div>'+
         '<button class="btn'+(on?'':' ghost')+'" type="button" data-act="setWeekly" data-id="'+w.id+'">'+(on?ICON.check+' المختارة':'اختاروها')+'</button></li>';}).join('')+'</ul>':
-      '<p class="muted">لا قراءات معتمدة هذا الأسبوع بعد. شجّعوا الأطفال على «قراءتي» في الاستوديو.</p>')+'</div>');
+      '<p class="muted">'+Gx('لم ⟨يسجّل|تسجّل⟩ '+nm+' قراءةً معتمدة بعد. ⟨شجّعوه|شجّعوها⟩ على «قراءتي» في الاستوديو، ثم اعتمدوها لتظهر هنا.',g)+'</p>'+
+      (!cur&&nx?'<div class="actions"><button class="btn ghost" type="button" data-act="passWeekly" data-id="'+k.id+'">'+Gx('⟨أجّلوا دوره|أجّلوا دورها⟩ إلى الأسبوع القادم، والدور الآن لـ',g)+esc(nx.name)+'</button></div>':''))+
+    '<p class="muted small">من لم يُكرَّم بعدُ يأتي دوره أولًا، ومن أجّلتم دوره يبقى في أوّل الدور للأسبوع الذي يليه.</p></div>');
 }
 function setWeekly(id){var w=workById(id); if(!w) return; FAM.weekly[weekKey()]={kid:w.kid,work:w.id,d:Date.now()}; saveFam(); var k=kidById(w.kid); toast(Gx(k.name+' ⟨قارئ|قارئة⟩ الأسبوع!',gOf(k))); pWeekly();}
 
@@ -3642,7 +3690,7 @@ async function kidDelete(id){
 }
 async function kidResetProgress(id){
   var k=kidById(id); if(!k) return;
-  var ok=await ask({title:'مسح جواهر '+esc(k.name)+' ونتائجه؟',c:'rose',ok:'امسحوها',danger:1,html:'<p>تُمسح الجواهر ونتائج الاختبارات وسلسلة الأيام. الأعمال والتسجيلات تبقى.</p>'});
+  var ok=await ask({title:'مسح جواهر '+esc(k.name)+' ونتائجه؟',c:'rose',ok:'امسحوها',danger:1,html:'<p>تُمسح الجواهر ونتائج الاختبارات وأيام «جوهرة اليوم». الأعمال والتسجيلات تبقى.</p>'});
   if(!ok) return;
   var d=kidLoad(id); d.prog={}; d.st=freshST(); d.certs={}; d.gseen=[]; d.rm={}; lsSet(kidKey(id),d);
   if(KID&&KID.id===id){KD=d;prog=d.prog;ST=d.st;}
@@ -3658,7 +3706,7 @@ function progressFor(kidId,asParent){
   var att=0,cor=0; Object.keys(S.items).forEach(function(x){var r=S.items[x];att+=r.n;cor+=r.c;});
   var acc=att?Math.round(cor/att*100):null, t=today();
   var due=BANK.filter(function(b){var r=S.items[b.id];return r&&r.w>0&&r.box<5&&r.due<=t;}).length;
-  var D=S.daily||{}, sk=(D.last===t||D.last===addDays(t,-1))?(D.streak||0):0;
+  var D=S.daily||{}, wn=weekDaysN(D);
   var rows=AXES.map(function(a){
     var its=BANK.filter(function(b){return b.ax===a.id;}), tried=its.filter(function(b){return S.items[b.id];});
     var m=null; if(tried.length){var s=0;tried.forEach(function(b){s+=S.items[b.id].last;});m=Math.round(s/tried.length*100);}
@@ -3676,7 +3724,7 @@ function progressFor(kidId,asParent){
     '<p class="lead">'+(asParent?Gx('الدرجات من المحاولة الأولى وحدها. «الإتقان» نسبة ما ⟨أصابه|أصابته⟩ '+who+' في آخر مرةٍ ⟨رأى|رأت⟩ فيها كل سؤال. وما ⟨يخطئ|تخطئ⟩ فيه يعود في «المراجعة الذكية» بعد يوم، ثم بعد ٢ و٤ و٧ و١٤ يومًا كلما ⟨أصابه|أصابته⟩.',f):
       'الدرجات من المحاولة الأولى وحدها. وما ⟨تخطئ|تخطئين⟩ فيه يعود إليك في «المراجعة الذكية» حتى ⟨تتقنه|تتقنيه⟩.')+'</p></header>'+
     '<div class="tiles"><div class="tile"><b>'+n2a(dc())+'</b><span>جواهر من '+n2a(LESSONS.length)+'</span></div>'+
-    '<div class="tile"><b>'+n2a(sk)+'</b><span>سلسلة الأيام</span></div>'+
+    '<div class="tile"><b>'+n2a(wn)+' من '+n2a(WEEK_GOAL)+'</b><span>أيام هذا الأسبوع'+(D.wk?' · '+n2a(D.wk)+' مكتملة':'')+'</span></div>'+
     '<div class="tile"><b>'+(acc===null?'—':n2a(acc)+'٪')+'</b><span>دقّة الإجابات</span></div>'+
     '<div class="tile"><b>'+n2a(due)+'</b><span>تنتظر المراجعة</span></div></div>'+
     (asParent?gardenCertsBlock(k):'<div class="actions"><button class="btn ghost" type="button" data-act="garden">🌱 حديقتي</button><button class="btn ghost" type="button" data-act="certs">'+ICON.shield+' شهاداتي</button></div>')+
@@ -3864,7 +3912,7 @@ function itemBody(w,o){
   function src(k){ if(!k) return ''; if(o.media==='pkg') return ' data-pkg="'+k+'"'; if(o.media==='data') return o.map&&o.map[k]?' src="'+o.map[k]+'"':null; return ' data-src="'+k+'"'; }
   function aud(k,lbl){var s=src(k); if(!k||s===null) return ''; return '<div class="mz-aud">'+(lbl?'<span class="mz-lbl">'+lbl+'</span>':'')+'<audio controls preload="none"'+s+'></audio>'+(w.dur?'<span class="mz-dur">'+fmtDur(w.dur)+'</span>':'')+'</div>';}
   function img(k,alt){var s=src(k); if(!k||s===null) return ''; return '<img class="mz-img" alt="'+escA(alt||'')+'"'+s+'>';}
-  function vs(id){var l=lessonById[id]; return l?l.verses.map(verse).join('').replace(/\u27e8استمع\|استمعي\u27e9 للتلاوة/g,'الاستماع للتلاوة'):'';}
+  function vs(id){var l=lessonById[id]; return l?l.verses.map(function(v){return verse(v,{out:!!o.media});}).join('').replace(/\u27e8استمع\|استمعي\u27e9 للتلاوة/g,'الاستماع للتلاوة'):'';}
   if(t==='kalima') h=nl2p(w.text)+aud(w.audio,'⟨بصوت الكاتب|بصوت الكاتبة⟩');
   else if(t==='lamsa') h=vs(w.lesson)+aud(w.audio,'⟨التلاوة بصوت القارئ|التلاوة بصوت القارئة⟩')+(w.text?'<p class="mz-lbl">اللمسة</p>'+nl2p(w.text):'')+(lessonById[w.lesson]?'<p class="mz-src">من درس «'+plain(lessonById[w.lesson].title)+'» في كنوز البيان</p>':'');
   else if(t==='twins') h='<div class="mz-twins"><span class="mz-w">'+esc(w.w1||'')+'</span><span class="mz-and">و</span><span class="mz-w">'+esc(w.w2||'')+'</span></div>'+nl2p(w.text)+aud(w.audio);
@@ -4149,7 +4197,7 @@ function contribPage(w,k,name,media){
 }
 
 /* ================= phase 2: the garden of Bayan & certificates ================= */
-/* Everything is derived from the child's own record: lessons (prog), tests and streak (st), approved works,
+/* Everything is derived from the child's own record: lessons (prog), tests and the days of «جوهرة اليوم» (st), approved works,
    magazines, teacher approvals, workshop writings. Certificates are stored once earned (d.certs) so they never vanish. */
 
 function kidData(kidId){ if(KID&&KID.id===kidId&&KD){KD.prog=prog;KD.st=ST;return KD;} return kidLoad(kidId); }
@@ -4159,7 +4207,7 @@ function cnt(n,f){return n===1?f[0]:n===2?f[1]:(n<=10?n2a(n)+' '+f[2]:n2a(n)+' '
 
 function kidStats(kidId){
   var d=kidData(kidId), P=d.prog, S=d.st, t=today();
-  var s={d:d,gems:0,perfect:0,axN:{},axHave:{},axDone:{},best:{},fullBest:null,bestStreak:(S.daily&&S.daily.best)||0,alive:false,
+  var s={d:d,gems:0,perfect:0,axN:{},axHave:{},axDone:{},best:{},fullBest:null,weeks:(S.daily&&S.daily.wk)||0,alive:false,
     approved:0,firstWork:null,teacher:0,firstTeacher:null,writings:0,mags:0,editorMag:null,weekly:0,riddles:0};
   LESSONS.forEach(function(l){ s.axN[l.ax]=(s.axN[l.ax]||0)+1; if(P[l.id]){ s.gems++; s.axHave[l.ax]=(s.axHave[l.ax]||0)+1; if(P[l.id].p) s.perfect++; } });
   AXES.forEach(function(a){ s.axDone[a.id]=(s.axHave[a.id]||0)===s.axN[a.id]; });
@@ -4167,7 +4215,7 @@ function kidStats(kidId){
     if(x.m==='axis'&&x.ax&&(!s.best[x.ax]||x.p>s.best[x.ax].p)) s.best[x.ax]={p:x.p,d:x.d};
     if(x.m==='full'&&(!s.fullBest||x.p>s.fullBest.p)) s.fullBest={p:x.p,d:x.d};
   });
-  var D=S.daily||{}; s.alive=D.last===t||D.last===addDays(t,-1);
+  var D=S.daily||{}; s.alive=weekDaysN(D,t)>0||weekDaysN(D,addDays(weekOf(t),-1))>0;
   var mine=WORKS.filter(function(w){return w.kid===kidId;});
   var appr=mine.filter(function(w){return w.status==='approved';}).sort(function(a,b){return (a.approvedAt||a.updated)-(b.approvedAt||b.updated);});
   s.approved=appr.length; s.firstWork=appr[0]||null;
@@ -4219,12 +4267,13 @@ var GEM_N=LESSONS.length;
     need:function(){return '⟨اجمع|اجمعي⟩ '+cnt(g[0],['جوهرة','جوهرتين','جواهر','جوهرة'])+'.';},
     prog:function(s){return [Math.min(s.gems,g[0]),g[0]];}});
 });
-[[7,'سبعة أيامٍ متتالية'],[30,'ثلاثون يومًا متتالية']].forEach(function(x){
-  CERTS.push({id:'s-'+x[0],k:'w',c:'olive',t:'شهادة المواظبة',sub:x[1],
-    ok:function(s){return s.bestStreak>=x[0]?{}:null;},
-    body:function(n){return 'تشهد «كنوز البيان» بأنّ ⟨الطالب|الطالبة⟩ '+n+' ⟨واظب|واظبت⟩ على «جوهرة اليوم» '+(x[0]===7?'سبعة أيامٍ متتالية':'ثلاثين يومًا متتالية')+'، وأحبّ الأعمال أدومها وإن قلّ.';},
-    need:function(s){return '⟨أجب|أجيبي⟩ عن «جوهرة اليوم» '+(x[0]===7?'سبعة أيامٍ':'ثلاثين يومًا')+' متتالية.'+(s.bestStreak?' أطول سلسلةٍ لك: '+daysWord(s.bestStreak)+'.':'');},
-    prog:function(s){return [Math.min(s.bestStreak,x[0]),x[0]];}});
+/* steadiness is counted in weeks of four days, not in days without a break: a missed day costs nothing */
+[[2,'أسبوعان','أسبوعين'],[8,'ثمانية أسابيع','ثمانية أسابيع']].forEach(function(x){
+  CERTS.push({id:'s-w'+x[0],k:'w',c:'olive',t:'شهادة المواظبة',sub:x[1]+'، في كلٍّ منها أربعة أيام',
+    ok:function(s){return s.weeks>=x[0]?{}:null;},
+    body:function(n){return 'تشهد «كنوز البيان» بأنّ ⟨الطالب|الطالبة⟩ '+n+' ⟨واظب|واظبت⟩ على «جوهرة اليوم» أربعة أيامٍ في الأسبوع، '+x[2]+'، وأحبّ الأعمال أدومها وإن قلّ.';},
+    need:function(s){return '⟨أتمّ|أتمّي⟩ '+x[2]+' في كلٍّ منها أربعة أيامٍ من «جوهرة اليوم»، ولا يلزم أن تتتابع الأسابيع.'+(s.weeks?' حتى الآن: '+n2a(Math.min(s.weeks,x[0]))+' من '+n2a(x[0])+'.':'');},
+    prog:function(s){return [Math.min(s.weeks,x[0]),x[0]];}});
 });
 CERTS.push({id:'w-1',k:'w',c:'rose',t:'⟨شهادة المبدع الصغير|شهادة المبدعة الصغيرة⟩',sub:'أوّل عملٍ معتمد',
   ok:function(s){return s.firstWork?{d:s.firstWork.approvedAt,x:titleOf(s.firstWork)}:null;},
@@ -4271,7 +4320,7 @@ function gardenItems(s){
   var it=[], certs=s.d.certs||{};
   LESSONS.forEach(function(l){ if(s.d.prog[l.id]) it.push('f:'+l.id); });
   AXES.forEach(function(a){ if(s.axDone[a.id]) it.push('t:'+a.id); if(certs['mx-'+a.id]) it.push('x:'+a.id); });
-  [3,7,14].forEach(function(n,i){ if(s.bestStreak>=n) it.push('b'+(i+1)); });
+  [1,4,8].forEach(function(n,i){ if(s.weeks>=n) it.push('b'+(i+1)); });
   [1,3,6,10,15].forEach(function(n,i){ if(s.approved>=n) it.push('u'+(i+1)); });
   [1,2,3,4].forEach(function(n){ if(s.mags>=n) it.push('l'+n); });
   [1,2,3,4,5].forEach(function(n){ if(s.writings>=n) it.push('v'+n); });
@@ -4407,7 +4456,7 @@ var GLEG=[
   ['🌷','وردةٌ لكلّ جوهرة','وسطها ذهبيّ إن ⟨أجبتَ|أجبتِ⟩ بلا خطأ.',function(s,c){return [s.gems,LESSONS.length];}],
   ['🌳','شجرةٌ لكلّ خزانةٍ ⟨تكملها|تكملينها⟩','في حوضها، بلون الخزانة.',function(s){return [AXES.filter(function(a){return s.axDone[a.id];}).length,AXES.length];}],
   ['🍎','ثمارٌ على الشجرة حين ⟨تتقن|تتقنين⟩ الخزانة','ثمانون في المئة أو أكثر في «اختبار الخزانة».',function(s,c){return [AXES.filter(function(a){return c['mx-'+a.id];}).length,AXES.length];}],
-  ['🐦','طيورٌ على السور','حين ⟨تواظب|تواظبين⟩ على «جوهرة اليوم» ٣ أيام، ثم ٧، ثم ١٤.',function(s){return [[3,7,14].filter(function(n){return s.bestStreak>=n;}).length,3];}],
+  ['🐦','طيورٌ على السور','طائرٌ حين ⟨تتمّ|تتمّين⟩ أوّل أسبوعٍ فيه أربعة أيامٍ من «جوهرة اليوم»، ثم عند الأسبوع الرابع، ثم الثامن.',function(s){return [[1,4,8].filter(function(n){return s.weeks>=n;}).length,3];}],
   ['🦋','فراشاتٌ تطير','كلما اعتمد وليّ أمرك أعمالًا ⟨لك|لكِ⟩: ١ ثم ٣ ثم ٦ ثم ١٠ ثم ١٥.',function(s){return [[1,3,6,10,15].filter(function(n){return s.approved>=n;}).length,5];}],
   ['⭐','نجومٌ في السماء','نجمةٌ كلما اعتمد المعلّم عملًا ⟨لك|لكِ⟩.',function(s){return [Math.min(s.teacher,5),5];}],
   ['🏮','فوانيس في الأقواس','فانوسٌ لكلّ مجلةٍ تصدر وفيها عملٌ ⟨لك|لكِ⟩.',function(s){return [Math.min(s.mags,4),4];}],
@@ -4437,7 +4486,7 @@ function gardenView(kidId,asParent){
     (fresh.length?'<p class="tip new-tip">✨ جديدٌ في حديقتك: '+gardenNews(fresh)+'.</p>':'')+
     (!its.length&&!asParent?'<p class="tip">🌱 حديقتك تنتظر أول وردة: ⟨أكمل|أكملي⟩ درسًا واحدًا، ⟨وتعال|وتعالَي⟩ ⟨لتراها|لتريها⟩ تنبت هنا.</p>':'')+
     '<div class="garden">'+gardenSVG(s,its,{id:'gv',fresh:fresh,label:'حديقة '+k.name})+'</div>'+
-    (s.alive?'':'<p class="muted small center">النافورة تجري ما دامت سلسلة «جوهرة اليوم» قائمة.</p>')+
+    (s.alive?'':'<p class="muted small center">النافورة تجري في كل أسبوعٍ ⟨تزور|تزورين⟩ فيه «جوهرة اليوم»، وتعود حين ⟨تعود|تعودين⟩.</p>')+
     '<section><h2 class="h2">'+(asParent?'كيف تنمو الحديقة؟':'كيف تنمو حديقتك؟')+'</h2><ul class="gleg">'+GLEG.map(function(g){
       var p=g[3](s,c), done=p[0]>=p[1];
       return '<li class="'+(done?'done':'')+'"><span class="gl-e" aria-hidden="true">'+g[0]+'</span><span class="gl-m"><span class="gl-t">'+g[1]+'</span><span class="gl-d">'+g[2]+'</span>'+
@@ -4867,7 +4916,7 @@ function fcardHTML(c){
   var l=lessonById[c.l], v=l&&l.verses[0];
   return '<article class="fcard"><header class="fc-h"><span class="eyebrow">جلسة العائلة · ربع ساعة</span><h2 class="h2">'+plain(Gx(l?l.title:'',0))+'</h2></header>'+
     '<div class="fc-sec"><span class="fc-k">كلمة الأسبوع</span><p><b class="fc-w">'+c.w[0]+'</b>'+(c.w[1]!=='—'?' <span class="muted">(الجذر: '+c.w[1]+')</span>':'')+' — '+c.w[2]+'</p></div>'+
-    (v?'<div class="fc-sec"><span class="fc-k">آية الأسبوع</span>'+verse(v).replace(/⟨استمع\|استمعي⟩ للتلاوة/,'الاستماع للتلاوة')+'</div>':'')+
+    (v?'<div class="fc-sec"><span class="fc-k">آية الأسبوع</span>'+verse(v,{out:1}).replace(/⟨استمع\|استمعي⟩ للتلاوة/,'الاستماع للتلاوة')+'</div>':'')+
     '<div class="fc-sec"><span class="fc-k">سؤال المائدة</span><p>'+c.q+'</p></div>'+
     '<div class="fc-sec"><span class="fc-k">لعبة</span><p>'+c.g+'</p></div>'+
     '<div class="fc-sec"><span class="fc-k">تحدّي الأسبوع</span><p>'+c.c+'</p></div>'+
@@ -5662,6 +5711,7 @@ async function pFrom(){
 /* ================= events & start ================= */
 function needKid(fn){return function(t,ds){ if(!KID) return who(); return fn(t,ds); };}
 var ACT={
+  vplay:function(t){vPlay(t);},
   backKid:function(){backKid();},
   home:function(){home();},
   parent:function(){needParent(parentHome);},
@@ -5685,7 +5735,7 @@ var ACT={
   kidDel:function(t,ds){kidDelete(ds.id);},
   kidReset:function(t,ds){kidResetProgress(ds.id);},
   pKids:function(){pKids();}, pProg:function(t,ds){pProg(ds.id);}, pApproved:function(){pApproved();}, pCode:function(){pCode();},
-  pWeekly:function(){pWeekly();}, setWeekly:function(t,ds){setWeekly(ds.id);}, pImport:function(){pImport();}, extDel:function(t,ds){extDel(ds.id);},
+  pWeekly:function(){pWeekly();}, setWeekly:function(t,ds){setWeekly(ds.id);}, passWeekly:function(t,ds){passWeekly(ds.id);}, pImport:function(){pImport();}, extDel:function(t,ds){extDel(ds.id);},
   pFrom:function(){pFrom();}, fromAdd:function(t,ds){fromAdd(+ds.i);}, fromAll:function(){fromAll();},
   pBackup:function(){pBackup();}, backupMake:function(){backupMake();}, pWork:function(t,ds){pWork(ds.id);},
   rub:function(t,ds){ if(!RV) return; RV.r[ds.k]=+ds.v; [].slice.call(t.parentNode.children).forEach(function(b){b.classList.toggle('on',b===t);}); },
@@ -5746,8 +5796,8 @@ var ACT={
   radioAll:function(){radioPlay(0);}, radioPlay:function(t,ds){radioPlay(+ds.v);}
 };
 var confirmIdea=false;
-var GUEST_ACTS=['rzG','rzPick','rzReveal','rzHint','rzSelf'];
-var PARENT_ACTS=['pWaha','pReport','exReport','pFamily','pFamilyOne','fsDone','fsSkip','pVoice','pVoiceOne','pVoiceG','narRec','narDel','pGarden','pCerts','exCert','exRiddle','pKids','pProg','pApproved','pCode','pWeekly','setWeekly','pImport','extDel','pFrom','fromAdd','fromAll','pBackup','backupMake','pWork','rub','approve','returnWork','unapprove','pDelWork',
+var GUEST_ACTS=['vplay','rzG','rzPick','rzReveal','rzHint','rzSelf'];
+var PARENT_ACTS=['pWaha','pReport','exReport','pFamily','pFamilyOne','fsDone','fsSkip','pVoice','pVoiceOne','pVoiceG','narRec','narDel','pGarden','pCerts','exCert','exRiddle','pKids','pProg','pApproved','pCode','pWeekly','setWeekly','passWeekly','pImport','extDel','pFrom','fromAdd','fromAll','pBackup','backupMake','pWork','rub','approve','returnWork','unapprove','pDelWork',
   'exTeacher','exGift','exContrib','manualReply','kidAdd','kidEdit','kidDel','kidReset','magExport','magBack','magPublishLocal','pMag'];
 function route(g){
   if(!KID&&g!=='parent') return who();

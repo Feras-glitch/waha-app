@@ -213,6 +213,7 @@ img.drawn{max-width:100%;border-radius:12px;border:1px solid var(--line)}
 .kr-m p{margin:0}
 .kr-n{font-family:var(--font-display);font-weight:700;font-size:1.1rem}
 .kr-a{display:flex;gap:8px}
+.who-turn{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px;padding:10px 12px;border-radius:14px;background:color-mix(in srgb,var(--gold) 12%,transparent)}
 .cands{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
 .cand{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--line);flex-wrap:wrap}
 .cand.on{border-color:var(--gold);box-shadow:0 0 0 2px color-mix(in srgb,var(--gold) 30%,transparent)}

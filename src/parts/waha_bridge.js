@@ -49,6 +49,16 @@
         stamped: Object.keys(stamps).filter(function (k) { return +stamps[k] >= from; }).length
       };
     },
+    /* what the child has studied in the two sections: lessons whose gem was earned, Hasaniya stations completed and verses answered.
+       The oasis asks about these alone, so its questions are review and never something the child was not taught */
+    studied: function (i) {
+      var id = ids[i], out = { kz: [], hsSt: [], hsV: [] }; if (!id) return out;
+      var d = lsGet('kb-kid-' + id); out.kz = Object.keys((d && d.prog) || {});
+      var u = hsUser(id), st = (u && u.state) || {}, ss = st.stationStatus || {};
+      out.hsSt = Object.keys(ss).filter(function (k) { return ss[k] === 'completed'; });
+      out.hsV = Object.keys(st.verseStats || {});
+      return out;
+    },
     /* misses since a time: «كنوز البيان» questions (lesson|question) and Hasaniya verses answered wrongly last */
     misses: function (i, since) {
       var id = ids[i], out = [], from = since || 0; if (!id) return out;

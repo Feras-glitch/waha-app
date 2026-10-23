@@ -134,7 +134,7 @@ function kidKey(id){return 'kb-kid-'+id;}
 function kidLoad(id){
   var d=lsGet(kidKey(id),null)||{};
   d.prog=d.prog||{}; d.st=d.st&&typeof d.st==='object'?d.st:freshST();
-  d.st.items=d.st.items||{}; d.st.tests=d.st.tests||[]; d.st.daily=d.st.daily||{last:'',streak:0,best:0}; d.w=d.w||{}; d.certs=d.certs||{}; d.st.diag=d.st.diag||[]; d.rm=d.rm||{};
+  d.st.items=d.st.items||{}; d.st.tests=d.st.tests||[]; d.st.daily=d.st.daily||{last:'',days:[],wk:0}; if(!d.st.daily.days) d.st.daily.days=d.st.daily.last?[d.st.daily.last]:[]; d.w=d.w||{}; d.certs=d.certs||{}; d.st.diag=d.st.diag||[]; d.rm=d.rm||{};
   return d;
 }
 function selectKid(id){
@@ -561,6 +561,8 @@ function home(){
     banners+='<section class="banner gold">'+avatarHTML(wkk,'m')+'<div class="bn-t"><span class="eyebrow">'+Gx('⟨قارئ|قارئة⟩ الأسبوع',gOf(wkk))+'</span>'+
       '<p>'+(me?'⟨أنتَ قارئ|أنتِ قارئة⟩ هذا الأسبوع! اختار وليّ أمرك ⟨قراءتك|قراءتكِ⟩: «'+esc(titleOf(wkw))+'».':Gx(esc(wkk.name)+' ⟨قارئ|قارئة⟩ هذا الأسبوع: «',gOf(wkk))+esc(titleOf(wkw))+'».')+'</p>'+
       '<audio controls preload="none" data-src="'+wkw.audio+'"></audio></div></section>';
+  } else if(Object.keys(FAM.weekly).length&&typeof weeklyTurn==='function'){
+    var tk=weeklyTurn(); if(tk&&tk.id===KID.id) banners+='<button class="banner gold" type="button" data-act="studio">'+ICON.radio+'<div class="bn-t"><strong>هذا الأسبوع دورك في «قارئ الأسبوع»</strong><span>⟨سجّل|سجّلي⟩ قراءةً جميلة في «قراءتي»، ⟨واعرضها|واعرضيها⟩ على وليّ أمرك ليختارها.</span></div></button>';
   }
   if(back.length) banners+='<button class="banner rose" type="button" data-act="works" data-v="returned">'+ICON.talk+'<div class="bn-t"><strong>'+(back.length===1?'عاد إليك عملٌ بملاحظة':'عادت إليك '+n2a(back.length)+' أعمال بملاحظات')+'</strong><span>⟨افتحه|افتحيه⟩ ⟨واقرأ|واقرئي⟩ الملاحظة، ثم ⟨عدّله|عدّليه⟩ ⟨وأرسله|وأرسليه⟩ من جديد.</span></div></button>';
   if(fresh.length) banners+='<button class="banner ok" type="button" data-act="works" data-v="approved">'+ICON.check+'<div class="bn-t"><strong>'+(fresh.length===1?'اعتمد وليّ أمرك عملًا ⟨لك|لكِ⟩':'اعتمد وليّ أمرك '+n2a(fresh.length)+' من أعمالك')+'</strong><span>«'+esc(clip(titleOf(fresh[0]),40))+'»'+(fresh.length>1?' وغيره':'')+'</span></div></button>';

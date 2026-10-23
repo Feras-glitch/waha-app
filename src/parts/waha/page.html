@@ -294,6 +294,20 @@ mark.cn{background:var(--sky-soft);color:var(--sky);font-weight:700}
 .sand{border-radius:22px;overflow:hidden;cursor:pointer;position:relative}.sand .tap{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:var(--paper);color:var(--ink);border-radius:999px;padding:6px 14px;font-weight:800;box-shadow:0 2px 8px rgba(0,0,0,.15);animation:tapPulse 1.4s infinite}@keyframes tapPulse{50%{transform:translateX(-50%) scale(1.08)}}
 .sand svg{display:block;width:100%}
 .tiny{font-size:.85rem;color:var(--muted);background:none;border:none;cursor:pointer;font:inherit;text-decoration:underline}
+/* التلاوة */
+.tl-seg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 10px}
+.tl-seg button{border:1.5px solid var(--line);background:var(--paper);color:var(--ink);border-radius:14px;padding:10px 8px;font:inherit;font-weight:700;cursor:pointer;min-height:56px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.tl-seg button small{font-weight:400;font-size:.8rem;color:var(--muted)}
+.tl-seg button[aria-pressed="true"]{border-color:var(--palm,#2f6b3a);background:var(--bg);box-shadow:0 0 0 2px color-mix(in srgb,var(--palm,#2f6b3a) 25%,transparent)}
+.tl-text{font-family:var(--f-q);font-size:1.45rem;line-height:2.2;text-align:justify;margin-top:6px;max-height:60vh;overflow:auto;padding:4px 2px}
+.tl-ay{cursor:pointer;border-radius:8px;padding:0 2px;transition:background .2s}
+.tl-ay.tl-on{background:color-mix(in srgb,var(--date,#c98a2b) 30%,transparent);-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.tl-nav{display:flex;align-items:center;gap:8px;margin:4px 0}
+.tl-pick{flex:1;display:flex;flex-direction:column;gap:2px}
+.tl-pick select{font:inherit;font-size:1.05rem;padding:8px 10px;border:1.5px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink);min-height:44px}
+.tl-b{text-align:center;margin:0}
+.tl-sn{text-align:center;margin:8px 0 2px}
+.tl-gapl{display:inline-flex;align-items:center;gap:6px;margin:0}
 </style>
 
 <div class="wrap">
@@ -816,6 +830,14 @@ mark.cn{background:var(--sky-soft);color:var(--sky);font-weight:700}
     </div>
   </section>
 
+  <section id="tilawa" hidden>
+    <div class="card">
+      <p class="lbl" style="margin:0">التلاوة</p>
+      <p class="note" style="margin:4px 0 8px">للتعلّم: الشيخ محمود خليل الحصري (المصحف المعلّم) آيةً آية. وللاستماع: الشيخ عبد الرحمن العوسي، السورة كاملة. ⟨اختر|اختاري⟩ أحدهما، ⟨وبدّل|وبدّلي⟩ متى ⟨شئت|شئتِ⟩.</p>
+      <div class="tl-nav" id="tlSurahs"></div>
+      <div id="tlTab" class="tl"></div>
+    </div>
+  </section>
   <section id="mushaf" hidden>
     <div class="card">
       <p class="lbl" style="margin:0">مصحفي بصوتي</p>

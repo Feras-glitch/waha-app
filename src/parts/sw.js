@@ -28,11 +28,53 @@ function pageFor(u) {
   if (/^hasaniya\//.test(rest)) return './hasaniya/index.html';
   return './index.html';
 }
+/* the recitation pack (audio/): too large to keep at the first visit, so a file is kept the first time it is heard, in a store
+   of its own that a new version of the app does not empty. A player asks for parts of a file (Range); they are cut from the
+   kept copy. A whole surah starts at once from the network while it is being kept */
+var AUDIO = 'wahaudio-1';
+function part(res, range) {
+  return res.blob().then(function (b) {
+    var n = b.size, m = /^bytes=(\d*)-(\d*)$/.exec((range || '').trim());
+    var h = { 'Content-Type': 'audio/mpeg', 'Accept-Ranges': 'bytes' };
+    if (!m || (m[1] === '' && m[2] === '')) { h['Content-Length'] = String(n); return new Response(b, { status: 200, headers: h }); }
+    var s = m[1] === '' ? Math.max(0, n - +m[2]) : +m[1], t = (m[1] !== '' && m[2] !== '') ? Math.min(+m[2], n - 1) : n - 1;
+    if (s >= n || t < s) return new Response('', { status: 416, headers: { 'Content-Range': 'bytes */' + n } });
+    h['Content-Range'] = 'bytes ' + s + '-' + t + '/' + n; h['Content-Length'] = String(t - s + 1);
+    return new Response(b.slice(s, t + 1), { status: 206, headers: h });
+  });
+}
+var KEEPING = {};   // one download per file, however many parts the player asks for meanwhile
+function keep(c, key) {
+  if (!KEEPING[key]) KEEPING[key] = fetch(key).then(function (res) { return res && res.status === 200 ? c.put(key, res.clone()).then(function () { return res; }) : res; })
+    .then(function (res) { delete KEEPING[key]; return res; }, function (err) { delete KEEPING[key]; throw err; });
+  return KEEPING[key].then(function (res) { return res && res.clone(); });
+}
+function audio(e, u) {
+  var r = e.request, key = u.origin + u.pathname, range = r.headers.get('range');
+  return caches.open(AUDIO).then(function (c) {
+    return c.match(key).then(function (hit) {
+      if (hit) return part(hit, range);
+      if (/\/audio\/o\//.test(u.pathname)) { e.waitUntil(keep(c, key).catch(function () {})); return fetch(r); }
+      return keep(c, key).then(function (res) { return res && res.status === 200 ? part(res.clone(), range) : res; }).catch(function () { return fetch(r); });
+    });
+  });
+}
+
 self.addEventListener('fetch', function (e) {
   var r = e.request;
   if (r.method !== 'GET' || !/^https?:/.test(r.url)) return;
   var u = new URL(r.url);
   if (u.origin !== self.location.origin) return;
+  if (/\/audio\/[^?#]+\.mp3$/.test(u.pathname)) { e.respondWith(audio(e, u)); return; }
+  /* what the pack holds: asked of the network first, so a new pack (or none) is seen at once; the kept copy serves offline */
+  if (/\/audio\/manifest\.js$/.test(u.pathname)) {
+    e.respondWith(fetch(r.url, { cache: 'no-cache' }).then(function (res) {
+      if (res && res.status === 200) { var cp = res.clone(); caches.open(AUDIO).then(function (c) { return c.put(r.url, cp); }).catch(function () {}); }
+      else if (res && res.status === 404) caches.has(AUDIO).then(function (h) { if (h) caches.open(AUDIO).then(function (c) { c.delete(r.url); }); }).catch(function () {});
+      return res;
+    }).catch(function () { return caches.match(r.url, { cacheName: AUDIO }); }));
+    return;
+  }
   var nav = r.mode === 'navigate';
   e.respondWith(caches.open(CACHE).then(function (c) {
     return c.match(r, { ignoreSearch: nav }).then(function (hit) {

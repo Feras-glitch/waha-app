@@ -1,6 +1,7 @@
 /* ================= events & start ================= */
 function needKid(fn){return function(t,ds){ if(!KID) return who(); return fn(t,ds); };}
 var ACT={
+  vplay:function(t){vPlay(t);},
   backKid:function(){backKid();},
   home:function(){home();},
   parent:function(){needParent(parentHome);},
@@ -24,7 +25,7 @@ var ACT={
   kidDel:function(t,ds){kidDelete(ds.id);},
   kidReset:function(t,ds){kidResetProgress(ds.id);},
   pKids:function(){pKids();}, pProg:function(t,ds){pProg(ds.id);}, pApproved:function(){pApproved();}, pCode:function(){pCode();},
-  pWeekly:function(){pWeekly();}, setWeekly:function(t,ds){setWeekly(ds.id);}, pImport:function(){pImport();}, extDel:function(t,ds){extDel(ds.id);},
+  pWeekly:function(){pWeekly();}, setWeekly:function(t,ds){setWeekly(ds.id);}, passWeekly:function(t,ds){passWeekly(ds.id);}, pImport:function(){pImport();}, extDel:function(t,ds){extDel(ds.id);},
   pFrom:function(){pFrom();}, fromAdd:function(t,ds){fromAdd(+ds.i);}, fromAll:function(){fromAll();},
   pBackup:function(){pBackup();}, backupMake:function(){backupMake();}, pWork:function(t,ds){pWork(ds.id);},
   rub:function(t,ds){ if(!RV) return; RV.r[ds.k]=+ds.v; [].slice.call(t.parentNode.children).forEach(function(b){b.classList.toggle('on',b===t);}); },
@@ -85,8 +86,8 @@ var ACT={
   radioAll:function(){radioPlay(0);}, radioPlay:function(t,ds){radioPlay(+ds.v);}
 };
 var confirmIdea=false;
-var GUEST_ACTS=['rzG','rzPick','rzReveal','rzHint','rzSelf'];
-var PARENT_ACTS=['pWaha','pReport','exReport','pFamily','pFamilyOne','fsDone','fsSkip','pVoice','pVoiceOne','pVoiceG','narRec','narDel','pGarden','pCerts','exCert','exRiddle','pKids','pProg','pApproved','pCode','pWeekly','setWeekly','pImport','extDel','pFrom','fromAdd','fromAll','pBackup','backupMake','pWork','rub','approve','returnWork','unapprove','pDelWork',
+var GUEST_ACTS=['vplay','rzG','rzPick','rzReveal','rzHint','rzSelf'];
+var PARENT_ACTS=['pWaha','pReport','exReport','pFamily','pFamilyOne','fsDone','fsSkip','pVoice','pVoiceOne','pVoiceG','narRec','narDel','pGarden','pCerts','exCert','exRiddle','pKids','pProg','pApproved','pCode','pWeekly','setWeekly','passWeekly','pImport','extDel','pFrom','fromAdd','fromAll','pBackup','backupMake','pWork','rub','approve','returnWork','unapprove','pDelWork',
   'exTeacher','exGift','exContrib','manualReply','kidAdd','kidEdit','kidDel','kidReset','magExport','magBack','magPublishLocal','pMag'];
 function route(g){
   if(!KID&&g!=='parent') return who();

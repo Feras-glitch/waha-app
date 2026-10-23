@@ -36,6 +36,11 @@ async def corner(p):
 async def ready_kid(p):
     await p.evaluate("store.set('cmp:'+kid,{kind:'camel',name:'ناجي'}); store.set('planted:'+kid, Date.now()); go('home')"); await p.wait_for_timeout(400)
 FAMJS = "JSON.parse(localStorage.getItem('kb-family-v1'))"
+STUDY = """(ids)=>{ ids.forEach((id, i) => { const k='kb-kid-'+id; const d=JSON.parse(localStorage.getItem(k)||'{}'); d.prog=d.prog||{};
+    if (i === 0){ d.prog.sadd={p:true,d:Date.now()}; d.prog.rih={p:false,d:Date.now()}; } localStorage.setItem(k,JSON.stringify(d));
+    const us=JSON.parse(localStorage.getItem('waha.hasaniya_v13_users')||'[]'); let u=us.find(x=>x.id==='kz_'+id); if(!u){u={id:'kz_'+id,name:'',state:{}};us.push(u);}
+    u.state=Object.assign({stationStatus:{},stampDates:{},verseStats:{},activeDays:[]},u.state||{}); u.state.stationStatus.s1='completed';
+    u.state.verseStats.s2v4={correct:1,wrong:0,lastWrong:0,lastCorrect:Date.now()}; localStorage.setItem('waha.hasaniya_v13_users',JSON.stringify(us)); }); }"""
 
 async def main():
     async with async_playwright() as pw:
@@ -52,8 +57,14 @@ async def main():
         await corner(p); await p.click('[data-act="pKids"]'); await p.click('[data-act="kidAdd"]'); await add_kid(p, 'يوسف', 'm', 2020)
         ids = await p.evaluate(FAMJS + ".kids.map(k=>k.id)")
 
-        # ---- one daily trip from the three sections
+        # ---- one daily trip from the three sections, asking only what was studied there
         await oasis(p, 'هند'); await ready_kid(p)
+        none = await p.evaluate("Array.from({length:8},()=>buildTrip(false).map(c=>c.g))")
+        ok(all('kz' not in t and 'hsq' not in t for t in none), 'nothing studied in the chambers or the Hasaniya: no question from them')
+        await p.evaluate(STUDY, ids); await oasis(p, 'هند'); await ready_kid(p)
+        hs = await p.evaluate("POOL.hsq()")
+        ok(hs and all(x.startswith('s1v') or x.startswith('s2v4|') for x in hs), 'the Hasaniya questions come from the completed station and the answered verse (%s)' % hs[:4])
+        ok(await p.evaluate("POOL.kz().every(x => ['sadd', 'rih'].includes(x.split('|')[0]))"), 'the chamber questions come from lessons whose gem was earned')
         trips = await p.evaluate("Array.from({length:12},()=>buildTrip(false).map(c=>c.g==='learn'?'learn:'+String(c.id).split('|')[0]:c.g))")
         ok(all('kz' in t for t in trips) and all('hsq' in t for t in trips), 'every trip of a ten-year-old has a chamber question and a Hasaniya question')
         ok(all(t.index('learn:kz') < t.index('kz') for t in trips if 'learn:kz' in t), 'a new chamber question comes after its lesson')

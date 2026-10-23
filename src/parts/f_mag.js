@@ -9,7 +9,7 @@ function itemBody(w,o){
   function src(k){ if(!k) return ''; if(o.media==='pkg') return ' data-pkg="'+k+'"'; if(o.media==='data') return o.map&&o.map[k]?' src="'+o.map[k]+'"':null; return ' data-src="'+k+'"'; }
   function aud(k,lbl){var s=src(k); if(!k||s===null) return ''; return '<div class="mz-aud">'+(lbl?'<span class="mz-lbl">'+lbl+'</span>':'')+'<audio controls preload="none"'+s+'></audio>'+(w.dur?'<span class="mz-dur">'+fmtDur(w.dur)+'</span>':'')+'</div>';}
   function img(k,alt){var s=src(k); if(!k||s===null) return ''; return '<img class="mz-img" alt="'+escA(alt||'')+'"'+s+'>';}
-  function vs(id){var l=lessonById[id]; return l?l.verses.map(verse).join('').replace(/\u27e8استمع\|استمعي\u27e9 للتلاوة/g,'الاستماع للتلاوة'):'';}
+  function vs(id){var l=lessonById[id]; return l?l.verses.map(function(v){return verse(v,{out:!!o.media});}).join('').replace(/\u27e8استمع\|استمعي\u27e9 للتلاوة/g,'الاستماع للتلاوة'):'';}
   if(t==='kalima') h=nl2p(w.text)+aud(w.audio,'⟨بصوت الكاتب|بصوت الكاتبة⟩');
   else if(t==='lamsa') h=vs(w.lesson)+aud(w.audio,'⟨التلاوة بصوت القارئ|التلاوة بصوت القارئة⟩')+(w.text?'<p class="mz-lbl">اللمسة</p>'+nl2p(w.text):'')+(lessonById[w.lesson]?'<p class="mz-src">من درس «'+plain(lessonById[w.lesson].title)+'» في كنوز البيان</p>':'');
   else if(t==='twins') h='<div class="mz-twins"><span class="mz-w">'+esc(w.w1||'')+'</span><span class="mz-and">و</span><span class="mz-w">'+esc(w.w2||'')+'</span></div>'+nl2p(w.text)+aud(w.audio);

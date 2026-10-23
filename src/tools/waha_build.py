@@ -22,7 +22,8 @@ HEAD = ('<meta name="viewport" content="width=device-width,initial-scale=1,viewp
         '<link rel="icon" href="@ICON@">'
         '<link rel="stylesheet" href="fonts/fonts.css">'
         '<script>window.WAHA_APP = 1;</script>'
-        '<script src="js/android-shim.js"></script>')
+        '<script src="js/android-shim.js"></script>'
+        '<script src="audio/manifest.js"></script>')   # the recitation pack, when this copy carries one (src/tools/audio_pack.py)
 GFONTS = re.compile(r'<link rel="stylesheet" href="https://fonts\.googleapis\.com/[^"]*">\s*')
 # one service worker for the product; an old Hasaniya-only registration (from version 1.5) is removed
 SW = ('<script>(function(){if(!("serviceWorker" in navigator)||window.AndroidBridge||!/^https?:$/.test(location.protocol))return;'
