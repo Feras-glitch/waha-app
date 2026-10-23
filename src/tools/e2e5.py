@@ -31,7 +31,7 @@ async def oasis_ready(p):
 async def oasis_kid(p): return await p.evaluate("JSON.parse(localStorage.getItem('oasis:kids'))[JSON.parse(localStorage.getItem('oasis:kid'))]")
 async def corner(p):
     """the parent corner of the app, from inside the oasis"""
-    await p.click('#whoBtn'); await p.click('#ksCorner'); await p.wait_for_selector('#pinIn, .ph-top')
+    await p.click('#whoBtn'); await p.click('#ksParent'); await p.click('#ksCorner'); await p.wait_for_selector('#pinIn, .ph-top')
     if await p.locator('#pinIn').count():
         await p.fill('#pinIn', '1234'); await p.click('#pinForm button[type=submit]'); await p.wait_for_selector('.ph-top')
 
@@ -95,7 +95,7 @@ async def main():
         await p.click('#whoBtn'); await p.locator('#sheet .chip2', has_text='هند').click(); await p.wait_for_timeout(400)
 
         # parent: wrong PIN, then the family PIN
-        await p.click('#whoBtn'); await p.click('#ksDad'); await p.wait_for_selector('#pinIn')
+        await p.click('#whoBtn'); await p.click('#ksParent'); await p.click('#ksDad'); await p.wait_for_selector('#pinIn')
         ok(not await p.locator('#pinIn2').count(), 'parent PIN asked once (no setup)')
         await p.fill('#pinIn', '0000'); await p.click('#pinOk'); await p.wait_for_timeout(300)
         ok('غير صحيح' in await p.inner_text('#pinFb'), 'wrong PIN refused')
@@ -110,7 +110,7 @@ async def main():
         await p.evaluate("void saveFile('test-hind.txt','⟨اكتب|اكتبي⟩ اسمك', null)")
         await p.wait_for_selector('#kzOk')
         ok(await p.locator('#kzGo[disabled]').count() == 1, 'export waits for consent')
-        await p.check('#kzOk')
+        await p.check('#kzOk'); await p.fill('#kzPin', '1234')
         async with p.expect_download() as dli:
             await p.click('#kzGo')
         dl = await dli.value; fp = os.path.join(DL, 'test.txt'); await dl.save_as(fp)
@@ -126,8 +126,8 @@ async def main():
             await p.fill('#pinIn', '1234'); await p.click('#pinForm button[type=submit]'); await p.wait_for_selector('.ph-top')
         await p.click('[data-act="pBackup"]'); await p.wait_for_selector('[data-act="backupMake"]')
         t = await p.evaluate("document.getElementById('view').innerText")
-        ok('ما خرج من الواحة والحسنية' in t and 'test-hind.txt' in t, 'oasis exports listed in the parent corner')
-        await p.click('[data-act="backupMake"]'); await p.fill('#bk1', 'kunuz-2026'); await p.fill('#bk2', 'kunuz-2026')
+        ok('ما خرج من الجهاز' in t and 'test-hind.txt' in t, 'oasis exports listed in the parent corner')
+        await p.click('[data-act="backupMake"]'); await p.fill('#bk1', 'kunuz-2026'); await p.fill('#bk2', 'kunuz-2026'); await p.fill('#fpIn', '1234')
         async with p.expect_download() as dli:
             await p.click('.modal [data-m="1"]')
         dl = await dli.value; bp = os.path.join(DL, 'backup.json'); await dl.save_as(bp)

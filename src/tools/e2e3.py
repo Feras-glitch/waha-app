@@ -53,7 +53,7 @@ async def main():
         await shot(p, 'v02-voice-one')
         await p.click('[data-act="pVoice"]'); await p.click('[data-act="parent"]'); await p.click('[data-act="backKid"]')
         await p.wait_for_selector('.hello')
-        await p.click('[data-open="ghayth"]'); await p.click('[data-step="1"]')
+        await p.evaluate("document.querySelectorAll('details.fold').forEach(d => d.open = true)"); await p.click('[data-open="ghayth"]'); await p.click('[data-step="1"]')
         t = await text(p)
         ok('اسمعي الشرح بصوت ماما' in t, 'lesson offers the family voice (f)')
         await p.click('[data-act="narPlay"]'); await p.wait_for_timeout(600)
@@ -111,14 +111,18 @@ async def main():
         t = await text(p)
         ok('الاختبار الدوري' in t, 'diagnostic banner shows')
         await p.click('.banner[data-act="diag"]')
-        for k in range(60):
+        fbk = 0
+        for k in range(200):
+            await p.wait_for_timeout(80)
             if await p.locator('.score-big').count(): break
+            if await p.locator('#asItem .why, #asItem .fb-ok, #asItem .fb-no, #asItem [data-anext]').count(): fbk += 1
             if await p.locator('[data-anext]').count(): await p.click('[data-anext]'); continue
             if await p.locator('[data-a2]:not([disabled])').count(): await p.locator('[data-a2]:not([disabled])').first.click(); continue
             if await p.locator('[data-a]:not([disabled])').count(): await p.locator('[data-a]:not([disabled])').first.click(); continue
             if await p.locator('#typeAns:not([disabled])').count(): await p.fill('#typeAns', 'كتب'); await p.click('[data-check]'); continue
         t = await text(p)
         ok('نتيجة الاختبار الدوري' in t, 'diagnostic result page')
+        ok(fbk == 0, 'the diagnostic shows no right or wrong while it runs (it measures, it does not teach)')
         await enter_parent(p)
         await p.click('[data-act="pKids"]'); await p.click('[data-act="pProg"]'); await p.click('[data-act="pReport"]')
         await p.wait_for_selector('.report')
@@ -128,7 +132,7 @@ async def main():
         ok(await p.locator('.report .rc-tab').count() >= 1, 'diagnostic table present')
         await no_markers(p, 'report')
         await shot(p, 'v07-report')
-        await p.click('[data-act="exReport"]'); await p.check('#cOk')
+        await p.click('[data-act="exReport"]'); await p.check('#cOk'); await p.fill('#fpIn', '1234')
         async with p.expect_download() as dli:
             await p.click('.modal [data-m="1"]')
         dl = await dli.value; rp = os.path.join(DL, 'report.html'); await dl.save_as(rp)

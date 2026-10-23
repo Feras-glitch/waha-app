@@ -57,7 +57,7 @@ function fcardHTML(c){
   var l=lessonById[c.l], v=l&&l.verses[0];
   return '<article class="fcard"><header class="fc-h"><span class="eyebrow">جلسة العائلة · ربع ساعة</span><h2 class="h2">'+plain(Gx(l?l.title:'',0))+'</h2></header>'+
     '<div class="fc-sec"><span class="fc-k">كلمة الأسبوع</span><p><b class="fc-w">'+c.w[0]+'</b>'+(c.w[1]!=='—'?' <span class="muted">(الجذر: '+c.w[1]+')</span>':'')+' — '+c.w[2]+'</p></div>'+
-    (v?'<div class="fc-sec"><span class="fc-k">آية الأسبوع</span>'+verse(v).replace(/⟨استمع\|استمعي⟩ للتلاوة/,'الاستماع للتلاوة')+'</div>':'')+
+    (v?'<div class="fc-sec"><span class="fc-k">آية الأسبوع</span>'+verse(v,{out:1}).replace(/⟨استمع\|استمعي⟩ للتلاوة/,'الاستماع للتلاوة')+'</div>':'')+
     '<div class="fc-sec"><span class="fc-k">سؤال المائدة</span><p>'+c.q+'</p></div>'+
     '<div class="fc-sec"><span class="fc-k">لعبة</span><p>'+c.g+'</p></div>'+
     '<div class="fc-sec"><span class="fc-k">تحدّي الأسبوع</span><p>'+c.c+'</p></div>'+

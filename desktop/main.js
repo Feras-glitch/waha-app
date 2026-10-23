@@ -25,5 +25,14 @@ function createWindow() {
   win.loadFile(path.join(__dirname, "app", "index.html"));
 }
 
+// المواقع الخارجية لا تُفتح من تطبيق الأطفال (قرار وليّ الأمر): لا نوافذ جديدة لموقع، ولا تغادر النافذة ملفات التطبيق.
+// تبقى نوافذ الطباعة الفارغة (about:blank) وروابط blob المحلية.
+const LOCAL = (url) => /^(file:|blob:|about:blank)/.test(String(url || ""));
+app.on("web-contents-created", (e, wc) => {
+  wc.setWindowOpenHandler(({ url }) => (LOCAL(url) ? { action: "allow" } : { action: "deny" }));
+  wc.on("will-navigate", (ev, url) => { if (!LOCAL(url)) ev.preventDefault(); });
+  wc.on("will-redirect", (ev, url) => { if (!LOCAL(url)) ev.preventDefault(); });
+});
+
 app.whenReady().then(createWindow);
 app.on("window-all-closed", () => app.quit());

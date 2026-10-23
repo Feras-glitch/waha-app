@@ -25,7 +25,6 @@ public class NativeBridge {
     private final WebView web;
     private TextToSpeech tts;
     private boolean ttsReady = false;
-    private boolean ttsWarned = false;
     private volatile boolean speaking = false;
     private WebView printView;
 
@@ -51,14 +50,15 @@ public class NativeBridge {
     }
 
     // ---------- TTS ----------
+    /** whether an Arabic voice is installed, for the parents' board */
+    @JavascriptInterface
+    public boolean ttsOk() { return tts != null && ttsReady; }
+
     @JavascriptInterface
     public void speak(String id, String text, double rate, double pitch) {
         act.runOnUiThread(() -> {
             if (tts == null || !ttsReady) {
-                if (!ttsWarned) {
-                    ttsWarned = true;
-                    Toast.makeText(act, "صوت القراءة العربي غير مثبّت. ثبّته من إعدادات الجهاز > اللغة > تحويل النص إلى كلام", Toast.LENGTH_LONG).show();
-                }
+                // no toast here: whoever holds the phone may be a child; the parents' board says it (ttsOk)
                 js("window.__ttsEvent&&window.__ttsEvent('error'," + JSONObject.quote(id) + ")");
                 return;
             }
@@ -75,6 +75,10 @@ public class NativeBridge {
 
     @JavascriptInterface
     public boolean isSpeaking() { return speaking; }
+
+    /* time since the device started, which the user cannot set: the waiting PIN reset checks the wall clock against it */
+    @JavascriptInterface
+    public double elapsed() { return (double) android.os.SystemClock.elapsedRealtime(); }
 
     public void stopSpeech() { cancel(); }
 

@@ -64,7 +64,7 @@ public class MainActivity extends Activity {
         web.setWebViewClient(new WebViewClient() {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-                return serve(request.getUrl());
+                return serve(request.getUrl(), request.getRequestHeaders());
             }
 
             @Override
@@ -113,7 +113,7 @@ public class MainActivity extends Activity {
     }
 
     /** يقدّم ملفات التطبيق من مجلد assets/www، ويمنع كل ما عداها */
-    private WebResourceResponse serve(Uri uri) {
+    private WebResourceResponse serve(Uri uri, java.util.Map<String, String> requestHeaders) {
         HashMap<String, String> headers = new HashMap<String, String>();
         if (!HOST.equals(uri.getHost())) {
             return new WebResourceResponse("text/plain", "UTF-8", 403, "Blocked", headers, new ByteArrayInputStream(new byte[0]));
@@ -121,6 +121,10 @@ public class MainActivity extends Activity {
         String path = uri.getPath();
         if (path == null || path.equals("/")) path = "/index.html";
         path = path.substring(1);
+        if (path.startsWith("audio/") && path.endsWith(".mp3")) {
+            WebResourceResponse r = AssetRange.serve(getAssets(), "www/" + path, requestHeaders, "audio/mpeg");
+            if (r != null) return r;
+        }
         try {
             InputStream in = getAssets().open("www/" + path);
             return new WebResourceResponse(mimeFor(path), "UTF-8", in);

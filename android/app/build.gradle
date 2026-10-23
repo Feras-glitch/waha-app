@@ -10,8 +10,8 @@ android {
         applicationId "com.waha.app"
         minSdk 26
         targetSdk 34
-        versionCode 12
-        versionName "2.5"
+        versionCode 17
+        versionName "2.10"
     }
 
     /* التوقيع: المفتاح يأتي من أسرار GitHub (انظر SIGNING-AR.md في جذر المستودع)،
@@ -47,6 +47,11 @@ android {
     }
 
 
+
+    // حزمة التلاوة (www/audio): تبقى mp3 غير مضغوطة داخل الـAPK ليُقرأ منها الجزء الذي يطلبه المشغّل (AssetRange)
+    androidResources {
+        noCompress 'mp3'
+    }
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17

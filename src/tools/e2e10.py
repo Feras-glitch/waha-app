@@ -138,7 +138,7 @@ async def main():
         await p.fill('#pinIn', '1234'); await p.click('#pinForm button[type=submit]'); await p.wait_for_timeout(300)
         ok(await p.locator('.ph-top').count() == 0, 'even the right PIN waits for the lock')
         await p.goto('about:blank'); await p.goto(URL); await p.wait_for_selector('#whoBtn'); await p.wait_for_timeout(300)
-        await p.click('#whoBtn'); await p.click('#ksDad'); await p.wait_for_selector('#pinIn'); await p.fill('#pinIn', '1234'); await p.click('#pinOk'); await p.wait_for_timeout(400)
+        await p.click('#whoBtn'); await p.click('#ksParent'); await p.click('#ksDad'); await p.wait_for_selector('#pinIn'); await p.fill('#pinIn', '1234'); await p.click('#pinOk'); await p.wait_for_timeout(400)
         ok('محاولات' in await p.inner_text('#pinFb') and await p.evaluate("$('dad').hidden"), 'the oasis keeps the same lock')
         await p.goto('about:blank'); await p.goto(HS); await p.wait_for_timeout(1500)
         ok(await p.evaluate("pinLockState().until > Date.now()"), 'the Hasaniya reads the same lock')
@@ -146,9 +146,9 @@ async def main():
 
         # ---- the oasis board: leaving it ends the parent's session
         await p.goto('about:blank'); await p.goto(URL); await p.wait_for_selector('#whoBtn'); await p.wait_for_timeout(300)
-        await p.click('#whoBtn'); await p.click('#ksDad'); await p.wait_for_selector('#pinIn'); await p.fill('#pinIn', '1234'); await p.click('#pinOk')
+        await p.click('#whoBtn'); await p.click('#ksParent'); await p.click('#ksDad'); await p.wait_for_selector('#pinIn'); await p.fill('#pinIn', '1234'); await p.click('#pinOk')
         await until(p, "!$('dad').hidden")
-        await p.click('#homeBtn'); await p.wait_for_timeout(300); await p.click('#whoBtn'); await p.click('#ksDad'); await p.wait_for_timeout(300)
+        await p.click('#homeBtn'); await p.wait_for_timeout(300); await p.click('#whoBtn'); await p.click('#ksParent'); await p.click('#ksDad'); await p.wait_for_timeout(300)
         ok(await p.locator('#sheet:not([hidden]) #pinIn').count() == 1, 'oasis: back from the parent board, the board asks for the PIN again')
         await p.keyboard.press('Escape')
 

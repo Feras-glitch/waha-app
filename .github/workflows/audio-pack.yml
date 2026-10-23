@@ -1,0 +1,57 @@
+# حزمة التلاوة: تُبنى هنا مرة واحدة (الشبكة متاحة في GitHub Actions)، وتُحفظ ملفًّا ثابتًا waha-audio.zip في صفحة Releases
+# باسم audio-v1، ثم تضعها مهمة «Build all» في web/audio/ قبل بناء أندرويد وسطح المكتب وصفحة الويب.
+# التطبيق نفسه لا يتّصل بأي موقع: التلاوة في الجهاز.
+#   للتعلّم: الحصري (المصحف المعلّم) آيةً آية، من everyayah.com
+#   للاستماع: عبد الرحمن العوسي، السورة كاملة، من archive.org
+# تُشغَّل برفع وسمٍ يبدأ بـ audio-v (git tag audio-v1 && git push origin audio-v1)، أو برفع فرعٍ اسمه audio-pack
+# (فتُحفظ في audio-v1)، أو يدويًّا من صفحة Actions.
+# إن تغيّر المحفوظ أو آيات «كنوز البيان» فابنوا حزمةً جديدة (audio-v2) وغيّروا AUDIO_TAG في build-all.yml.
+name: Audio pack
+
+on:
+  push:
+    tags: [ 'audio-v*' ]
+    branches: [ 'audio-pack' ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: اسم الإصدار الذي تُحفظ فيه الحزمة
+        default: audio-v1
+      kbps:
+        description: معدّل البتات (كيلوبت في الثانية، صوتٌ واحد)
+        default: '32'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: audio-pack
+  cancel-in-progress: false
+
+jobs:
+  pack:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    env:
+      TAG: ${{ inputs.tag || (startsWith(github.ref, 'refs/tags/') && github.ref_name || 'audio-v1') }}
+      KBPS: ${{ inputs.kbps || '32' }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: ffmpeg
+        run: command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
+      - name: Build the pack
+        run: python3 src/tools/audio_pack.py --out "$RUNNER_TEMP/pack" --kbps "$KBPS" --jobs 6
+      - name: Zip
+        run: |
+          cd "$RUNNER_TEMP/pack" && zip -0 -qr "$RUNNER_TEMP/waha-audio.zip" audio
+          ls -la "$RUNNER_TEMP/waha-audio.zip"
+      - name: Keep it in Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view "$TAG" > /dev/null 2>&1; then
+            gh release create "$TAG" --prerelease --target "$GITHUB_SHA" --title "حزمة التلاوة ($TAG)" --notes-file "$RUNNER_TEMP/pack/audio/SOURCES.txt"
+          fi
+          gh release upload "$TAG" "$RUNNER_TEMP/waha-audio.zip" --clobber
+          # the builds check the pack against src/tools/audio.sha256: a new pack is used only once its fingerprint is recorded there
+          echo "::notice::بصمة الحزمة الجديدة: $(sha256sum "$RUNNER_TEMP/waha-audio.zip" | cut -d' ' -f1). سجّلوها في src/tools/audio.sha256 لتستعملها النسخ."
