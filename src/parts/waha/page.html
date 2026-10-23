@@ -1,0 +1,869 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<meta charset="utf-8">
+<title>واحة اللسان العربي</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Tajawal:wght@400;500;700;800&family=Aref+Ruqaa:wght@400;700&display=swap">
+<style>
+/* Layout: the child's own oasis scene on top (it grows as stages are passed), one "next step" card, then the eight oases.
+   Inside an oasis: wrapping tabs, one game card at a time, a stage strip on every game. Sand by day, oasis night in dark. */
+:root{
+  --bg:#efe3c6; --paper:#f8f1df; --ink:#2b2416; --muted:#6e624a;
+  --palm:#2f6b3a; --palm-deep:#1f4a28; --date:#b5651d; --date-soft:#e9c89a;
+  --line:#d6c39a; --ok:#2f6b3a; --bad:#a63d2f; --near:#8a6a12;
+  --nabi:#1d5a43; --nabi-soft:#dcebe2; --sahabi:#6a4a1f; --sahabi-soft:#efe1c8;
+  --sky:#2f5f7a; --sky-soft:#d9e6ea; --ink-soft:#e4d6b4;
+  --sc-sky1:#bfe0f2; --sc-sky2:#f3e6c8; --sc-sand1:#e6cf9a; --sc-sand2:#d4b878; --sc-water:#5aa7cf; --sc-water2:#8fcbe8; --sc-leaf:#3d8a4a; --sc-leaf2:#2c6a38; --sc-trunk:#8a5a2b; --sc-sun:#f6c453; --sc-star:#f6c453;
+  --f-ui:"Tajawal","Amiri",system-ui,sans-serif; --f-q:"Amiri","Scheherazade New","Noto Naskh Arabic",serif; --f-d:"Aref Ruqaa","Amiri",serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141b16; --paper:#1d2620; --ink:#efe7d2; --muted:#a79c82; --palm:#6fbf7d; --palm-deep:#9bd9a5;
+  --date:#e0944a; --date-soft:#4a3418; --line:#34423a; --ok:#6fbf7d; --bad:#e07b6a; --near:#e0c060; --nabi:#8fd4ad; --nabi-soft:#16302a; --sahabi:#e2bd84; --sahabi-soft:#3a2c17;
+  --sky:#8cc3df; --sky-soft:#15303d; --ink-soft:#2b352e;
+  --sc-sky1:#0f1b33; --sc-sky2:#2a3550; --sc-sand1:#5a4a2e; --sc-sand2:#3f3421; --sc-water:#2f6f94; --sc-water2:#4d93b8; --sc-leaf:#3f8a52; --sc-leaf2:#2a5e39; --sc-trunk:#6b4423; --sc-sun:#e8e2c4; --sc-star:#fff3c4; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141b16; --paper:#1d2620; --ink:#efe7d2; --muted:#a79c82; --palm:#6fbf7d; --palm-deep:#9bd9a5;
+  --date:#e0944a; --date-soft:#4a3418; --line:#34423a; --ok:#6fbf7d; --bad:#e07b6a; --near:#e0c060; --nabi:#8fd4ad; --nabi-soft:#16302a; --sahabi:#e2bd84; --sahabi-soft:#3a2c17;
+  --sky:#8cc3df; --sky-soft:#15303d; --ink-soft:#2b352e;
+  --sc-sky1:#0f1b33; --sc-sky2:#2a3550; --sc-sand1:#5a4a2e; --sc-sand2:#3f3421; --sc-water:#2f6f94; --sc-water2:#4d93b8; --sc-leaf:#3f8a52; --sc-leaf2:#2a5e39; --sc-trunk:#6b4423; --sc-sun:#e8e2c4; --sc-star:#fff3c4; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:18px;line-height:1.6;direction:rtl;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 40px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+/* sticky bar: always a way home, always the current place */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--bg);display:flex;align-items:center;gap:10px;padding:10px 0 8px;border-bottom:1px solid var(--line)}
+.bar .home{display:flex;align-items:center;gap:8px;border:1.5px solid var(--line);background:var(--paper);color:var(--palm-deep);border-radius:999px;padding:4px 12px 4px 8px;font:inherit;font-weight:800;cursor:pointer}
+.bar .home svg{width:26px;height:26px}
+.bar .where{flex:1;min-width:0;font-family:var(--f-d);font-size:1.35rem;color:var(--palm-deep);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+.bar .who{border:1.5px solid var(--line);background:var(--paper);color:var(--ink);border-radius:999px;padding:4px 12px;font:inherit;font-weight:700;cursor:pointer;white-space:nowrap}
+h1{font-family:var(--f-d);font-weight:700;font-size:2.2rem;margin:0;line-height:1.1;color:var(--palm-deep);text-wrap:balance}
+h1 small{display:block;font-family:var(--f-ui);font-size:.95rem;font-weight:500;color:var(--muted)}
+/* scene */
+.scene{background:var(--paper);border-radius:16px;overflow:hidden;position:relative}
+.scene svg{display:block;width:100%;height:auto}
+.scene .cap{position:absolute;top:8px;right:12px;font-family:var(--f-d);font-size:1.3rem;color:var(--ink);text-shadow:0 1px 0 var(--paper)}
+.scene .cnt{position:absolute;top:10px;left:12px;font-size:.85rem;color:var(--ink);background:color-mix(in srgb,var(--paper) 70%,transparent);border-radius:999px;padding:0 10px;font-variant-numeric:tabular-nums}
+.next{background:var(--paper);border-radius:14px;padding:12px 14px;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:center;border-right:5px solid var(--date)}
+.next .ic{grid-row:span 3;width:64px;height:64px}
+.next .ic svg{width:100%;height:100%}
+.next .t{font-weight:800;font-size:1.1rem;margin:0}
+.next .d{margin:0;font-size:.95rem;color:var(--muted)}
+.next .bar2{display:flex;align-items:center;gap:8px}
+.bar2 .track{flex:1;height:8px;border-radius:4px;background:var(--line);overflow:hidden}.bar2 .track i{display:block;height:100%;background:var(--date)}
+.bar2 .n{font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.next .go{grid-column:2;justify-self:start}
+.otiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.otile{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;align-items:center;text-align:right;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);border-radius:16px;padding:10px 12px;font:inherit;cursor:pointer;min-width:0}
+.otile:hover,.otile:focus-visible{border-color:var(--date);outline:none}
+.otile .g{grid-row:span 2;width:58px;height:58px;position:relative}
+.otile .g svg{width:100%;height:100%}
+.otile .nm{font-weight:800;font-size:1.05rem;line-height:1.3}
+.otile .bl{font-size:.82rem;color:var(--muted);line-height:1.4}
+.journey{display:flex;flex-direction:column;gap:6px}
+.jrow{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.jrow .ic{width:34px;height:34px}.jrow .ic svg{width:100%;height:100%}
+.jrow .t{font-weight:700;margin:0;font-size:.98rem}.jrow .d{margin:0;font-size:.85rem;color:var(--muted)}
+.jrow .st{font-size:.85rem;font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap}
+.jrow.done .st{color:var(--ok);font-weight:800}
+.jrow.locked{opacity:.55}
+/* nav wraps so nothing hides */
+nav{display:flex;gap:6px;flex-wrap:wrap}
+nav button{border:1.5px solid var(--line);background:var(--paper);color:var(--muted);font:inherit;font-weight:700;font-size:.98rem;padding:6px 14px;border-radius:999px;cursor:pointer}
+nav button[aria-selected="true"]{background:var(--palm);border-color:var(--palm);color:#fff}
+section{display:flex;flex-direction:column;gap:12px}
+.stage{display:flex;align-items:center;gap:10px;background:var(--bg);border-radius:10px;padding:6px 10px;font-size:.9rem}
+.stage .ic{width:30px;height:30px;flex:0 0 auto}.stage .ic svg{width:100%;height:100%}
+.stage .t{flex:1;min-width:0}
+.stage .track{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:2px}.stage .track i{display:block;height:100%;background:var(--date)}
+.stage.done{color:var(--ok)}
+/* palm */
+.palm{position:relative;background:var(--paper);border-radius:14px;padding:16px 12px 8px;overflow:hidden}
+.palm svg{display:block;width:100%;max-width:100%;height:auto}
+.fruits{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.fruit{border:1.5px solid var(--line);background:var(--bg);border-radius:12px;padding:10px 8px;text-align:center;cursor:pointer;font:inherit;color:var(--ink);display:flex;flex-direction:column;gap:2px;min-width:0;position:relative}
+.fruit:hover,.fruit:focus-visible{border-color:var(--date);outline:none}
+.fruit .w{font-family:var(--f-q);font-size:1.55rem;line-height:1.2}
+.fruit .c{font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.tile .w{font-family:var(--f-d);font-size:1.6rem}
+.tile .bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}.tile .bar i{display:block;height:100%;background:var(--date)}
+.fruit .p{font-size:.8rem;color:var(--date);font-weight:700}
+.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+.item{border:1.5px solid var(--line);background:var(--paper);border-radius:12px;padding:10px 12px;text-align:right;cursor:pointer;font:inherit;color:var(--ink);display:flex;flex-direction:column;gap:2px;min-width:0;position:relative}
+.item:hover,.item:focus-visible{border-color:var(--date);outline:none}
+.item .w{font-family:var(--f-q);font-size:1.35rem;line-height:1.3}
+.item .c{font-size:.8rem;color:var(--muted)}
+.done-mark{position:absolute;top:6px;left:8px;color:var(--ok);font-weight:800;font-size:.9rem}
+/* sheet */
+.sheet{position:fixed;inset:auto 0 0 0;background:var(--paper);border-radius:18px 18px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.25);max-height:88%;overflow:auto;
+  padding:14px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));z-index:20;display:flex;flex-direction:column;gap:10px}
+.sheet .top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.sheet h2{font-family:var(--f-q);font-size:2.2rem;margin:0;line-height:1.2}
+.chip{display:inline-block;background:var(--date-soft);color:var(--ink);border-radius:999px;padding:2px 12px;font-size:.9rem;font-weight:700}
+.x{border:0;background:var(--bg);color:var(--ink);width:38px;height:38px;border-radius:50%;font-size:1.3rem;cursor:pointer}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:baseline}
+.lbl{font-size:.8rem;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.q{font-family:var(--f-q);font-size:1.5rem;line-height:2;background:var(--bg);border-radius:10px;padding:10px 14px;margin:0}
+.q.s{font-size:1.25rem}
+.mq{font-family:var(--f-q);font-size:1.25rem;line-height:1.9;margin:0 0 4px;border-right:3px solid var(--line);padding-right:10px}
+.hd{border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.hd.nabi{background:var(--nabi-soft);border-right:5px solid var(--nabi)}
+.hd.wasf,.hd.sahabi,.hd.shair,.hd.tamaththul{background:var(--sahabi-soft);border-right:5px solid var(--sahabi)}
+.hd.tamaththul{border-right-style:double;border-right-width:7px}
+.hd .who{font-size:.85rem;font-weight:800;letter-spacing:.02em}
+.hd.nabi .who{color:var(--nabi)}.hd.wasf .who,.hd.sahabi .who,.hd.shair .who,.hd.tamaththul .who{color:var(--sahabi)}
+.hd .ctx{font-family:var(--f-q);font-size:1.1rem;color:var(--muted);margin:0}
+.hd .fx{font-family:var(--f-q);font-size:1.45rem;line-height:1.9;margin:0}
+.hd details summary{cursor:pointer;color:var(--muted);font-size:.85rem}
+.hd details p{font-family:var(--f-q);font-size:1.05rem;line-height:1.9;margin:6px 0 0}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chip2{border:1.5px solid var(--line);background:var(--paper);color:var(--ink);border-radius:999px;padding:4px 12px;font:inherit;font-size:.95rem;cursor:pointer}
+.chip2[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.badge{display:inline-block;border-radius:999px;padding:0 10px;font-size:.78rem;font-weight:700}
+.badge.ok{background:var(--nabi-soft);color:var(--nabi)}.badge.wait{background:var(--date-soft);color:var(--ink)}
+.hk{border-bottom:1px solid var(--line);padding:10px 0}.hk summary{font-family:var(--f-q);font-size:1.35rem;cursor:pointer;list-style:none}.hk summary::-webkit-details-marker{display:none}.hk p{margin:4px 0 0}
+mark{background:var(--date-soft);color:inherit;padding:0 3px;border-radius:4px}
+.ref{font-size:.9rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.sent{font-size:1.15rem;border-right:3px solid var(--line);padding-right:10px}
+.draft{font-size:.75rem;color:var(--muted)}
+/* games */
+.card{background:var(--paper);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.big{font-family:var(--f-q);font-size:3rem;text-align:center;line-height:1.3;margin:0}
+.rasm{font-family:var(--f-q);font-size:4rem;text-align:center;line-height:1.4;margin:0;color:var(--palm-deep);letter-spacing:.05em}
+.ask{font-size:1.2rem;font-weight:700;text-align:center;margin:0;text-wrap:balance}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.opts.one{grid-template-columns:1fr}
+.opt{border:1.5px solid var(--line);background:var(--bg);color:var(--ink);border-radius:12px;padding:12px 8px;font:inherit;font-family:var(--f-q);font-size:1.5rem;cursor:pointer;min-width:0}
+.opt.m{font-family:var(--f-ui);font-size:1.05rem}
+.opt.v{font-family:var(--f-q);font-size:1.25rem;line-height:1.7}
+.opt[data-s="ok"]{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 15%,var(--bg))}
+.opt[data-s="bad"]{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 15%,var(--bg))}
+.opt:disabled{cursor:default}
+.btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.btn{border:0;background:var(--palm);color:#fff;font:inherit;font-weight:700;border-radius:10px;padding:10px 18px;cursor:pointer}
+.btn.ghost{background:var(--bg);color:var(--ink);border:1.5px solid var(--line)}
+.btn.warm{background:var(--date)}
+.btn.sm{padding:6px 12px;font-size:.9rem}
+.btn:disabled{opacity:.45;cursor:default}
+.btn:focus-visible,.opt:focus-visible,nav button:focus-visible,.chip2:focus-visible,.back:focus-visible,.tok:focus-visible,.otile:focus-visible,.bar button:focus-visible{outline:3px solid var(--date);outline-offset:2px}
+.fb{min-height:1.6em;text-align:center;font-weight:700;margin:0}
+.fb.ok{color:var(--ok)}.fb.bad{color:var(--bad)}.fb.near{color:var(--near)}
+.why{background:var(--bg);border-radius:10px;padding:10px 14px;font-size:1rem;display:flex;flex-direction:column;gap:8px}
+.why p{margin:0}
+.score{display:flex;gap:14px;justify-content:center;color:var(--muted);font-size:.9rem;font-variant-numeric:tabular-nums;flex-wrap:wrap}
+.score b{color:var(--date)}
+textarea,input.f{width:100%;font:inherit;font-size:1.1rem;line-height:1.8;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--bg);color:var(--ink)}
+input.f.t{font-family:var(--f-q);font-size:1.5rem;text-align:center}
+textarea{min-height:7em;resize:vertical}
+.bank{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.bank button{border:1.5px solid var(--line);background:var(--paper);color:var(--ink);border-radius:10px;min-width:2.3em;padding:4px 8px;font:inherit;font-family:var(--f-q);font-size:1.4rem;cursor:pointer}
+.bank button.u{font-family:var(--f-ui);font-size:.95rem}
+.used{display:flex;gap:6px;flex-wrap:wrap}
+.used span{border:1px solid var(--line);border-radius:999px;padding:1px 10px;font-family:var(--f-q);font-size:1.1rem;color:var(--muted)}
+.used span.on{background:var(--date-soft);color:var(--ink);border-color:var(--date)}
+.note{font-size:.9rem;color:var(--muted);margin:0}
+.back{border:1.5px solid var(--line);background:var(--paper);color:var(--ink);border-radius:999px;padding:4px 14px;font:inherit;font-size:.95rem;cursor:pointer}
+/* riddles */
+.clues{margin:0;padding:0 1.4em 0 0;display:flex;flex-direction:column;gap:6px;font-size:1.2rem}
+.clues li.ay{font-family:var(--f-q);font-size:1.25rem;line-height:1.9;list-style:none;margin-right:-1.4em}
+.letters{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;direction:rtl}
+.letters span{min-width:2.1em;text-align:center;border:1.5px solid var(--line);border-radius:8px;padding:2px 4px;font-family:var(--f-q);font-size:1.3rem;background:var(--bg)}
+/* poetry */
+.poem{display:flex;flex-direction:column;gap:6px;font-family:var(--f-q);font-size:1.35rem;line-height:1.9}
+.bt{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px}
+.bt.one{grid-template-columns:1fr}
+.bt span:first-child{text-align:right}.bt span:last-child{text-align:left}
+.bt.one span{text-align:center!important}
+.gap{border-bottom:2px dotted var(--date);color:transparent;cursor:pointer;user-select:none}
+.gap.open{color:inherit;border-bottom-color:transparent;background:var(--date-soft);border-radius:4px}
+@media (max-width:460px){.bt{grid-template-columns:1fr;gap:0}.bt span:last-child{text-align:left;padding-right:2em}}
+.gloss{display:flex;flex-wrap:wrap;gap:6px}
+.gloss span{background:var(--bg);border-radius:8px;padding:2px 10px;font-size:.95rem}
+.gloss b{font-family:var(--f-q);font-size:1.1rem;font-weight:700}
+/* stories & articles */
+.prose{font-family:var(--f-q);font-size:1.3rem;line-height:2;margin:0}
+.orig{font-family:var(--f-q);font-size:1.15rem;line-height:2;margin:0;background:var(--bg);border-radius:10px;padding:10px 14px}
+.part{display:flex;flex-direction:column;gap:4px}
+.part .lbl{color:var(--sky)}
+mark.cn{background:var(--sky-soft);color:var(--sky);font-weight:700}
+.mcq{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:10px}
+.mcq p{margin:0;font-weight:700}
+/* daily life */
+.talk{display:flex;flex-direction:column;gap:8px}
+.bub{max-width:85%;border-radius:14px;padding:6px 12px;background:var(--bg);display:flex;flex-direction:column;min-width:0}
+.bub.s0{align-self:flex-start;background:var(--nabi-soft)}
+.bub.s1{align-self:flex-end;background:var(--date-soft)}
+.bub.s2{align-self:flex-start;background:var(--sky-soft)}
+.bub .w{font-size:.78rem;font-weight:800;color:var(--muted)}
+.bub .t{font-family:var(--f-q);font-size:1.3rem;line-height:1.8}
+.bub .t.hide{color:transparent;border-bottom:2px dotted var(--date);cursor:pointer}
+.tray{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;min-height:3em;padding:8px;border-radius:12px;background:var(--bg)}
+.tray.ans{border:2px dashed var(--line);background:transparent}
+.tray.col{flex-direction:column;align-items:stretch}
+.tok{border:1.5px solid var(--line);background:var(--paper);color:var(--ink);border-radius:10px;padding:4px 12px;font:inherit;font-family:var(--f-q);font-size:1.35rem;cursor:pointer}
+.tok.s{font-size:1.05rem;text-align:right}
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.sw{display:flex;gap:10px;align-items:center;background:var(--paper);border-radius:12px;padding:8px 10px;min-width:0}
+.sw i{flex:0 0 auto;width:38px;height:38px;border-radius:50%;border:1.5px solid var(--line)}
+.sw .w{font-family:var(--f-q);font-size:1.25rem;line-height:1.3}
+.sw .c{font-size:.8rem;color:var(--muted)}
+.bigsw{width:96px;height:96px;border-radius:50%;margin:0 auto;border:2px solid var(--line)}
+.forms{width:100%;border-collapse:collapse;font-size:1rem}
+.forms td,.forms th{border-bottom:1px solid var(--line);padding:4px 6px;text-align:right}
+.forms td{font-family:var(--f-q);font-size:1.2rem}
+.tablewrap{overflow-x:auto}
+.paper{background:var(--paper);border-radius:4px;padding:14px 16px;border-top:4px double var(--ink);display:flex;flex-direction:column;gap:6px}
+.paper h3{font-family:var(--f-d);font-size:1.6rem;margin:0;line-height:1.3;text-wrap:balance}
+.paper .meta{font-size:.8rem;color:var(--muted)}
+.paper p{margin:0;font-family:var(--f-q);font-size:1.2rem;line-height:1.9;white-space:pre-wrap}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fields label{display:flex;flex-direction:column;gap:2px;font-size:.85rem;color:var(--muted);min-width:0}
+@media (max-width:460px){.fields{grid-template-columns:1fr}}
+.checks{display:flex;flex-wrap:wrap;gap:6px}
+.checks span{border-radius:999px;padding:1px 10px;font-size:.85rem;background:var(--bg);color:var(--muted)}
+.checks span.on{background:var(--nabi-soft);color:var(--nabi);font-weight:700}
+/* AI feedback */
+.ai{background:var(--sky-soft);border-radius:12px;padding:10px 14px;display:flex;flex-direction:column;gap:6px;font-size:1rem}
+.ai .h{font-weight:800;color:var(--sky);font-size:.85rem}
+.ai ul{margin:0;padding-right:1.2em}
+.ai .fix b{font-family:var(--f-q);font-size:1.15rem}
+/* tests & dad */
+.tq{display:flex;flex-direction:column;gap:10px}
+.dash{width:100%;border-collapse:collapse;font-size:.95rem}
+.dash td,.dash th{border-bottom:1px solid var(--line);padding:4px 6px;text-align:right;font-variant-numeric:tabular-nums}
+.queue{display:flex;flex-direction:column;gap:10px}
+.qi{background:var(--bg);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.qi .tx{font-family:var(--f-q);font-size:1.15rem;line-height:1.8;white-space:pre-wrap;margin:0}
+/* celebration */
+.cele{position:fixed;inset:0;background:color-mix(in srgb,var(--ink) 55%,transparent);z-index:30;display:grid;place-items:center;padding:16px}
+.cele .cc{background:var(--paper);border-radius:20px;padding:20px;max-width:420px;width:100%;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.cele .cc svg{width:180px;height:180px}
+.cele h2{font-family:var(--f-d);font-size:1.9rem;margin:0;color:var(--palm-deep);text-wrap:balance}
+.cele p{margin:0;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){
+  .sheet{animation:up .25s ease-out}@keyframes up{from{transform:translateY(30px);opacity:0}}
+  .cele .cc{animation:pop .35s cubic-bezier(.2,1.2,.4,1)}@keyframes pop{from{transform:scale(.7);opacity:0}}
+  .scene .new{animation:grow .9s ease-out}@keyframes grow{from{transform:scale(0);opacity:0}}
+  .twinkle{animation:tw 2.4s ease-in-out infinite alternate}@keyframes tw{from{opacity:.4}to{opacity:1}}
+}
+@media (max-width:420px){body{font-size:17px}.big{font-size:2.4rem}.rasm{font-size:3.2rem}.opt{font-size:1.3rem}h1{font-size:1.9rem}.bar .where{font-size:1.15rem}}
+
+/* ---- طبقة الطفل: شاشة بزر واحد، رفيق يتكلم، رحلة اليوم ---- */
+.kid{display:flex;flex-direction:column;gap:14px}
+.kscene{position:relative;border-radius:22px;overflow:hidden;box-shadow:0 2px 10px rgba(60,40,10,.12)}
+.kscene svg{display:block;width:100%;height:auto}
+.kscene .new{animation:grow 1.3s cubic-bezier(.3,1.6,.5,1)}
+.kscene .cnt{position:absolute;top:10px;inset-inline-start:12px;background:var(--paper);border-radius:999px;padding:3px 10px;font-weight:800;font-size:.95rem}
+.ktalk{display:flex;align-items:flex-end;gap:10px}
+.cmp{width:86px;height:86px;flex:none;transition:transform .2s}
+.cmp svg{width:100%;height:100%}
+.cmp.talk{animation:cmpTalk .45s ease-in-out infinite alternate}
+@keyframes cmpTalk{from{transform:translateY(0) rotate(-2deg)}to{transform:translateY(-4px) rotate(2deg)}}
+.cmp.happy{animation:cmpHop .5s ease 2}
+@keyframes cmpHop{50%{transform:translateY(-14px) scale(1.06)}}
+.bubble{position:relative;flex:1;background:var(--paper);border:2px solid var(--line);border-radius:20px;padding:12px 14px;font-size:1.2rem;line-height:1.7;font-weight:700}
+.bubble:after{content:'';position:absolute;bottom:14px;inset-inline-start:-10px;border:9px solid transparent;border-inline-end-color:var(--line)}
+.hear{border:none;background:var(--date-soft);border-radius:50%;width:38px;height:38px;font-size:1.1rem;cursor:pointer;flex:none}
+.bigplay{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;min-height:86px;border:none;border-radius:26px;background:var(--palm-deep);color:var(--paper);font:inherit;font-size:1.7rem;font-weight:800;cursor:pointer;box-shadow:0 5px 0 rgba(0,0,0,.18)}
+.bigplay:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.18)}
+.bigplay.done{background:var(--date)}
+.krow{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:10px}
+.ktile{display:flex;flex-direction:column;align-items:center;gap:4px;border:2px solid var(--line);background:var(--paper);border-radius:20px;padding:12px 6px;font:inherit;font-weight:800;font-size:1rem;cursor:pointer;color:var(--ink);position:relative}
+.ktile .e{font-size:2rem;line-height:1}
+.ktile .n{position:absolute;top:6px;inset-inline-end:8px;background:var(--date);color:#fff;border-radius:999px;font-size:.8rem;padding:0 7px}
+.dots{display:flex;gap:6px;justify-content:center}
+.dots i{width:12px;height:12px;border-radius:50%;background:var(--line)}
+.dots i.ok{background:var(--palm-deep)}.dots i.learn{border-radius:3px;background:var(--date-soft)}.dots i.learn.ok{background:var(--palm)}.kcard.learn .big{font-size:1.5rem;line-height:1.9;margin:6px 0}.kscene .kav{position:absolute;top:8px;inset-inline-start:8px;border:2px solid var(--paper);border-radius:50%;line-height:0}.kcard.msg{border:2px solid var(--date-soft)}.kbag{display:flex;flex-direction:column;gap:10px}.kcard.kw{padding:10px 12px;gap:4px}.kwords{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:6px}.kwords span{background:var(--date-soft);color:#3a2a12;border-radius:10px;padding:3px 10px;font-size:.95rem}.kcard .lrn{margin:4px 0;font-size:1.15rem;line-height:1.9;text-align:center}.dots i.bad{background:var(--date)}.dots i.now{outline:3px solid var(--date-soft)}
+.kcard{background:var(--paper);border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 2px 10px rgba(60,40,10,.1)}
+.kcard .kq{font-size:1.45rem;line-height:1.8;font-weight:700;text-align:center}
+.kopts{display:grid;gap:10px}
+.kopts .opt{min-height:64px;font-size:1.3rem;border-radius:18px}
+.mic{display:flex;flex-direction:column;align-items:center;gap:8px}
+.micb{width:120px;height:120px;border-radius:50%;border:6px solid var(--date-soft);background:var(--date);cursor:pointer;display:grid;place-items:center;box-shadow:0 5px 0 rgba(0,0,0,.18)}
+.micb .dot{width:44px;height:44px;border-radius:50%;background:#fff}
+.micb.on{animation:micPulse 1s ease-in-out infinite}.micb.on .dot{border-radius:8px;width:38px;height:38px}
+@keyframes micPulse{50%{box-shadow:0 0 0 14px rgba(224,90,60,.25)}}
+.mlab{margin:0;font-weight:800;font-size:1.1rem}
+.mprev{width:100%}
+.pickc{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.pickc button{border:3px solid var(--line);background:var(--paper);border-radius:22px;padding:10px;cursor:pointer;font:inherit;font-weight:800;font-size:1.15rem}
+.pickc button[aria-pressed=true]{border-color:var(--palm-deep);background:var(--date-soft)}
+.pickc svg{width:100%;height:110px}
+.sand{border-radius:22px;overflow:hidden;cursor:pointer;position:relative}.sand .tap{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:var(--paper);color:var(--ink);border-radius:999px;padding:6px 14px;font-weight:800;box-shadow:0 2px 8px rgba(0,0,0,.15);animation:tapPulse 1.4s infinite}@keyframes tapPulse{50%{transform:translateX(-50%) scale(1.08)}}
+.sand svg{display:block;width:100%}
+.tiny{font-size:.85rem;color:var(--muted);background:none;border:none;cursor:pointer;font:inherit;text-decoration:underline}
+</style>
+
+<div class="wrap">
+  <div class="bar">
+    <button class="home" type="button" id="homeBtn" aria-label="واحتي"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M8 34 Q20 26 32 34" fill="var(--sc-sand2)"/><path d="M18 33 Q20 20 21 12" stroke="var(--sc-trunk)" stroke-width="3" fill="none"/><path d="M21 12 q-8 -2 -12 4 M21 12 q8 -2 12 4 M21 12 q-6 -7 -11 -5 M21 12 q6 -7 11 -5 M21 12 q0 -8 -2 -10" stroke="var(--sc-leaf)" stroke-width="3" fill="none" stroke-linecap="round"/><ellipse cx="27" cy="34" rx="7" ry="2.5" fill="var(--sc-water)"/></svg><span>واحتي</span></button>
+    <span class="where" id="where">واحة اللسان العربي</span>
+    <button class="who" type="button" id="whoBtn" aria-label="من يلعب؟"></button>
+  </div>
+
+  <section id="kidHome" class="kid" hidden></section>
+  <section id="kidTrip" class="kid" hidden></section>
+  <section id="kidHello" class="kid" hidden></section>
+  <section id="kidBag" class="kid" hidden></section>
+  <section id="kidSay" class="kid" hidden></section>
+  <section id="kidFam" class="kid" hidden></section>
+  <section id="home">
+    <div class="scene" id="scene"></div>
+    <div class="card" id="placeBox" hidden style="padding:12px 14px"></div>
+    <div class="next" id="next"></div>
+    <div class="card" id="daily" style="padding:12px 14px"></div>
+    <div class="otiles" id="otiles"></div>
+    <details class="card" style="padding:12px 16px">
+      <summary class="lbl" style="cursor:pointer">خريطة الرحلة: كل المراحل وما ⟨تفتحه|تفتحينه⟩ في واحتك</summary>
+      <div class="journey" id="journey"></div>
+    </details>
+    <p class="note">الآيات من نص حفص، والأحاديث من الصحيحين والأربعين النووية، والشعر والحكايات مطابقة لدواوين وكتب OpenITI. المعاني والشروح مسودة بانتظار مراجعة الأب. <button class="btn ghost sm" type="button" id="dadBtn">لوحة ولي الأمر</button></p>
+  </section>
+
+  <div class="seed" id="seedBox" hidden style="background:var(--paper);border-right:5px solid var(--date);padding:10px 14px;border-radius:6px;font-size:1.05rem">البذرة: <b id="seedRoot" style="color:var(--date)"></b> = <span id="seedText"></span>
+    <span class="n" id="seedN" style="color:var(--muted);font-size:.9rem;display:block"></span></div>
+
+  <nav role="tablist" id="tabs" hidden></nav>
+
+  <!-- ======= واحة الجذور ======= -->
+  <section id="oasis" hidden>
+    <p class="note">⟨اختر|اختاري⟩ نخلة. كل نخلة جذرٌ ⟨تحفظه|تحفظينه⟩ في القرآن؛ ثمارها كلماته. ⟨افتح|افتحي⟩ الثمار ⟨لتعرف|لتعرفي⟩ العائلة، ثم ⟨العب|العبي⟩.</p>
+    <div class="fruits" id="grove"></div>
+  </section>
+
+  <section id="palm" hidden>
+    <div class="palm">
+      <svg viewBox="0 0 720 150" aria-hidden="true">
+        <defs><linearGradient id="trunk" x1="0" x2="1"><stop offset="0" stop-color="#8a5a2b"/><stop offset="1" stop-color="#5b3a1a"/></linearGradient></defs>
+        <g id="fronds" stroke="var(--palm)" stroke-width="6" stroke-linecap="round" fill="none"></g>
+        <path d="M352 150 C356 110 364 90 360 60 L372 60 C368 90 376 110 380 150 Z" fill="url(#trunk)"/>
+        <g id="dates" fill="var(--date)"></g>
+      </svg>
+      <p class="note" style="margin:0 0 8px">⟨اضغط|اضغطي⟩ ثمرة ⟨لتفتح|لتفتحي⟩ الكلمة: معناها، ووزنها، وآيتها من محفوظك.</p>
+      <div class="fruits" id="fruits"></div>
+      <div id="matnBox" hidden><p class="lbl" style="margin:14px 0 6px">من متونك <span class="draft">(روابط مقترحة، تُراجع)</span></p><div id="matn"></div></div>
+    </div>
+  </section>
+
+  <section id="roles" hidden>
+    <div class="card">
+      <div class="stage" data-g="rl"></div>
+      <p class="lbl" style="margin:0">⟨ضع|ضعي⟩ الجذرَ على الوزن المناسب</p>
+      <p class="ask" id="rlQ"></p>
+      <div class="opts" id="rlOpts"></div>
+      <p class="fb" id="rlFb"></p>
+      <div class="why" id="rlWhy" hidden></div>
+      <div class="btns"><button class="btn ghost" id="rlNext">سؤال آخر</button></div>
+      <div class="score" data-g="rl"></div>
+    </div>
+  </section>
+
+  <section id="derive" hidden>
+    <div class="card">
+      <div class="stage" data-g="drv"></div>
+      <p class="lbl" style="margin:0">⟨اشتقّ|اشتقّي⟩ الكلمة: جذرٌ ووزنٌ، ⟨فاكتب|فاكتبي⟩ الكلمة</p>
+      <p class="big" id="dvQ" style="font-size:2rem"></p>
+      <p class="ask" id="dvRole" style="font-weight:500;color:var(--muted)"></p>
+      <div id="dvBox"></div>
+      <p class="fb" id="dvFb"></p>
+      <div class="why" id="dvWhy" hidden></div>
+      <div class="btns"><button class="btn ghost" id="dvNext">كلمة أخرى</button></div>
+      <div class="score" data-g="drv"></div>
+    </div>
+    <p class="note">هذا هو مفتاح الثروة اللغوية: من الجذر والوزن ⟨تصنع|تصنعين⟩ الكلمة بنفسك ولا ⟨تحفظها|تحفظينها⟩.</p>
+  </section>
+
+  <section id="unknown" hidden>
+    <div class="card">
+      <div class="stage" data-g="uk"></div>
+      <p class="lbl" style="margin:0">كلمة من الجذر نفسه لا ⟨تحفظها|تحفظينها⟩. ⟨خمّن|خمّني⟩ معناها من وزنها قبل أي شرح.</p>
+      <p class="big" id="ukWord"></p>
+      <div id="ukAyah"></div>
+      <div class="opts" id="ukOpts"></div>
+      <p class="fb" id="ukFb"></p>
+      <div class="why" id="ukWhy" hidden></div>
+      <div class="btns"><button class="btn ghost" id="ukNext">كلمة أخرى</button></div>
+      <div class="score" data-g="uk"></div>
+    </div>
+  </section>
+
+  <section id="recall" hidden>
+    <div class="chips" id="rcMode" role="group" aria-label="الطريقة">
+      <button class="chip2" type="button" data-m="fill" aria-pressed="true">⟨اكتب|اكتبي⟩ الكلمة الناقصة</button>
+      <button class="chip2" type="button" data-m="recite" aria-pressed="false">⟨اتلُ|اتلي⟩ الآية</button>
+    </div>
+    <div class="card" id="fillCard">
+      <div class="stage" data-g="fill"></div>
+      <p class="lbl" style="margin:0">آيةٌ من محفوظك سقطت منها كلمةٌ من هذه النخلة. ⟨اكتبها|اكتبيها⟩.</p>
+      <div id="flAyah"></div>
+      <div id="flBox"></div>
+      <p class="fb" id="flFb"></p>
+      <div class="why" id="flWhy" hidden></div>
+      <div class="btns"><button class="btn ghost" id="flNext">آية أخرى</button></div>
+      <div class="score" data-g="fill"></div>
+    </div>
+    <div class="card" id="rcCard" hidden>
+      <p class="lbl" style="margin:0">الكلمة</p>
+      <p class="big" id="rcWord"></p>
+      <p class="ask">⟨اتلُ|اتلي⟩ آيةً ⟨تحفظها|تحفظينها⟩ فيها هذه الكلمة. ثم ⟨اعرض|اعرضي⟩ الآية ⟨وقارن|وقارني⟩.</p>
+      <div id="rcAyah" hidden></div>
+      <div class="btns" id="rcBtns"></div>
+      <div class="score" data-g="rc"></div>
+      <p class="note">هذا تقييمٌ لنفسك: ⟨كن صادقًا|كوني صادقة⟩، فهو لا يُحتسب في المراحل.</p>
+    </div>
+  </section>
+
+  <section id="letter" hidden>
+    <div class="card">
+      <p class="lbl" style="margin:0">رسالة اليوم إلى القافلة</p>
+      <p class="ask">⟨اكتب|اكتبي⟩ ثلاث جمل عن يومك، فيها كلمتان من النخلة على الأقل.</p>
+      <textarea id="ltText" placeholder="اليوم …"></textarea>
+      <div class="used" id="ltUsed"></div>
+      <p class="fb" id="ltFb"></p>
+      <div class="btns"><button class="btn aiBtn" id="ltAi" hidden>صحّح لي</button><button class="btn ghost" id="ltSend">أرسلها إلى أبي</button></div>
+      <div id="ltAiOut"></div>
+      <p class="note">تُحفظ الرسالة على هذا الجهاز فقط. «صحّح لي» يسأل مساعد الواحة، وأبوك يراجع بعده.</p>
+    </div>
+  </section>
+
+  <!-- ======= واحة الألغاز ======= -->
+  <section id="gzWho" hidden>
+    <div class="chips" id="gwMode" role="group" aria-label="الطريقة"><span class="note">الجواب:</span><button class="chip2" type="button" data-m="mcq" aria-pressed="true">أختار</button><button class="chip2" type="button" data-m="type" aria-pressed="false">أكتب</button></div>
+    <div class="card">
+      <div class="stage" data-g="gzw"></div>
+      <div class="row" style="justify-content:space-between"><span class="chip" id="gwTheme"></span><span class="note" id="gwCount"></span></div>
+      <p class="ask" style="text-align:right">من أنا؟</p>
+      <ol class="clues" id="gwClues"></ol>
+      <div class="btns"><button class="btn ghost" id="gwMore">تلميح آخر</button></div>
+      <div class="opts" id="gwOpts"></div>
+      <div id="gwBox"></div>
+      <p class="fb" id="gwFb"></p>
+      <div class="why" id="gwWhy" hidden></div>
+      <div class="btns"><button class="btn ghost" id="gwNext">لغز آخر</button></div>
+      <div class="score" data-g="gzw"></div>
+    </div>
+    <p class="note">الألغاز من محفوظك. التلميح الأخير آيةٌ من المصحف حُجب منها الجواب، والدليل يظهر بعد الإجابة. كلما ⟨عرفتَ|عرفتِ⟩ الجواب بتلميحات أقل كان أحسن.</p>
+  </section>
+
+  <section id="gzDots" hidden>
+    <div class="chips" id="gdMode" role="group" aria-label="الطريقة"><span class="note">الجواب:</span><button class="chip2" type="button" data-m="mcq" aria-pressed="true">أختار</button><button class="chip2" type="button" data-m="type" aria-pressed="false">أكتب</button></div>
+    <div class="card">
+      <div class="stage" data-g="gzd"></div>
+      <p class="lbl" style="margin:0">رسمٌ واحد بلا نقاط. النقاط وحدها تغيّر المعنى</p>
+      <p class="rasm" id="gdRasm"></p>
+      <p class="ask" id="gdAsk"></p>
+      <div class="opts" id="gdOpts"></div>
+      <div id="gdBox"></div>
+      <p class="fb" id="gdFb"></p>
+      <div class="why" id="gdWhy" hidden></div>
+      <div class="btns"><button class="btn ghost" id="gdNext">رسمٌ آخر</button></div>
+      <div class="score" data-g="gzd"></div>
+    </div>
+    <p class="note">هكذا كُتبت المصاحف الأولى بلا نقاط. ⟨ضع|ضعي⟩ النقطة في مكانها حين ⟨تكتب|تكتبين⟩، فهي تفرق بين الجبل والحبل والخيل.</p>
+  </section>
+
+  <section id="gzRoot" hidden>
+    <div class="card">
+      <div class="stage" data-g="gzr"></div>
+      <p class="lbl" style="margin:0">جذرٌ يختبئ في كلماته</p>
+      <p class="ask" id="grQ"></p>
+      <div class="opts" id="grOpts"></div>
+      <p class="fb" id="grFb"></p>
+      <div class="why" id="grWhy" hidden></div>
+      <div class="btns"><button class="btn ghost" id="grNext">لغز آخر</button></div>
+      <div class="score" data-g="gzr"></div>
+    </div>
+  </section>
+
+  <section id="gzFolk" hidden>
+    <div class="card">
+      <div class="stage" data-g="gzf"></div>
+      <span class="chip" id="gfKind" style="align-self:flex-start"></span>
+      <p class="ask" id="gfQ"></p>
+      <div class="opts" id="gfOpts"></div>
+      <p class="fb" id="gfFb"></p>
+      <div class="why" id="gfWhy" hidden></div>
+      <div class="btns"><button class="btn ghost" id="gfNext">لغز آخر</button></div>
+      <div class="score" data-g="gzf"></div>
+    </div>
+  </section>
+
+  <section id="gzPalin" hidden>
+    <p class="note">كلماتٌ وجملٌ تُقرأ من آخرها كما تُقرأ من أولها. ⟨اضغط|اضغطي⟩ «اقلبها» ⟨لترى|لتري⟩ الحروف معكوسة.</p>
+    <div id="gpList" style="display:flex;flex-direction:column;gap:10px"></div>
+  </section>
+
+  <!-- ======= واحة الشعر ======= -->
+  <section id="shKids" hidden>
+    <div class="stage" data-g="pml" style="background:var(--paper)"></div>
+    <div id="skList" class="list"></div>
+    <div id="skRead" class="card" hidden></div>
+  </section>
+
+  <section id="shAbyat" hidden>
+    <div class="chips" id="saMode" role="group" aria-label="اللعبة">
+      <button class="chip2" type="button" data-m="complete" aria-pressed="true">⟨أكمل|أكملي⟩ البيت</button>
+      <button class="chip2" type="button" data-m="last" aria-pressed="false">⟨اكتب|اكتبي⟩ آخر كلمة</button>
+      <button class="chip2" type="button" data-m="poet" aria-pressed="false">من الشاعر؟</button>
+    </div>
+    <div class="card">
+      <div class="stage" id="saStage" data-g="sha"></div>
+      <p class="lbl" style="margin:0" id="saLbl"></p>
+      <div id="saQ"></div>
+      <div class="opts one" id="saOpts"></div>
+      <div id="saBox"></div>
+      <p class="fb" id="saFb"></p>
+      <div class="why" id="saWhy" hidden></div>
+      <div class="btns"><button class="btn ghost" id="saNext">بيتٌ آخر</button></div>
+      <div class="score" id="saScore" data-g="sha"></div>
+    </div>
+    <div class="card"><p class="lbl" style="margin:0">ديوان الحكمة <span class="draft">(التشكيل والمعاني مسودة)</span></p><div id="saList"></div></div>
+  </section>
+
+  <section id="shSahih" hidden>
+    <p class="note">شعرٌ ورد في صحيح البخاري. لكل نصٍّ قائله كما في الحديث: لفظ النبي ﷺ بالأخضر، وكلام غيره بالبنّي، وما ردّده النبي ﷺ من شعر غيره بإطارٍ مزدوج.</p>
+    <div id="ssList" style="display:flex;flex-direction:column;gap:10px"></div>
+  </section>
+
+  <!-- ======= واحة الحكايات ======= -->
+  <section id="ntList" hidden>
+    <div class="stage" data-g="nt" style="background:var(--paper)"></div>
+    <div class="chips" id="ntChips" role="group" aria-label="الكتب"></div>
+    <div id="ntItems" class="list"></div>
+    <div id="ntRead" class="card" hidden></div>
+  </section>
+
+  <!-- ======= واحة الحياة اليومية ======= -->
+  <section id="hyTalk" hidden>
+    <div id="htList" class="list"></div>
+    <div id="htRead" class="card" hidden></div>
+  </section>
+
+  <section id="hySay" hidden>
+    <div class="card">
+      <div class="stage" data-g="hys"></div>
+      <p class="lbl" style="margin:0">ماذا ⟨تقول|تقولين⟩؟</p>
+      <p class="ask" id="hsQ"></p>
+      <div class="opts one" id="hsOpts"></div>
+      <p class="fb" id="hsFb"></p>
+      <div class="why" id="hsWhy" hidden></div>
+      <div class="btns"><button class="btn ghost" id="hsNext">موقف آخر</button></div>
+      <div class="score" data-g="hys"></div>
+    </div>
+  </section>
+
+  <section id="hyOrder" hidden>
+    <div class="card">
+      <div class="stage" data-g="hyo"></div>
+      <p class="lbl" style="margin:0">⟨رتّب|رتّبي⟩ الجملة كما تُكتب</p>
+      <p class="note" id="hoWho"></p>
+      <div class="tray ans" id="hoAns" aria-label="جملتك"></div>
+      <div class="tray" id="hoBank" aria-label="الكلمات"></div>
+      <div class="btns"><button class="btn" id="hoCheck">⟨تحقّق|تحقّقي⟩</button><button class="btn ghost" id="hoNext">جملة أخرى</button></div>
+      <p class="fb" id="hoFb"></p>
+      <div class="score" data-g="hyo"></div>
+    </div>
+  </section>
+
+  <section id="hyColors" hidden>
+    <div class="card">
+      <div class="stage" data-g="hyc"></div>
+      <p class="lbl" style="margin:0">⟨ضع|ضعي⟩ اللونَ على وزنه</p>
+      <div class="bigsw" id="hcSw"></div>
+      <p class="big" id="hcQ" style="font-size:2.2rem"></p>
+      <div class="opts" id="hcOpts"></div>
+      <p class="fb" id="hcFb"></p>
+      <div class="why" id="hcWhy" hidden></div>
+      <div class="btns"><button class="btn ghost" id="hcNext">شيء آخر</button></div>
+      <div class="score" data-g="hyc"></div>
+    </div>
+    <div class="card">
+      <p class="lbl" style="margin:0">وزن الألوان: أَفْعَل للمذكّر، فَعْلاء للمؤنّث، فُعْل للجمع</p>
+      <div class="tablewrap"><table class="forms" id="hcTable"></table></div>
+      <div id="hcVerses"></div>
+    </div>
+    <div class="card">
+      <p class="lbl" style="margin:0">ألوانٌ أُخذت من أشيائها: وزن النسبة «ـيّ»</p>
+      <div class="swatches" id="hcNisba"></div>
+    </div>
+  </section>
+
+  <!-- ======= صحيفة الواحة ======= -->
+  <section id="sfRead" hidden>
+    <div id="srList" class="list"></div>
+    <div id="srRead" class="card" hidden></div>
+  </section>
+
+  <section id="sfWrite" hidden>
+    <div class="card">
+      <div class="stage" data-g="news"></div>
+      <p class="lbl" style="margin:0">⟨اكتب|اكتبي⟩ خبرك لصحيفة الواحة</p>
+      <div class="chips" id="swPrompts"></div>
+      <div class="fields">
+        <label>العنوان<input class="f" id="swTitle" placeholder="جدّتي في بيتنا"></label>
+        <label>متى؟<input class="f" id="swWhen" placeholder="يومَ الجمعة"></label>
+        <label>ماذا حدث؟ (جملة)<input class="f" id="swWhat" placeholder="زارتنا جدّتي"></label>
+        <label>أين؟<input class="f" id="swWhere" placeholder="في بيتنا"></label>
+        <label>لماذا؟ أو كيف؟<input class="f" id="swWhy" placeholder="لأنها اشتاقت إلينا"></label>
+      </div>
+      <label class="note" for="swMore">ثم ماذا؟ ⟨اكتب|اكتبي⟩ التفاصيل بكلمات الربط:</label>
+      <div class="used" id="swConn"></div>
+      <textarea id="swMore" placeholder="أولًا … ثم … لكنّ … لذلك …"></textarea>
+      <div class="checks" id="swChecks"></div>
+      <div class="paper" id="swPreview"></div>
+      <div class="btns"><button class="btn aiBtn" id="swAi" hidden>صحّح لي</button><button class="btn" id="swSave">انشره في صحيفتي</button><button class="btn ghost" id="swClear">⟨ابدأ|ابدئي⟩ خبرًا جديدًا</button></div>
+      <div id="swAiOut"></div>
+      <p class="fb" id="swFb"></p>
+      <p class="note">يُحفظ الخبر على هذا الجهاز فقط، ويصل إلى لوحة الأب ليراجعه.</p>
+    </div>
+  </section>
+
+  <section id="sfMine" hidden>
+    <div id="smList" style="display:flex;flex-direction:column;gap:10px"></div>
+  </section>
+
+  <section id="sfFamily" hidden>
+    <p class="note">مجلس العائلة: كل ما نشره الإخوة في صحفهم ورسائلهم، ليقرأه بعضهم لبعض.</p>
+    <div id="sfList" style="display:flex;flex-direction:column;gap:10px"></div>
+  </section>
+
+  <!-- ======= الحكم والحديث ======= -->
+  <section id="hikam" hidden>
+    <div class="card">
+      <div class="stage" data-g="hk"></div>
+      <p class="lbl" style="margin:0">متى تقولها؟</p>
+      <p class="big" id="hkText" style="font-size:2rem"></p>
+      <div class="opts one" id="hkOpts"></div>
+      <p class="fb" id="hkFb"></p>
+      <div class="why" id="hkWhy" hidden></div>
+      <div class="btns"><button class="btn ghost" id="hkNext">مثل آخر</button></div>
+      <div class="score" data-g="hk"></div>
+    </div>
+    <div class="card">
+      <p class="lbl" style="margin:0">حقيبة القافلة <span class="draft">(مسودة تُراجع)</span></p>
+      <div id="hkList"></div>
+    </div>
+  </section>
+
+  <section id="hadith" hidden>
+    <div class="card">
+      <div class="stage" data-g="wh"></div>
+      <p class="lbl" style="margin:0">من القائل؟</p>
+      <p class="fx" id="whText" style="font-family:var(--f-q);font-size:1.5rem;line-height:1.9;text-align:center;margin:0"></p>
+      <div class="opts one" id="whOpts"></div>
+      <p class="fb" id="whFb"></p>
+      <div id="whWhy" hidden></div>
+      <div class="btns"><button class="btn ghost" id="whNext">نص آخر</button></div>
+      <div class="score" data-g="wh"></div>
+    </div>
+    <div class="chips" id="hdChips" role="group" aria-label="الأقسام">
+      <button class="chip2" type="button" data-c="nabi" aria-pressed="true">قال النبي ﷺ</button>
+      <button class="chip2" type="button" data-c="wasf" aria-pressed="false">الصحابة يصفون النبي ﷺ</button>
+      <button class="chip2" type="button" data-c="sahabi" aria-pressed="false">من أقوال الصحابة</button>
+      <button class="chip2" type="button" data-c="nawawi" aria-pressed="false">الأربعون النووية</button>
+    </div>
+    <div id="hdList" style="display:flex;flex-direction:column;gap:10px"></div>
+    <p class="note" id="hdSrc"></p>
+  </section>
+
+  <!-- ======= ورشة الكتابة ======= -->
+  <section id="wsDict" hidden>
+    <div class="card">
+      <div class="stage" data-g="dct"></div>
+      <p class="lbl" style="margin:0">إملاء بالذاكرة: ⟨انظر|انظري⟩ إلى الكلمة جيدًا، فستختفي، ثم ⟨اكتبها|اكتبيها⟩</p>
+      <p class="big" id="dcWord"></p>
+      <div class="bar2" id="dcTimer"><span class="track"><i style="width:100%"></i></span></div>
+      <div id="dcBox"></div>
+      <p class="fb" id="dcFb"></p>
+      <div class="why" id="dcWhy" hidden></div>
+      <div class="btns"><button class="btn ghost" id="dcAgain">أرِني مرة أخرى</button><button class="btn ghost" id="dcNext">كلمة أخرى</button></div>
+      <div class="score" data-g="dct"></div>
+    </div>
+    <p class="note">الكلمات من نخيلك ومن «نقطة تغيّر المعنى» والألوان. «أرِني مرة أخرى» تُظهر الكلمة ثانيةً، لكن الإجابة بعدها لا تُحتسب إتقانًا.</p>
+  </section>
+
+  <section id="wsTri" hidden>
+    <div class="card">
+      <div class="stage" data-g="tri"></div>
+      <p class="lbl" style="margin:0">الكلمة بثلاث لغات: ما الكلمة العربية؟</p>
+      <p class="big" id="trQ" style="font-size:1.6rem"></p>
+      <p class="ref" id="trRef"></p>
+      <div id="trBox"></div>
+      <p class="fb" id="trFb"></p>
+      <div class="why" id="trWhy" hidden></div>
+      <div class="btns"><button class="btn ghost" id="trNext">كلمةٌ أخرى</button></div>
+      <div class="score" data-g="tri"></div>
+    </div>
+    <p class="note">الكلمات هنا كتبها إخوتك بالصينية والإنجليزية في بطاقات النخيل، وأجازها ولي الأمر. ⟨افتح|افتحي⟩ أي ثمرة في نخلة ⟨واكتب أنت|واكتبي أنتِ⟩ كلمةً جديدة.</p>
+  </section>
+  <section id="wsConj" hidden>
+    <div class="card">
+      <div class="stage" data-g="cnj"></div>
+      <p class="lbl" style="margin:0">⟨صرّف|صرّفي⟩ الفعل كما ورد في محفوظك</p>
+      <p class="big" id="cjQ" style="font-size:1.9rem"></p>
+      <div id="cjBox"></div>
+      <p class="fb" id="cjFb"></p>
+      <div class="why" id="cjWhy" hidden></div>
+      <div class="btns"><button class="btn ghost" id="cjNext">فعلٌ آخر</button></div>
+      <div class="score" data-g="cnj"></div>
+    </div>
+    <p class="note">كل صيغة هنا وردت فعلًا في القرآن الذي ⟨تحفظه|تحفظينه⟩، فالدليل آية. الماضي والمضارع المرفوع والأمر فقط.</p>
+  </section>
+
+  <section id="wsAsk" hidden>
+    <div class="card">
+      <p class="lbl" style="margin:0">⟨اكتب|اكتبي⟩ سؤالًا لإخوتك (يراجعه ولي الأمر قبل أن يظهر)</p>
+      <div class="fields">
+        <label>السؤال<input class="f" id="kqQ" placeholder="ما جمع كلمة «كتاب»؟"></label>
+        <label>الجواب الصحيح<input class="f" id="kqA" placeholder="كُتُب"></label>
+        <label>جواب خطأ<input class="f" id="kqW1" placeholder="كاتبون"></label>
+        <label>جواب خطأ آخر<input class="f" id="kqW2" placeholder="مكتبة"></label>
+        <label>من أين ⟨أخذتَه|أخذتِه⟩؟ (اختياري)<input class="f" id="kqSrc" placeholder="نخلة ك ت ب"></label>
+      </div>
+      <div class="btns"><button class="btn" id="kqSend">أرسله لولي الأمر</button></div>
+      <p class="fb" id="kqFb"></p>
+      <div id="kqMine"></div>
+    </div>
+  </section>
+
+  <section id="wsSib" hidden>
+    <div class="card">
+      <div class="stage" data-g="kq"></div>
+      <p class="lbl" style="margin:0">أسئلة الإخوة: كتبها إخوتك وأجازها ولي الأمر</p>
+      <p class="ask" id="sbQ"></p>
+      <div class="opts one" id="sbOpts"></div>
+      <p class="fb" id="sbFb"></p>
+      <div class="why" id="sbWhy" hidden></div>
+      <div class="btns"><button class="btn ghost" id="sbNext">سؤال آخر</button></div>
+      <div class="score" data-g="kq"></div>
+    </div>
+  </section>
+
+  <!-- ======= المتون ======= -->
+  <section id="mtRecite" hidden>
+    <div class="chips" id="mtChips" role="group" aria-label="المتن"></div>
+    <div class="card">
+      <div class="stage" data-g="mtn"></div>
+      <p class="lbl" style="margin:0" id="mtLbl">⟨سمّع|سمّعي⟩: ⟨اكتب|اكتبي⟩ الكلمة الأخيرة في البيت</p>
+      <p class="q s" id="mtQ" style="text-align:center"></p>
+      <p class="ref" id="mtRef" style="text-align:center;margin:0"></p>
+      <div id="mtBox"></div>
+      <p class="fb" id="mtFb"></p>
+      <div class="why" id="mtWhy" hidden></div>
+      <div class="btns"><button class="btn ghost" id="mtNext">بيتٌ آخر</button><button class="btn ghost" id="mtRec">🎙 ⟨سجّل|سجّلي⟩ هذا البيت</button></div>
+      <div class="score" data-g="mtn"></div>
+    </div>
+    <p class="note">نصوص المتون نُقلت من الطبعات المرفقة وتحتاج مراجعة ولي الأمر على نسخة الحفظ.</p>
+  </section>
+
+  <section id="mtRead" hidden>
+    <div class="chips" id="mrChips" role="group" aria-label="المتن"></div>
+    <div id="mrList" class="card" style="gap:4px"></div>
+  </section>
+
+  <section id="mtAjr" hidden>
+    <div class="card">
+      <div class="stage" data-g="ajd"></div>
+      <div class="chips" id="ajMode" role="group" aria-label="النمط"><button class="chip2" type="button" data-m="game" aria-pressed="true">ما المصطلح؟</button><button class="chip2" type="button" data-m="cnt" aria-pressed="false">كم عددها؟</button><button class="chip2" type="button" data-m="irb" aria-pressed="false">أعرب</button><button class="chip2" type="button" data-m="tq" aria-pressed="false">أسئلة وتمرينات</button><button class="chip2" type="button" data-m="read" aria-pressed="false">المتن نثرًا</button><button class="chip2" type="button" data-m="fadl" aria-pressed="false">في فضل النحو</button><button class="chip2" type="button" data-m="info" aria-pressed="false">عن المتن</button></div>
+      <div id="ajGame">
+        <p class="lbl" style="margin:0">عرّفه ابن آجرّوم بقوله:</p>
+        <p class="ask" id="ajQ"></p>
+        <div id="ajBox"></div>
+        <p class="fb" id="ajFb"></p>
+        <div class="why" id="ajWhy" hidden></div>
+        <div class="btns"><button class="btn ghost" id="ajNext">تعريفٌ آخر</button></div>
+        <div class="score" data-g="ajd"></div>
+      </div>
+      <div id="ajCnt" hidden>
+        <div class="stage" data-g="ajc"></div>
+        <p class="lbl" style="margin:0">من نظم الآجرومية</p>
+        <p class="ask" id="acQ"></p>
+        <div class="opts" id="acOpts"></div>
+        <p class="fb" id="acFb"></p>
+        <div class="why" id="acWhy" hidden></div>
+        <div class="btns"><button class="btn ghost" id="acNext">سؤالٌ آخر</button></div>
+        <div class="score" data-g="ajc"></div>
+      </div>
+      <div id="ajIrb" hidden>
+        <div class="stage" data-g="irb"></div>
+        <p class="lbl" style="margin:0">⟨أعرب|أعربي⟩ الكلمة الملوّنة <span class="ref">(من «تدريب على الإعراب» في التحفة السنية)</span></p>
+        <p class="ask" id="ibQ" style="font-family:var(--f-q);font-size:1.5rem"></p>
+        <div class="opts one" id="ibOpts"></div>
+        <p class="fb" id="ibFb"></p>
+        <div class="why" id="ibWhy" hidden></div>
+        <div class="btns"><button class="btn ghost" id="ibNext">كلمةٌ أخرى</button></div>
+        <div class="score" data-g="irb"></div>
+      </div>
+      <div id="ajTq" hidden></div>
+      <div id="ajRead" hidden></div>
+    </div>
+    <p class="note">النظم (عبيد ربه، طبعة جدّو/الحكمي التي تحفظونها) في «سمّع» و«اقرأ المتن» مع حواشي التحقيق. «كم عددها؟» مأخوذة من أبيات النظم نفسها، و«في فضل النحو» من تقديم الطبعة. المتن النثري نُقل من مصدر آخر ويُراجع.</p>
+  </section>
+
+  <!-- ======= رفّ التسجيلات ======= -->
+  <section id="recShelf" hidden>
+    <div class="card">
+      <p class="lbl" style="margin:0">تسجيلاتي</p>
+      <div class="chips" id="rsFilter" role="group" aria-label="الحالة"><button class="chip2" type="button" data-f="all" aria-pressed="true">الكل</button><button class="chip2" type="button" data-f="pending" aria-pressed="false">بانتظار المراجعة</button><button class="chip2" type="button" data-f="fix" aria-pressed="false">فيها ملاحظات</button><button class="chip2" type="button" data-f="approved" aria-pressed="false">معتمدة</button></div>
+      <div id="rsList" class="queue"></div>
+      <div class="btns"><button class="btn" id="rsNew">🎙 تسجيل جديد</button><button class="btn ghost" id="rsExport">صدّر تسجيلاتي للمعلم</button><button class="btn ghost" id="rsImport">استورد ردّ المعلم</button></div>
+      <input type="file" id="rsImportFile" accept=".json,application/json" hidden>
+      <p class="fb" id="rsFb"></p>
+      <p class="note" id="rsNote">التسجيل يكون بمسجّل الجهاز ثم ⟨تُرفق|تُرفقين⟩ الملف هنا. تُحفظ التسجيلات على هذا الجهاز فقط، ويراجعها ولي الأمر من لوحته أو المعلم بعد التصدير.</p>
+    </div>
+  </section>
+
+  <section id="mushaf" hidden>
+    <div class="card">
+      <p class="lbl" style="margin:0">مصحفي بصوتي</p>
+      <p class="note" style="margin:4px 0 8px">صفحةً صفحة من المصحف المدني. كل جزء مَعلَم: إذا اعتمد الشيخ كل صفحاته نبتت نجمةٌ في سماء واحتك.</p>
+      <div class="chips" id="muUnits"></div>
+      <div id="muBody"></div>
+    </div>
+  </section>
+  <section id="relay" hidden>
+    <div class="card">
+      <p class="lbl" style="margin:0">تسميع التتابع: سورة بأصوات الإخوة</p>
+      <p class="note" style="margin:4px 0 8px">تُوزَّع آيات السورة على الإخوة بالتناوب؛ كلٌّ يسجّل آيته، ثم تُسمع السورة كاملة بأصواتكم.</p>
+      <div class="chips" id="ryChips"></div>
+      <div id="ryBody"></div>
+    </div>
+  </section>
+  <section id="radio" hidden>
+    <div class="card" id="rdBox"></div>
+    <p class="note">الإذاعة تُركَّب كل يوم من التسجيلات المعتمدة لكل الإخوة (القرآن بعد اعتماد الشيخ أولًا)، وما لا تسجيل له يقرؤه مقدّم اليوم. «صدّر الإذاعة» يصنع صفحة واحدة فيها النصوص والأصوات تُفتح في أي متصفح وتُرسل للجدّ والجدّة.</p>
+  </section>
+  <section id="giftShelf" hidden>
+    <div class="card">
+      <div class="stage" data-g="gift" style="background:var(--bg)"></div>
+      <p class="lbl" style="margin:0">هداياي</p>
+      <div class="chips" id="gfMode" role="group" aria-label="النوع"><button class="chip2" type="button" data-m="in" aria-pressed="true">وصلتني</button><button class="chip2" type="button" data-m="out" aria-pressed="false">أهديتُها</button></div>
+      <div id="gfList" class="queue"></div>
+      <div class="btns"><button class="btn ghost" id="gfImport">استورد هدية أو ردًّا</button></div>
+      <input type="file" id="gfImportFile" accept=".json,application/json" hidden>
+      <p class="fb" id="gfFb"></p>
+      <p class="note">الهدية تسجيلٌ معتمد بصوت أخٍ أو صديق. ⟨تفتحها|تفتحينها⟩ بالاستماع، ⟨وتُتمّها|وتُتمّينها⟩ بأن ⟨تكتب|تكتبي⟩ الكلمة الناقصة من نصها، فتنبت عند مُهديك شجرة. والقرآن لا يُهدى إلا باعتماد الشيخ.</p>
+    </div>
+  </section>
+
+  <!-- ======= اختبار القافلة ======= -->
+  <section id="plCard" hidden>
+    <div class="card" id="plBox"></div>
+  </section>
+  <section id="rvCard" hidden>
+    <div class="card" id="rvBox"></div>
+  </section>
+  <section id="test" hidden>
+    <div class="card" id="tsCard"></div>
+  </section>
+
+  <!-- ======= لوحة الأب ======= -->
+  <section id="dad" hidden>
+    <div class="card" id="ddCard"></div>
+  </section>
+</div>
+
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true"></div>
+<div class="cele" id="cele" hidden role="dialog" aria-modal="true"></div>

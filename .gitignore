@@ -13,3 +13,7 @@ android/app/src/main/assets/www/
 node_modules/
 
 !android/app/debug.keystore
+
+# مصدر التطبيق: الناتج المبني يُنسخ إلى web/
+src/dist/
+__pycache__/
