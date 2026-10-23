@@ -196,6 +196,7 @@
      every day; and one week counter, a day counting in any section */
   function weekPlan() {
     var ks = (typeof kids !== 'undefined' && kids) || []; if (!ks.length) return '';
+    var AR = function (x) { return String(x).replace(/\d/g, function (d) { return '٠١٢٣٤٥٦٧٨٩'[d]; }); };
     var plan = function (a) {
       if (a <= 7) return 'الرحلة كلّ يوم · الحسنية الأحد والثلاثاء · الجمعة: تحدّي العائلة والإذاعة';
       if (a <= 8) return 'الرحلة كلّ يوم · الحسنية الأحد والثلاثاء · «كنوز البيان» الاثنين والأربعاء · الجمعة: التحدّي والإذاعة';
@@ -203,7 +204,7 @@
     };
     return '<details class="wkplan" style="margin-top:10px"><summary style="cursor:pointer;font-weight:700">📅 خطة الأسبوع</summary>' +
       '<p class="note" style="margin:6px 0">اقتراحٌ لا قيد. يتمّ الأسبوع بأربعة أيام من السبت إلى الجمعة، ويُحسب اليوم بأيّ قسمٍ لعب فيه الطفل.</p>' +
-      ks.map(function (k, i) { var n = 0; try { n = weekPlayed(i); } catch (e) {} return '<p style="margin:4px 0"><b>' + esc(k.name) + '</b> (' + esc(String(k.age)) + '): ' + plan(k.age) + ' <span class="ref">☀️ ' + n + ' من ٤</span></p>'; }).join('') + '</details>';
+      ks.map(function (k, i) { var n = 0; try { n = weekPlayed(i); } catch (e) {} return '<p style="margin:4px 0"><b>' + esc(k.name) + '</b> (' + esc(typeof ageWords === 'function' ? ageWords(k.age) : AR(k.age)) + '): ' + plan(k.age) + ' <span class="ref">☀️ ' + AR(n) + ' من ٤</span></p>'; }).join('') + '</details>';
   }
   function parentHub() {
     var s = $('sheet');

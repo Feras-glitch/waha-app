@@ -2,7 +2,7 @@
 """The improvement ideas (2.10): known and learning words, the story of the week in a parent's voice, «أخبرني» as a conversation
 with a frame for the young, one week counter and a weekly plan, handwriting for the young, pictures for concrete words, the
 recitation for offline use, the child's echo against الحصري, a verse of the memorised part, and a shorter «كنوز البيان» home."""
-import asyncio, os, sys, functools, http.server, threading
+import asyncio, os, sys, functools, http.server, threading, json
 from playwright.async_api import async_playwright
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST = os.path.join(ROOT, 'dist')
@@ -106,6 +106,61 @@ async def main():
         ok(not has_pack or await p.locator('#ddBody button', has_text='الحصري آيةً آية').count() == 1, 'the parents can fetch the recitation for offline use (web app)')
         await p.evaluate("go('home')")
         ok(await p.evaluate("typeof echoKeep === 'function' && /tl-echo/.test(document.documentElement.innerHTML + tlRender.toString())"), 'the learning player can record the echo and compare it with الحصري')
+
+        # ---- «قراءة الربع»: waits for the sheikh; once approved, a new passage, last quarter's again, and three questions
+        await as_kid(p, 'مريم')
+        await p.evaluate("go('dad')"); await p.wait_for_timeout(200)
+        if await p.locator('#sheet:not([hidden]) #pinIn').count():
+            await p.fill('#pinIn', '1234'); await p.click('#pinOk')
+        await p.wait_for_selector('#ddTabs'); await p.locator('#ddTabs button', has_text='قراءة الربع').click(); await p.wait_for_timeout(300)
+        ok('تنتظر مراجعة الشيخ' in await p.inner_text('#ddBody') and not await p.evaluate("!!DATA.orf"), 'the quarterly reading waits for the sheikh: the build carries no passage until they are approved')
+        O = json.load(open(os.path.join(ROOT, 'parts', 'waha', 'pending', 'orf.json'), encoding='utf-8'))
+        await p.evaluate("(o) => { DATA.orf = o; renderDad(); }", O); await p.wait_for_timeout(300)
+        await p.click('#orfGo'); await p.wait_for_selector('#orfText')
+        ok('القطعة الجديدة' in await p.inner_text('#ddBody') and await p.evaluate("ORF.steps.map(s => s.id).join(',')") == 'L1-Q1', 'the first sitting of a six-year-old starts at level one')
+        await p.locator('#orfCtl button').first.click(); await p.wait_for_timeout(400)
+        await p.evaluate("ORF.w.t0 = Date.now() - 45000")
+        await p.locator('#orfCtl button', has_text='قبل الدقيقة').click(); await p.wait_for_timeout(600)
+        await p.locator('#orfText .otok[data-i="2"]').click(); await p.locator('#orfText .otok[data-i="9"]').click()
+        sm = await p.inner_text('#orfSum')
+        ok('أخطأت في ٢' in sm and 'بدقّة ٩٦٪' in sm, 'the parents mark the words she missed; words read, correct words a minute and accuracy follow: ' + sm)
+        await p.locator('#orfCtl button', has_text='احفظوا وتابعوا').click(); await p.wait_for_timeout(500)
+        t = await p.inner_text('#ddBody')
+        ok('ثلاثة أسئلة عن' in t and 'أخفوا القطعة' in t and await p.locator('#orfText').count() == 0, 'then three questions, the passage hidden')
+        for i, v in enumerate(('1', '0.5', '1')):
+            await p.locator('[data-q="%d"] [data-v="%s"]' % (i, v)).click(); await p.wait_for_timeout(100)
+        await p.click('#orfSave'); await p.wait_for_timeout(400)
+        r = await p.evaluate("(() => { const h = store.get('orf:' + kid, []); return [h.length, h[0].neu.wcpm, h[0].neu.acc, h[0].comp, store.get('orfLvl:' + kid, null)]; })()")
+        ok(r == [1, 67, 96, 2.5, 1], 'saved: 50 right of 52 in 45 seconds = 67 a minute, 96%%, understanding 2.5 of 3, level one (%s)' % r)
+        await p.evaluate("(() => { const h = store.get('orf:' + kid, []); h[0].t -= 91 * 864e5; store.set('orf:' + kid, h); renderDad(); })()"); await p.wait_for_timeout(300)
+        await p.click('#orfGo'); await p.wait_for_selector('#orfText')
+        ok(await p.evaluate("ORF.steps.map(s => s.id + (s.reread ? '*' : '')).join(',')") == 'L1-Q2,L1-Q1*', "three months later: the next new passage, then last quarter's again")
+        for k in range(2):
+            await p.locator('#orfCtl button').first.click(); await p.wait_for_timeout(300)
+            await p.evaluate("ORF.w.t0 = Date.now() - %d" % (40000 if k == 1 else 50000))
+            await p.locator('#orfCtl button', has_text='قبل الدقيقة').click(); await p.wait_for_timeout(500)
+            await p.locator('#orfCtl button', has_text='احفظوا وتابعوا').click(); await p.wait_for_timeout(400)
+        for i in range(3):
+            await p.locator('[data-q="%d"] [data-v="1"]' % i).click(); await p.wait_for_timeout(80)
+        await p.click('#orfSave'); await p.wait_for_timeout(400)
+        t = await p.inner_text('#ddBody')
+        ok('قرأت قطعة «الْقِطَّةُ الصَّغِيرَةُ» مرةً ثانية بعد ٩١ يومًا: ٦٧ ← ٧٨ كلمةً صحيحة في الدقيقة' in t and 'نموٌّ حقيقي' in t, 'growth is read on the same passage, with the error of one minute in mind')
+        ok(await p.evaluate("PRIVATE_K.has('قراءة الربع')"), 'the readings stay between the child and the parents (never gifted, exported or broadcast)')
+        await as_kid(p, 'هند')
+        await p.evaluate("go('dad')"); await p.wait_for_timeout(200)
+        if await p.locator('#sheet:not([hidden]) #pinIn').count():
+            await p.fill('#pinIn', '1234'); await p.click('#pinOk')
+        await p.wait_for_selector('#ddTabs')
+        await p.evaluate("(o) => { DATA.orf = o; ddTab = 'orf'; renderDad(); }", O); await p.wait_for_timeout(300)
+        await p.click('#orfGo'); await p.wait_for_selector('#orfText')
+        await p.locator('#orfCtl button').first.click(); await p.wait_for_timeout(300)
+        await p.evaluate("ORF.w.t0 = Date.now() - 60000"); await p.wait_for_timeout(700)
+        await p.locator('#orfText .otok[data-i="70"]').click()
+        for i in range(12):
+            await p.locator('#orfText .otok[data-i="%d"]' % (i * 3)).click()
+        await p.locator('#orfCtl button', has_text='احفظوا وتابعوا').click(); await p.wait_for_timeout(400)
+        ok(await p.evaluate("ORF.steps.map(s => s.id).join(',')") == 'L3-Q1,L2-Q1', 'a minute ends on the word she reached; below 90%% at level three, the first sitting tries level two (%s)' % await p.evaluate("ORF.steps.map(s => s.id).join(',')"))
+        await p.evaluate("ORF = null; ddTab = 'today'; go('home')")
 
         # ---- «كنوز البيان»: a shorter home
         await p.goto('about:blank'); await p.goto(KZ + '#kunuz'); await p.wait_for_selector('.hello')

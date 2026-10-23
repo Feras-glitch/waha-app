@@ -184,7 +184,7 @@ async function oasisForget(id,name){
    A Quran recitation becomes «قراءتي», which has no magazine section: it plays in the radio at home and leaves only through the teacher.
    Everything else (a hadith, a proverb, a poem, a text, a verse of the Hasaniya) becomes «بيتٌ وحكمة». */
 var HS_VERSES=/*@HS_VERSES@*/{};
-var OA_QURAN=['آية','صفحة'], OA_PRIVATE=['أخبرني','رأيتُها اليوم','كتابتي','كلمة','جملة','من أبي'];   /* the oasis keeps these between the child and the parent */
+var OA_QURAN=['آية','صفحة'], OA_PRIVATE=['أخبرني','رأيتُها اليوم','كتابتي','كلمة','جملة','من أبي','قراءة الربع'];   /* the oasis keeps these between the child and the parent */
 var FROM={list:[],urls:[]};
 function idbAll(d,store){
   return new Promise(function(res){ try{ var q=d.transaction(store).objectStore(store).getAll(); q.onsuccess=function(){res(q.result||[]);}; q.onerror=function(){res([]);}; }catch(e){res([]);} });

@@ -1098,13 +1098,157 @@ function renderTestEnd(){
 INIT.test = renderTest;
 RESETS.push(() => { TS = null; });
 
+/* ================= قراءة الربع: دقيقة قراءة كل ثلاثة أشهر (الفكرة ٩) =================
+   The child reads this quarter's new passage aloud for one minute, then last quarter's passage again for one minute: growth is
+   read on the same passage, so the passage's difficulty leaves the comparison. The parents mark the words; three questions follow,
+   asked aloud with the passage hidden. The passages wait for the sheikh: until src/parts/waha/pending/orf.json is approved the
+   build carries none, and the tab says so. The recordings stay between the child and the parents (PRIVATE_K). */
+const ORF_DAYS = 90, ORF_KIND = 'قراءة الربع';
+const orfN = x => AR_NUM(String(x).replace('.', '٫'));   /* 2.5 → ٢٫٥ */
+const ORF_LV = {1: 'الأول (٦–٧ سنوات)', 2: 'الثاني (٨–٩ سنوات)', 3: 'الثالث (١٠–١٢ سنة)'};
+let ORF = null;   /* the sitting in progress: {kid, steps: [{id, reread}], i, res: [], placing, comp, w: the reading on screen} */
+const orfData = () => (DATA.orf && Array.isArray(DATA.orf.passages) && DATA.orf.passages.length) ? DATA.orf : null;
+const orfHist = () => store.get(`orf:${kid}`, []);
+const orfP = id => (orfData() ? orfData().passages : []).find(p => p.id === id) || null;
+const orfGuess = age => age <= 7 ? 1 : age <= 9 ? 2 : 3;
+const orfLvl = () => store.get(`orfLvl:${kid}`, null) || orfGuess(K().age);
+const orfWords = p => p.text.split(/\s+/).filter(Boolean);
+/* this sitting: the level's next new passage, and last sitting's new passage read again */
+function orfPlan(){
+  const h = orfHist(), lvl = orfLvl(), n = h.filter(s => s.lvl === lvl).length;
+  const steps = [{id: `L${lvl}-Q${(n % 4) + 1}`, reread: false}];
+  const last = h[h.length - 1]; if (last && last.neu && orfP(last.neu.id)) steps.push({id: last.neu.id, reread: true});
+  return {kid, lvl, steps: steps.filter(s => orfP(s.id)), i: 0, res: [], placing: !h.length, comp: null, w: null};
+}
+function orfScore(w){
+  const words = w.n, last = w.last == null ? words - 1 : w.last, read = last + 1;
+  const err = w.err.filter(i => i <= last).length, ok = Math.max(0, read - err), secs = Math.max(1, Math.min(60, w.secs || 60));
+  return {read, err, ok, secs, wcpm: secs >= 60 ? ok : Math.round(ok * 60 / secs), acc: Math.round(100 * ok / Math.max(1, read))};
+}
+function renderOrf(B){
+  const D = orfData(); const fm = fem(), V = (m, f) => fm ? f : m, nm = esc(K().name);
+  if (!D){
+    B.innerHTML = `<div class="kcard" style="padding:14px"><p class="lbl" style="margin:0">📖 قراءة الربع</p>
+      <p style="margin:6px 0">قِطَع القراءة الاثنتا عشرة تنتظر مراجعة الشيخ، ثم تُفعَّل هنا.</p>
+      <p class="note" style="margin:0">طريقتها: كل ثلاثة أشهر ${V('يقرأ', 'تقرأ')} ${nm} قطعةً جديدة دقيقةً واحدة بصوتٍ عالٍ، ثم ${V('يعيد', 'تعيد')} قطعة الربع الماضي دقيقةً أخرى، فترون نموّه على القطعة نفسها، ثم ثلاثة أسئلة شفهية. التسجيل يبقى بينكم وبين ${V('ابنكم', 'ابنتكم')}.</p></div>`;
+    return;
+  }
+  if (ORF && ORF.kid === kid) return ORF.i < ORF.steps.length ? orfReadView(B) : orfQView(B);
+  ORF = null;
+  const h = orfHist(), lvl = orfLvl(), last = h[h.length - 1];
+  const since = last ? dayN() - dayN(last.t) : null, dueIn = last ? ORF_DAYS - since : 0;
+  const pair = [...h].reverse().find(s => s.again);
+  let growth = '';
+  if (pair){ const a = pair.again, b0 = h.find(s => s.neu && s.neu.id === a.id && s.t < pair.t), p = orfP(a.id);
+    if (b0 && p){ const d = Math.round((pair.t - b0.t) / 864e5), diff = a.wcpm - b0.neu.wcpm;
+      growth = `<p style="margin:6px 0;font-weight:700">${V('قرأ', 'قرأت')} قطعة «${esc(p.title)}» مرةً ثانية بعد ${AR_NUM(d)} يومًا: ${AR_NUM(b0.neu.wcpm)} ← ${AR_NUM(a.wcpm)} كلمةً صحيحة في الدقيقة، بدقة ${AR_NUM(a.acc)}٪${b0.comp != null ? `، وفهم ${orfN(b0.comp)} من ٣` : ''}.</p>
+        <p class="note" style="margin:0">${Math.abs(diff) < 8 ? 'الفرق أصغر من ٨ كلمات، والدقيقة الواحدة تخطئ بنحو ذلك، فلا يُعدّ تغيّرًا بعد.' : diff > 0 ? 'الدقيقة الواحدة تخطئ بنحو ٨ كلمات، والفرق أكبر من ذلك: نموٌّ حقيقي.' : 'نقص أكثر من ٨ كلمات: ربما كان يومًا متعبًا؛ أعيدوا القطعة بعد أيام قبل أن تحكموا.'}</p>
+        <div class="row" style="gap:8px;margin-top:6px" id="orfAB"></div>`; } }
+  const lastHard = last && last.neu && last.neu.acc < 90 ? `<p class="fb bad" style="margin:6px 0">القطعة الأخيرة ما زالت صعبة (دقّة ${AR_NUM(last.neu.acc)}٪)؛ نبقى في هذا المستوى، وهذا حكمٌ على القطعة لا على ${nm}.</p>` : '';
+  /* one row a reading: the new passage, and under it the passage read again */
+  const rows = h.slice().reverse().map(s => { const p = s.neu && orfP(s.neu.id), q = s.again && orfP(s.again.id);
+    return `<tr><td>${esc(s.date)}</td><td>${p ? esc(p.title) : '—'}</td><td>${s.neu ? AR_NUM(s.neu.wcpm) : '—'}</td><td>${s.neu ? AR_NUM(s.neu.acc) + '٪' : '—'}</td><td>${s.comp != null ? orfN(s.comp) + ' من ٣' : '—'}</td></tr>` +
+      (q ? `<tr><td></td><td>↺ ${esc(q.title)}</td><td>${AR_NUM(s.again.wcpm)}</td><td>${AR_NUM(s.again.acc)}٪</td><td></td></tr>` : ''); }).join('');
+  B.innerHTML = `<div class="kcard" style="padding:14px">
+     <p class="lbl" style="margin:0">📖 قراءة الربع — ${nm}</p>
+     <p class="note" style="margin:6px 0">كل ثلاثة أشهر: قطعةٌ جديدة دقيقةً واحدة، ثم قطعة الربع الماضي دقيقةً أخرى، ثم ثلاثة أسئلة والقطعة مخفيّة. لا مقارنة بإخوته ولا بغيره: ${V('يُقارَن بنفسه', 'تُقارَن بنفسها')} على القطعة نفسها.</p>
+     ${growth}${lastHard}
+     <p style="margin:8px 0 4px">${!last ? 'لم تبدأ بعد. القراءة الأولى تحدّد المستوى.' : dueIn > 0 ? `القراءة القادمة بعد ${AR_NUM(dueIn)} يومًا.` : 'حان وقت قراءة هذا الربع.'}</p>
+     <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><button class="btn sm" type="button" id="orfGo">${last ? 'ابدؤوا قراءة هذا الربع' : 'ابدؤوا القراءة الأولى'}</button>
+       <label class="note">المستوى: <select id="orfLvl">${[1, 2, 3].map(l => `<option value="${l}" ${l === lvl ? 'selected' : ''}>${ORF_LV[l]}</option>`).join('')}</select></label></div>
+     ${h.length ? `<div class="tablewrap" style="margin-top:10px"><table class="dash"><tr><th>التاريخ</th><th>القطعة</th><th>في الدقيقة</th><th>الدقّة</th><th>الفهم</th></tr>${rows}</table></div><p class="note" style="margin:4px 0 0">«في الدقيقة»: الكلمات الصحيحة في دقيقة. والسطر الذي أوّله ↺ قطعة الربع الماضي حين أُعيدت.</p>` : ''}
+   </div>`;
+  B.querySelector('#orfGo').addEventListener('click', () => { ORF = orfPlan(); if (!ORF.steps.length){ ORF = null; return; } renderDad(); });
+  B.querySelector('#orfLvl').addEventListener('change', e => { store.set(`orfLvl:${kid}`, +e.target.value); renderDad(); });
+  /* «قبل» و«بعد» للطفل نفسه: يسمع تسجيليه، بلا أرقام */
+  const ab = B.querySelector('#orfAB');
+  if (ab && pair){ const b0 = h.find(s => s.neu && s.neu.id === pair.again.id && s.t < pair.t);
+    recAll().then(all => { [[b0 && b0.neu.rec, 'قبل'], [pair.again.rec, 'بعد']].forEach(([id, l]) => { const r = id && all.find(x => x.id === id); if (!r || !ab.isConnected) return;
+      const w = el('div', 'row'); w.style.cssText = 'gap:6px;align-items:center'; w.append(el('span', 'chip', `🎧 ${l}`), audioEl(r.blob)); ab.appendChild(w); }); });
+  }
+}
+function orfReadView(B){
+  const st = ORF.steps[ORF.i], p = orfP(st.id), words = orfWords(p), fm = fem(), V = (m, f) => fm ? f : m;
+  if (!ORF.w || ORF.w.id !== st.id) ORF.w = {id: st.id, n: words.length, err: [], last: null, secs: 0, t0: 0, rec: null, mode: 'err', blob: null};
+  const w = ORF.w; const S = (D => D && D.procedure && D.procedure.scoring)(orfData()) || {};
+  B.innerHTML = `<div class="kcard" style="padding:14px">
+     <div class="row" style="justify-content:space-between"><p class="lbl" style="margin:0">📖 ${st.reread ? 'إعادة قطعة الربع الماضي' : ORF.placing && ORF.i > 0 ? 'قطعةٌ من مستوى آخر لتحديد المستوى' : 'القطعة الجديدة'}: «${esc(p.title)}»</p><button class="btn ghost sm" type="button" id="orfStop">إلغاء</button></div>
+     <p class="note" style="margin:6px 0">${V('يقرأ', 'تقرأ')} ${esc(K().name)} بصوتٍ عالٍ بلا مساعدة. ابدؤوا الوقت مع أول كلمة، والمسوا كل كلمة ${V('أخطأ', 'أخطأت')} فيها أثناء القراءة أو بعدها من التسجيل. إن ${V('توقّف', 'توقّفت')} أكثر من ٣ ثوانٍ قولوا الكلمة، وهي خطأ.</p>
+     <details class="qi"><summary class="note" style="cursor:pointer">ما الخطأ وما ليس خطأً؟</summary><p class="note" style="margin:4px 0"><b>خطأ:</b> ${(S.errors || []).map(esc).join(' ')}</p><p class="note" style="margin:4px 0"><b>ليس خطأً:</b> ${(S.not_errors || []).map(esc).join(' ')}</p></details>
+     <p class="orf-text" id="orfText" dir="rtl">${words.map((x, i) => `<span class="otok${w.err.includes(i) ? ' err' : ''}${w.last === i ? ' last' : ''}" data-i="${i}">${esc(x)}</span>`).join(' ')}</p>
+     <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center" id="orfCtl"></div>
+     <div id="orfRec"></div><p class="lbl" id="orfSum" style="margin:6px 0 0"></p>
+   </div>`;
+  const ctl = B.querySelector('#orfCtl'), sum = B.querySelector('#orfSum'), txt = B.querySelector('#orfText');
+  const fmt = s => `${AR_NUM(Math.floor(s / 60))}:${AR_NUM(String(Math.floor(s % 60)).padStart(2, '0'))}`;
+  const showSum = () => { if (w.t0 && !w.secs){ sum.textContent = ''; return; } if (!w.secs) return; const r = orfScore(w);
+    sum.textContent = `${V('قرأ', 'قرأت')} ${AR_NUM(r.read)} كلمة في ${AR_NUM(r.secs)} ثانية، ${V('وأخطأ', 'وأخطأت')} في ${AR_NUM(r.err)}: ${AR_NUM(r.wcpm)} كلمة صحيحة في الدقيقة، بدقّة ${AR_NUM(r.acc)}٪.`; };
+  const paint = () => txt.querySelectorAll('.otok').forEach(s => { const i = +s.dataset.i; s.classList.toggle('err', w.err.includes(i)); s.classList.toggle('last', w.last === i); s.classList.toggle('after', w.last != null && i > w.last); });
+  txt.addEventListener('click', e => { const s = e.target.closest('.otok'); if (!s) return; const i = +s.dataset.i;
+    if (w.mode === 'last'){ w.last = i; w.mode = 'err'; } else { const k = w.err.indexOf(i); if (k >= 0) w.err.splice(k, 1); else w.err.push(i); }
+    paint(); drawCtl(); showSum(); });
+  const finish = async (early) => { if (!w.t0 || w.secs) return; w.secs = Math.min(60, Math.round((Date.now() - w.t0) / 1000)) || 1; clearInterval(w.tick);
+    if (early) w.last = words.length - 1; else w.mode = 'last';
+    if (w.recOn){ w.recOn = false; try { const blob = await micStop(); if (blob && blob.size) w.blob = blob; } catch (e) {} }
+    if (ORF && ORF.w === w && B.isConnected) drawCtl(), paint(), showSum(), drawRec(); };
+  const drawRec = () => { const R = B.querySelector('#orfRec'); R.innerHTML = ''; if (w.blob){ const a = audioEl(w.blob); a.dataset.keep = '1'; R.appendChild(a); } };
+  const drawCtl = () => { ctl.innerHTML = '';
+    if (!w.t0){ const go = el('button', 'btn', '▶ ابدؤوا الوقت مع أول كلمة'); go.type = 'button'; ctl.appendChild(go);
+      go.addEventListener('click', async () => { w.t0 = Date.now(); drawCtl();
+        if (MIC_OK){ try { await micStart(); w.recOn = true; } catch (e) { w.recOn = false; } }
+        w.tick = setInterval(() => { if (!ORF || ORF.w !== w || !B.isConnected){ clearInterval(w.tick); if (w.recOn){ w.recOn = false; micAbort(); } return; }
+          const s = (Date.now() - w.t0) / 1000; const t = ctl.querySelector('.otime'); if (t) t.textContent = `⏱ ${fmt(Math.min(60, s))}`; if (s >= 60) finish(false); }, 250); });
+      return; }
+    if (!w.secs){ const t = el('span', 'chip otime', '⏱ ٠:٠٠'); const end = el('button', 'btn ghost sm', `${V('أنهى', 'أنهت')} القطعة قبل الدقيقة`); end.type = 'button'; end.addEventListener('click', () => finish(true)); ctl.append(t, end); return; }
+    const m1 = el('button', 'chip2', '✗ كلمة خطأ'), m2 = el('button', 'chip2', `⌖ آخر كلمة ${V('قرأها', 'قرأتها')}`); [m1, m2].forEach(b => b.type = 'button');
+    m1.setAttribute('aria-pressed', String(w.mode === 'err')); m2.setAttribute('aria-pressed', String(w.mode === 'last'));
+    m1.addEventListener('click', () => { w.mode = 'err'; drawCtl(); }); m2.addEventListener('click', () => { w.mode = 'last'; drawCtl(); });
+    const save = el('button', 'btn sm', 'احفظوا وتابعوا'); save.type = 'button'; save.disabled = w.last == null;
+    if (w.last == null) ctl.append(el('span', 'note', `انتهت الدقيقة: المسوا آخر كلمة ${V('قرأها', 'قرأتها')}.`));
+    ctl.append(m1, m2, save);
+    save.addEventListener('click', async () => { save.disabled = true; const r = {id: st.id, reread: st.reread, ...orfScore(w)};
+      if (w.blob){ const rid = 'orf' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        try { await recPut({id: rid, kid, kidName: K().name, kind: ORF_KIND, ref: p.title, text: p.text, date: today(), type: w.blob.type || 'audio/webm', blob: w.blob, status: 'approved', notes: [], source: 'local'}); r.rec = rid; } catch (e) {} }
+      ORF.res.push(r); ORF.w = null;
+      /* the first sitting places the child: 90–97% accuracy is the level; above it the next level's first passage, below it the one before */
+      if (ORF.placing && !st.reread){ const L = +st.id[1]; const tried = ORF.res.filter(x => !x.reread).map(x => +x.id[1]);
+        const nx = r.acc > 97 && L < 3 ? L + 1 : r.acc < 90 && L > 1 ? L - 1 : null;
+        if (nx && !tried.includes(nx) && orfP(`L${nx}-Q1`)) ORF.steps.splice(ORF.i + 1, 0, {id: `L${nx}-Q1`, reread: false}); }
+      ORF.i++; renderDad(); });
+  };
+  drawCtl(); paint(); showSum(); drawRec();
+  B.querySelector('#orfStop').addEventListener('click', () => { if (w.recOn){ w.recOn = false; micAbort(); } clearInterval(w.tick); ORF = null; renderDad(); });
+}
+/* the new passage of the sitting: in the first sitting, the level read at 90–97% (or the nearest) */
+function orfNew(){ const n = ORF.res.filter(r => !r.reread); if (!n.length) return null; if (!ORF.placing) return n[0];
+  return n.slice().sort((a, b) => { const d = x => x.acc >= 90 && x.acc <= 97 ? 0 : Math.min(Math.abs(x.acc - 90), Math.abs(x.acc - 97)); return d(a) - d(b) || +a.id[1] - +b.id[1]; })[0]; }
+function orfQView(B){
+  const nu = orfNew(), p = nu && orfP(nu.id); const fm = fem(), V = (m, f) => fm ? f : m;
+  if (!p){ ORF = null; return renderDad(); }
+  ORF.comp = ORF.comp || p.questions.map(() => null);
+  B.innerHTML = `<div class="kcard" style="padding:14px">
+     <p class="lbl" style="margin:0">📖 ثلاثة أسئلة عن «${esc(p.title)}»</p>
+     <p class="note" style="margin:6px 0">أخفوا القطعة، واسألوا ${esc(K().name)} شفهيًّا بالترتيب. الجواب بالعربية أو الصينية أو الإنجليزية مقبول، فالمقصود الفهم. أعطوا نقطةً أو نصف نقطة أو لا شيء بحسب الجواب المكتوب.</p>
+     ${p.questions.map((q, i) => `<div class="qi" style="margin:8px 0"><p style="margin:0"><b>${AR_NUM(i + 1)}.</b> ${esc(q.q)} <span class="ref">(${esc(q.kind)})</span></p><p class="note" style="margin:2px 0">الجواب: ${esc(q.a)}</p>
+       <div class="chips" data-q="${i}">${[[1, '✓ نقطة'], [0.5, '½ نصف نقطة'], [0, 'لا شيء']].map(([v, l]) => `<button class="chip2" type="button" data-v="${v}" aria-pressed="${ORF.comp[i] === v}">${l}</button>`).join('')}</div></div>`).join('')}
+     <div class="btns" style="justify-content:flex-start"><button class="btn sm" type="button" id="orfSave" ${ORF.comp.some(v => v == null) ? 'disabled' : ''}>احفظوا قراءة هذا الربع</button><button class="btn ghost sm" type="button" id="orfStop">إلغاء</button></div></div>`;
+  B.querySelectorAll('[data-q]').forEach(row => row.addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; ORF.comp[+row.dataset.q] = +b.dataset.v; orfQView(B); }));
+  B.querySelector('#orfStop').addEventListener('click', () => { ORF = null; renderDad(); });
+  B.querySelector('#orfSave').addEventListener('click', () => {
+    const again = ORF.res.find(r => r.reread) || null, comp = ORF.comp.reduce((a, b) => a + b, 0);
+    const h = orfHist(); h.push({date: today(), t: Date.now(), lvl: +nu.id[1], neu: nu, again, comp, tries: ORF.res.filter(r => !r.reread && r !== nu)}); store.set(`orf:${kid}`, h);
+    if (ORF.placing) store.set(`orfLvl:${kid}`, +nu.id[1]);
+    ORF = null; renderDad(); });
+}
+RESETS.push(() => { if (ORF && ORF.w && ORF.w.recOn) micAbort(); ORF = null; });
+
 /* ================= لوحة الأب ================= */
 let ddTab = 'today';
 function renderDad(){
   const C = $('ddCard');
   if (TEACHER){ C.innerHTML = `<div class="row" style="justify-content:space-between"><p class="lbl" style="margin:0">ملف المعلم</p><button class="back" type="button" id="ddHome">→ الواحات</button></div><p class="note">استورد ملف الطالب الذي أرسله ولي الأمر، واستمع، واضغط الكلمات الخاطئة، واكتب أو سجّل ملاحظتك، ثم اعتمد أو اطلب التصحيح، وصدّر الملف لولي الأمر.</p><div id="ddRec" class="queue"></div>`;
     C.querySelector('#ddHome').addEventListener('click', () => { TEACHER = false; go('home'); }); renderReview($('ddRec'), true); return; }
-  const tabs = [['today','سطر اليوم'],['progress','التقدّم'],['rec','التسجيلات'],['gift','الهدايا'],['amal','اعمل به'],['voice','صوت الرفيق'],['kidset','واجهة الطفل'],['tri','ثلاث لغات'],['week','تقرير الجمعة'],['write','الكتابات'],['kq','أسئلة الأبناء']];
+  const tabs = [['today','سطر اليوم'],['progress','التقدّم'],['rec','التسجيلات'],['gift','الهدايا'],['amal','اعمل به'],['voice','صوت الرفيق'],['kidset','واجهة الطفل'],['tri','ثلاث لغات'],['week','تقرير الجمعة'],['write','الكتابات'],['kq','أسئلة الأبناء'],['orf','قراءة الربع']];
   C.innerHTML = `<div class="row" style="justify-content:space-between"><p class="lbl" style="margin:0">لوحة الواحة — ${avatarHtml(K(), 28)} ${esc(K().name)} (${ageWords(K().age)})</p><button class="back" type="button" id="ddHome">→ واحتي</button></div>
    ${kids.length > 1 ? `<div class="chips" id="ddKids" role="group" aria-label="الأطفال">${kids.map((k, i) => `<button class="chip2" type="button" data-i="${i}" aria-pressed="${i === kid}">${avatarHtml(k, 24)} ${esc(k.name)}</button>`).join('')}</div>` : ''}
    <div class="row" id="ddHub" style="gap:6px;flex-wrap:wrap;margin:2px 0 6px"><button class="btn ghost sm" type="button" data-hub="corner">💎 ركن وليّ الأمر</button><button class="btn ghost sm" type="button" data-hub="hasaniya">🐪 لوحة الحسنية</button></div>
@@ -1139,6 +1283,7 @@ function renderDad(){
   else if (ddTab === 'tri'){ renderTriPanel(B); }
   else if (ddTab === 'week'){ renderWeekPanel(B); }
   else if (ddTab === 'voice'){ renderVoiceStudio(B); }
+  else if (ddTab === 'orf') renderOrf(B);
   else if (ddTab === 'kidset'){ const c = cmpGet(); B.innerHTML = `<p class="note">واجهة ${esc(K().name)} البسيطة: شاشة بزر «رحلة اليوم»، ورفيق يتكلم. «كل الواحات» تظهر لمن عمره 9 فأكثر، ويمكنكم فتحها للأصغر.</p>
      <label class="row" style="gap:8px"><input type="checkbox" id="ksMode" ${kidMode() ? 'checked' : ''}> الواجهة البسيطة للطفل</label>
      <label class="row" style="gap:8px"><input type="checkbox" id="ksLib" ${store.get(`libOpen:${kid}`, false) ? 'checked' : ''}> أظهروا «كل الواحات» و«كنوز البيان» حتى لو كان صغيرًا</label>
@@ -1342,7 +1487,7 @@ function unb64(s, type){ const bin = atob(s); const u = new Uint8Array(bin.lengt
 const ST_OK = ['pending', 'fix', 'approved'];
 const STATUS = {pending:['بانتظار المراجعة','wait'], approved:['معتمد','ok'], fix:['فيه ملاحظات','wait']};
 const isQuran = r => r.kind === 'آية' || r.kind === 'صفحة';
-const PRIVATE_K = new Set(['أخبرني', 'رأيتُها اليوم', 'كتابتي', 'كلمة', 'جملة', 'من أبي']);   // تسجيلات بين الطفل وأبيه: لا تُهدى ولا تُصدَّر إلى المعلم ولا تدخل الإذاعة
+const PRIVATE_K = new Set(['أخبرني', 'رأيتُها اليوم', 'كتابتي', 'كلمة', 'جملة', 'من أبي', 'قراءة الربع']);   // تسجيلات بين الطفل وأبيه: لا تُهدى ولا تُصدَّر إلى المعلم ولا تدخل الإذاعة
 const giftable = r => r.status === 'approved' && (!isQuran(r) || r.approvedBy === 'المعلم') && !PRIVATE_K.has(r.kind) && !String(r.type || '').startsWith('image/');
 function statusBadge(r){ if (r.status === 'approved' && isQuran(r) && r.approvedBy !== 'المعلم') return '<span class="badge wait">معتمد مبدئيًّا (القرآن يعتمده الشيخ)</span>'; return `<span class="badge ${STATUS[r.status][1]}">${STATUS[r.status][0]}</span>`; }
 /* every recording shown holds its object URL; lists re-render whole, so the URLs whose element left the page are released
@@ -2382,9 +2527,9 @@ function storyRecall(avoid){ const age = K().age; const cands = [], due = [];
   return {g, id: c.id, ...q, kind: 'review', html: `<p class="note" style="margin:0 0 6px">${esc(c.sfr ? '⟨تذكّر|تذكّري⟩ مقالة' : '⟨تذكّر|تذكّري⟩ قصة')} «${esc(c.x.title)}»: ${esc(first)}.</p>` + (q.html || '')}; }
 const TRIP_V = 5;
 /* 2.6: a fixed recipe instead of «always + weak + random».
-   1. reviews first, as many as the backlog asks (2 to 3 under nine, up to 5 from nine);
+   1. reviews first, the oldest first: up to 10 words under nine and 15 from nine, with up to 3 other reviews (the family's rule);
    2. under nine, a story heard and asked about;
-   3. two new words from the child's own memorised part: the oasis exists for them;
+   3. two new words from the child's own memorised part, only once no word learnt waits for its review: the oasis exists for them;
    4. one item of the next stage that a trip can reach;
    5. the Hasaniya or «كنوز البيان»: one question at most, from what was studied there (under nine, every other day);
    6. a story recall, then other games up to the day's number.
