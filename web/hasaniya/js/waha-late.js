@@ -417,9 +417,14 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
     var MF = by(0), FM = by(1);
     var rx = function (m) { return new RegExp('(' + Object.keys(m).sort(function (a, b) { return b.length - a.length; }).map(esc).join('|') + ')(?![\\u0621-\\u064A\\u064B-\\u0652])', 'g'); };
     var RMF = rx(MF), RFM = rx(FM), ATTR = ['title', 'aria-label', 'placeholder'];
-    function fix(s, girl) { return s.replace(girl ? RMF : RFM, function (w) { return (girl ? MF : FM)[w]; }); }
-    function text(n, girl) { var d = n.data, o = fix(d, girl); if (o !== d) n.data = o; }
-    function attrs(e, girl) { for (var i = 0; i < ATTR.length; i++) { var v = e.getAttribute(ATTR[i]); if (v) { var o = fix(v, girl); if (o !== v) e.setAttribute(ATTR[i], o); } } }
+    /* and numbers are written ١٢٣ as in the rest of the product (2.8), except in what is typed and in code-like text */
+    var AD = '٠١٢٣٤٥٦٧٨٩', LATIN = 'textarea,input,pre,code,[data-latin],[lang]:not([lang^="ar"])';
+    var toL = function (s) { return s.replace(/[٠-٩]/g, function (c) { return String(AD.indexOf(c)); }); };
+    var toA = function (s) { return s.replace(/[0-9]/g, function (c) { return AD[c]; }); };
+    var latin = function (n) { var e = n.nodeType === 1 ? n : n.parentElement; try { return !!(e && e.closest(LATIN)); } catch (x) { return false; } };
+    function fix(s, girl, n) { if (n && latin(n)) return s; var t = toL(s); t = t.replace(girl ? RMF : RFM, function (w) { return (girl ? MF : FM)[w]; }); return toA(t); }
+    function text(n, girl) { var d = n.data, o = fix(d, girl, n); if (o !== d) n.data = o; }
+    function attrs(e, girl) { for (var i = 0; i < ATTR.length; i++) { var v = e.getAttribute(ATTR[i]); if (v) { var o = fix(v, girl, e); if (o !== v) e.setAttribute(ATTR[i], o); } } }
     function walk(root, girl) {
       if (!root) return;
       if (root.nodeType === 3) return text(root, girl);

@@ -137,7 +137,7 @@ async def main():
             ok(await p.evaluate("[weekPlayed(), weeksMet()]") == [1, 1], 'the oasis counts this week\'s days and the weeks completed')
             await p.evaluate("renderDaily()"); await p.wait_for_timeout(200)
             dl = await p.inner_text('#daily')
-            ok('هذا الأسبوع: 1 من 4' in dl and 'سلسلة' not in dl and 'متتالية' not in dl, 'her daily mission: «هذا الأسبوع: 1 من 4» (%s)' % dl[:60].replace('\n', ' '))
+            ok('هذا الأسبوع: ١ من ٤' in dl and 'سلسلة' not in dl and 'متتالية' not in dl, 'her daily mission: «هذا الأسبوع: ١ من ٤» (%s)' % dl[:60].replace('\n', ' '))
             rep = await p.evaluate("weekText([kidWeek(0, [])])")
             ok('أسابيع مكتملة: 1' in rep and 'سلسلة' not in rep, 'the Friday report counts weeks, not a chain')
 

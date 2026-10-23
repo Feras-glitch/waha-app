@@ -74,6 +74,8 @@ async def main():
 
         # ---- the Hasaniya: one window at a time, the product's fonts, and back to the oasis
         await p.goto('about:blank'); await p.goto(HS); await p.wait_for_timeout(1800)
+        hn = await p.evaluate("(() => { const ws = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT); let n, bad = []; while ((n = ws.nextNode())){ const e = n.parentElement; if (e && !e.closest('textarea,input,script,style,pre,code,[lang]:not([lang^=ar])') && /[0-9]/.test(n.data) && e.offsetParent) bad.push(n.data.trim().slice(0, 30)); } return bad; })()")
+        ok(not hn, 'and in the Hasaniya (%s)' % hn[:3])
         f = await p.evaluate("getComputedStyle(document.body).fontFamily")
         ok('Tajawal' in f, 'the Hasaniya uses the product\'s fonts (%s)' % f[:40])
         r = await p.evaluate("""(async () => { document.getElementById('quizPopup').classList.add('active'); showNewAchievement({icon: '⭐', name: 'تجربة', desc: 'تجربة'});
@@ -94,6 +96,8 @@ async def main():
         t = await p.inner_text('#ddBody')
         ok('اسمعوا ما قالوه اليوم، وأرسلوا' in t, 'the board speaks to «you» in the plural: a mother or a father')
         await shot(p, 'b01-board')
+        nums = await p.evaluate("(() => { const ws = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT); let n, bad = []; while ((n = ws.nextNode())){ const e = n.parentElement; if (e && !e.closest('textarea,input,script,style,pre,code,[lang]:not([lang^=ar])') && /[0-9]/.test(n.data) && e.offsetParent) bad.push(n.data.trim().slice(0, 30)); } return bad; })()")
+        ok(not nums, 'numbers on the oasis screens are written ١٢٣ (%s)' % nums[:3])
         await b.close()
     srv.shutdown()
     print('\nERRORS:', len(ERRS))

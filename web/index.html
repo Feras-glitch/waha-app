@@ -3613,18 +3613,25 @@ if (typeof pinSet === 'function' && !pinSet() && typeof store.get('pin', null) !
   function R(s) { return s == null ? s : String(s).replace(RX, function (m, a, b) { return isF() ? b : a; }); }
   window.KZR = R;
   var ATTRS = ['placeholder', 'aria-label', 'title', 'alt'];
+  /* numbers on screen are written ١٢٣, as in «كنوز البيان» (2.8). What is typed, Chinese or English text, and files that leave keep theirs */
+  var AD = '٠١٢٣٤٥٦٧٨٩', LATIN = 'textarea,input,pre,code,[data-latin],[lang]:not([lang^="ar"])';
+  function D(s) { return s.replace(/[0-9]/g, function (c) { return AD[c]; }); }
+  function latin(n) { var e = n.nodeType === 1 ? n : n.parentElement; try { return !!(e && e.closest(LATIN)); } catch (x) { return false; } }
+  function show(s, n) { var o = R(s); return latin(n) ? o : D(o); }
   function fixText(n) {
     var d = n.data;
-    if (n.__kzO === d && n.__kzS != null) { var o = R(n.__kzS); if (o !== d) { n.__kzO = o; n.data = o; } return; }
-    if (d.indexOf('⟨') < 0) { n.__kzS = null; return; }
-    n.__kzS = d; var out = R(d); n.__kzO = out; n.data = out;
+    if (n.__kzO === d && n.__kzS != null) { var o = show(n.__kzS, n); if (o !== d) { n.__kzO = o; n.data = o; } return; }
+    if (d.indexOf('⟨') < 0 && !/[0-9]/.test(d)) { n.__kzS = null; return; }
+    var out = show(d, n); if (out === d) { n.__kzS = null; return; }
+    n.__kzS = d; n.__kzO = out; n.data = out;
   }
   function fixAttr(e, a) {
     var v = e.getAttribute(a); if (v == null) return;
     var s = e.__kzA || (e.__kzA = {});
-    if (s['o' + a] === v && s['s' + a] != null) { var o = R(s['s' + a]); if (o !== v) { s['o' + a] = o; e.setAttribute(a, o); } return; }
-    if (v.indexOf('⟨') < 0) { s['s' + a] = null; return; }
-    s['s' + a] = v; var out = R(v); s['o' + a] = out; e.setAttribute(a, out);
+    if (s['o' + a] === v && s['s' + a] != null) { var o = show(s['s' + a], e); if (o !== v) { s['o' + a] = o; e.setAttribute(a, o); } return; }
+    if (v.indexOf('⟨') < 0 && !/[0-9]/.test(v)) { s['s' + a] = null; return; }
+    var out = show(v, e); if (out === v) { s['s' + a] = null; return; }
+    s['s' + a] = v; s['o' + a] = out; e.setAttribute(a, out);
   }
   function fixEl(e) { for (var i = 0; i < ATTRS.length; i++) fixAttr(e, ATTRS[i]); }
   function skip(n) { return n.nodeType === 1 && (n.tagName === 'SCRIPT' || n.tagName === 'STYLE'); }
