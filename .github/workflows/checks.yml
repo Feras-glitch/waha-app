@@ -1,0 +1,34 @@
+# فحوص كل طلب دمج قبل دمجه: web/ هو ناتج src/، ثم اختبارات التطبيق كلها، ثم اختبار الدخان.
+# (لا يُبنى هنا APK ولا إصدار ولا نشر؛ ذلك في build-all.yml عند الدمج في main)
+name: Checks
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: web/ is what src/ builds
+        run: |
+          python3 src/tools/build.py
+          python3 src/tools/publish.py --check
+      - name: End-to-end tests
+        run: |
+          pip install playwright==1.56.0
+          python -m playwright install --with-deps chromium
+          python3 src/tools/test_all.py
+      - name: Smoke test (first run, child journey, sections)
+        run: |
+          npm install --no-save --no-package-lock playwright@1.49.1
+          npx playwright install chromium
+          export CHROMIUM_PATH="$(node -e "console.log(require('playwright').chromium.executablePath())")"
+          node web/tests/smoke.js

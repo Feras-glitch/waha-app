@@ -3,8 +3,9 @@
 #   2) أندرويد APK موقّع بالمفتاح الثابت (أو نسخة تجريبية إن لم تُضف المفاتيح بعد)
 #   3) ويندوز ولينكس (Electron)، وملفات الويب
 #   4) إصدار في صفحة Releases باسم رقم النسخة، فيه كل الملفات
-# ملاحظة: web/ (إلا web/tests) يُبنى خارج المستودع من أجزاء المشروع في مشروع Claude (tools/build.py ثم tools/publish.py) ثم يُرفع هنا:
+# المصدر في src/، وweb/ (إلا web/tests) يُبنى منه: python3 src/tools/build.py ثم python3 src/tools/publish.py
 #   الواحة web/index.html، و«كنوز البيان» web/kunuz/، والحسنية web/hasaniya/ (نسخة مثبّتة من مستودعها + طبقة تكامل)، وعامل خدمة واحد web/sw.js.
+#   مهمة e2e تتحقق أن web/ هو ناتج src/ فعلًا، ثم تشغّل اختبارات التطبيق كلها (src/tools/test_all.py).
 name: Build all
 
 on:
@@ -33,8 +34,28 @@ jobs:
           export CHROMIUM_PATH="$(node -e "console.log(require('playwright').chromium.executablePath())")"
           node web/tests/smoke.js
 
+  e2e:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: web/ is what src/ builds
+        run: |
+          python3 src/tools/build.py
+          python3 src/tools/publish.py --check
+      - name: End-to-end tests (family profiles, oasis, كنوز البيان, Hasaniya, consent, backup, offline, recovery code)
+        run: |
+          pip install playwright==1.56.0
+          python -m playwright install --with-deps chromium
+          python3 src/tools/test_all.py
+
   android:
-    needs: test
+    needs: [test, e2e]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -88,7 +109,7 @@ jobs:
           path: out/*.apk
 
   packages:
-    needs: test
+    needs: [test, e2e]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -122,7 +143,7 @@ jobs:
 
   # نسخة الويب على GitHub Pages: تُدفع إلى فرع gh-pages فتُفتح من https://feras-glitch.github.io/waha-app/
   pages:
-    needs: test
+    needs: [test, e2e]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
