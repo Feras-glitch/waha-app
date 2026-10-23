@@ -1069,8 +1069,11 @@ function renderDad(){
     C.querySelector('#ddHome').addEventListener('click', () => { TEACHER = false; go('home'); }); renderReview($('ddRec'), true); return; }
   const tabs = [['today','سطر اليوم'],['progress','التقدّم'],['rec','التسجيلات'],['gift','الهدايا'],['amal','اعمل به'],['voice','صوت الرفيق'],['kidset','واجهة الطفل'],['tri','ثلاث لغات'],['week','تقرير الجمعة'],['write','الكتابات'],['kq','أسئلة الأبناء']];
   C.innerHTML = `<div class="row" style="justify-content:space-between"><p class="lbl" style="margin:0">لوحة ولي الأمر — ${avatarHtml(K(), 28)} ${esc(K().name)} (${K().age} سنوات)</p><button class="back" type="button" id="ddHome">→ واحتي</button></div>
+   <div class="row" id="ddHub" style="gap:6px;flex-wrap:wrap;margin:2px 0 6px"><button class="btn ghost sm" type="button" data-hub="corner">💎 ركن وليّ الأمر</button><button class="btn ghost sm" type="button" data-hub="hasaniya">🐪 لوحة الحسنية</button></div>
    <div class="chips" id="ddTabs">${tabs.map(([k, l]) => `<button class="chip2" type="button" data-k="${k}" aria-pressed="${k === ddTab}">${l}</button>`).join('')}</div><div id="ddBody" style="display:flex;flex-direction:column;gap:10px"></div>`;
   C.querySelector('#ddHome').addEventListener('click', () => { LIB = false; go('home'); });
+  C.querySelector('#ddHub').addEventListener('click', e => { const b = e.target.closest('[data-hub]'); const H = window.KZ_PARENT_HUB; if (b && H) H[b.dataset.hub](); });
+  if (!window.KZ_PARENT_HUB) C.querySelector('#ddHub').hidden = true;
   C.querySelector('#ddTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; ddTab = b.dataset.k; renderDad(); });
   const B = C.querySelector('#ddBody');
   if (ddTab === 'today'){ renderTodayLine(B).then(() => { if ('speechSynthesis' in window && !window.AndroidBridge && !pickVoice()) B.insertAdjacentHTML('afterbegin', '<p class="fb bad">لا يوجد صوتٌ عربي في هذا الجهاز، فلن تُسمع الأسئلة ولا 🔊. ثبّتوا صوتًا عربيًّا من إعدادات «تحويل النص إلى كلام» في الجهاز، أو سجّلوا جمل الرفيق في «صوت الرفيق».</p>'); }); }

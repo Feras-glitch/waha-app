@@ -68,7 +68,7 @@ var ACT={
   diag:needKid(function(){startDiag();}), pReport:function(t,ds){pReport(ds.id,ds.v);}, exReport:function(t,ds){exReport(ds.id,ds.v);},
   pFamily:function(){pFamily();}, pFamilyOne:function(t,ds){pFamily(ds.id);}, fsDone:function(t,ds){fsDone(ds.id);}, fsSkip:function(){fsSkip();},
   presentMag:function(t,ds){presentMag(ds.id);}, presentRadio:function(){presentRadio();},
-  waha:needKid(function(){wahaGo({kid:KID.id});}), pWaha:function(){wahaGo({dad:1,kid:KID&&KID.id});},
+  waha:needKid(function(){wahaGo({kid:KID.id});}), pWaha:function(){wahaGo({dad:1,kid:KID&&KID.id});}, pHasaniya:function(){hasaniyaParent();},
   rm:needKid(function(){rmView();}), rmOne:needKid(function(t,ds){rmOne(ds.id);}), rmPick:function(t,ds){rmPick(+ds.i);},
   lab:needKid(function(){labView();}), labPair:needKid(function(t,ds){labPair(ds.id);}), labRec:needKid(function(t,ds){labRec(ds.id);}),
   pVoice:function(){pVoice();}, pVoiceOne:function(t,ds){pVoiceOne(ds.id);}, pVoiceG:function(t,ds){if(NV) pVoiceOne(NV.id,ds.v);},
@@ -87,7 +87,7 @@ var ACT={
 };
 var confirmIdea=false;
 var GUEST_ACTS=['vplay','rzG','rzPick','rzReveal','rzHint','rzSelf'];
-var PARENT_ACTS=['pWaha','pReport','exReport','pFamily','pFamilyOne','fsDone','fsSkip','pVoice','pVoiceOne','pVoiceG','narRec','narDel','pGarden','pCerts','exCert','exRiddle','pKids','pProg','pApproved','pCode','pWeekly','setWeekly','passWeekly','pImport','extDel','pFrom','fromAdd','fromAll','pBackup','backupMake','pWork','rub','approve','returnWork','unapprove','pDelWork',
+var PARENT_ACTS=['pWaha','pHasaniya','pReport','exReport','pFamily','pFamilyOne','fsDone','fsSkip','pVoice','pVoiceOne','pVoiceG','narRec','narDel','pGarden','pCerts','exCert','exRiddle','pKids','pProg','pApproved','pCode','pWeekly','setWeekly','passWeekly','pImport','extDel','pFrom','fromAdd','fromAll','pBackup','backupMake','pWork','rub','approve','returnWork','unapprove','pDelWork',
   'exTeacher','exGift','exContrib','manualReply','kidAdd','kidEdit','kidDel','kidReset','magExport','magBack','magPublishLocal','pMag'];
 function route(g){
   if(!KID&&g!=='parent') return who();
@@ -205,7 +205,10 @@ window.appBack=function(){
   if(hr.indexOf('r=')===0) return riddleGuest(parseRiddleHash(hr)||{bad:1});
   IN_KUNUZ=!!hr;
   if(!FAM.pin) return setupWelcome();
-  if(hr==='parent'){ if(FAM.cur&&kidById(FAM.cur)) selectKid(FAM.cur); return needParent(parentHome); }
+  if(hr==='parent'){ if(FAM.cur&&kidById(FAM.cur)) selectKid(FAM.cur);
+    /* a session opened with the code on another board comes along (the parents' hub, 2.8) */
+    try{ var pu=+sessionStorage.getItem('kz-parent-until')||0; sessionStorage.removeItem('kz-parent-until'); if(pu>Date.now()) PARENT_UNTIL=Math.min(pu,Date.now()+15*60*1000); }catch(e){}
+    return needParent(parentHome); }
   if(!(FAM.cur&&kidById(FAM.cur))) return who();
   selectKid(FAM.cur);
   var h=(location.hash||'').replace('#','');

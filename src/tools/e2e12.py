@@ -63,7 +63,7 @@ async def main():
 
         # the parent board: no Arabic voice on this device; a free recording is not marked word by word
         await p.evaluate("""async () => { await recPut({id: 'free1', kid, kidName: 'يوسف', kind: 'نص حر', ref: 'من اختياري', text: '⟨اقرأ|اقرئي⟩ أي نصٍّ ⟨تحفظه|تحفظينه⟩', date: today(), type: 'audio/webm', blob: new Blob([new Uint8Array(3000)], {type: 'audio/webm'}), status: 'pending', notes: [], source: 'local'}); }""")
-        await p.click('#whoBtn'); await p.click('#ksDad'); await p.wait_for_selector('#sheet:not([hidden]) #pinIn'); await p.fill('#pinIn', '1234'); await p.click('#pinOk')
+        await p.click('#whoBtn'); await p.click('#ksParent'); await p.click('#ksDad'); await p.wait_for_selector('#sheet:not([hidden]) #pinIn'); await p.fill('#pinIn', '1234'); await p.click('#pinOk')
         await p.wait_for_selector('#ddTabs'); await p.wait_for_timeout(600)
         ok('لا يوجد صوتٌ عربي' in await p.inner_text('#ddBody'), 'the parent is told the device has no Arabic voice')
         await p.click('#ddTabs [data-k="rec"]'); await p.wait_for_timeout(600)

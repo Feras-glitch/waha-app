@@ -602,6 +602,11 @@ img.drawn{max-width:100%;border-radius:12px;border:1px solid var(--line)}
 .kr-m p{margin:0}
 .kr-n{font-family:var(--font-display);font-weight:700;font-size:1.1rem}
 .kr-a{display:flex;gap:8px}
+.hub-row{margin:0 0 16px}
+.hub-btns{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:6px}
+.hub-b{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:start;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:14px;padding:10px 12px;font:inherit;cursor:pointer;min-height:56px}
+.hub-b b{font-size:1rem}.hub-b span{font-size:.8rem;color:var(--ink-2)}
+.hub-b.on{border-color:var(--plum);cursor:default;opacity:1}
 .who-turn{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px;padding:10px 12px;border-radius:14px;background:color-mix(in srgb,var(--gold) 12%,transparent)}
 .cands{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
 .cand{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--line);flex-wrap:wrap}
@@ -3404,6 +3409,11 @@ function parentHome(){
     (FAM.pinResets.length?'<p class="tip">'+ICON.shield.replace('<svg','<svg class="ic-s"')+' أُعيد ضبط الرمز آخر مرة في '+fmtDate(FAM.pinResets[FAM.pinResets.length-1])+'، وأُلغيت الموافقات السابقة عندها.</p>':'')+
     (!FAM.rec?'<button class="banner rose" type="button" data-act="rcNew">'+ICON.lock+'<div class="bn-t"><strong>لا يوجد رمز استرداد بعد</strong><span>أنشئوه وأرسلوه إلى بريدكم؛ فبه وحده يُعاد ضبط الرمز إن نُسي.</span></div></button>':'')+
     (backupDue()?'<button class="banner gold" type="button" data-act="pBackup">'+ICON.shield+'<div class="bn-t"><strong>'+(FAM.lastBackup?'مضى أكثر من شهرٍ على آخر نسخةٍ احتياطية':'لم تحفظوا نسخةً احتياطية بعد')+'</strong><span>أصوات الأطفال وأعمالهم على هذا الجهاز وحده. احفظوا نسخةً مشفّرة في مكانٍ آمن.</span></div></button>':'')+
+    /* the parents' one way in: the three boards side by side (2.8) */
+    '<section class="hub-row" aria-label="لوحات العائلة"><span class="eyebrow">لوحات العائلة، برمزٍ واحد</span><div class="hub-btns">'+
+      '<button class="hub-b on" type="button" disabled><b>💎 ركن وليّ الأمر</b><span>أنتم هنا: الأعمال، والأطفال، والرمز، والنسخ</span></button>'+
+      '<button class="hub-b" type="button" data-act="pWaha"><b>🌴 لوحة الواحة</b><span>سطر اليوم، والتقدّم، والتسجيلات، وتقرير الجمعة</span></button>'+
+      '<button class="hub-b" type="button" data-act="pHasaniya"><b>🐪 لوحة الحسنية</b><span>حفظ المنظومة وتسجيلاتها وتقاريرها</span></button></div></section>'+
     (!IDB.db?'<p class="tip warn">هذا المتصفح لا يسمح بحفظ التسجيلات والرسوم بعد إغلاقه (ربما وضع التصفّح الخاص). افتحوا التطبيق في نافذةٍ عادية.</p>':'')+
     '<section><h2 class="h2">بانتظار مراجعتكم'+(pend.length?' · '+n2a(pend.length):'')+'</h2>'+
       (pend.length?'<ul class="wlist">'+pend.map(pRow).join('')+'</ul>':'<p class="muted">لا أعمال تنتظر المراجعة.</p>')+'</section>'+
@@ -3413,7 +3423,6 @@ function parentHome(){
       ptool('pCode','lapis','talk','ردّ المعلّم','ألصقوا الرمز الذي أرسله المعلّم، أو أدخلوا ردّه بأنفسكم')+
       ptool('pWeekly','gold','radio','قارئ الأسبوع',wk?Gx(esc(kidById(wk.kid).name)+' ⟨قارئ|قارئة⟩ هذا الأسبوع',gOf(kidById(wk.kid))):(weeklyTurn()?'تكريمٌ بالتناوب · هذا الأسبوع دور '+esc(weeklyTurn().name):'تكريمٌ يدور على الأطفال'))+
       ptool('pFamily','olive','users','جلسة العائلة','بطاقة هذا الأسبوع: '+plain(Gx(lessonById[fsCurrent().l].title,0)))+
-      ptool('pWaha','olive','palm','لوحة الواحة','تقدّم الأطفال في «واحة اللسان العربي»، ورسائلهم وأخبارهم وتسجيلاتهم للمراجعة')+
       ptool('pVoice','teal','mic','صوت البيت','سجّلوا شرح الدروس بصوتكم ليسمعه الأطفال · '+n2a(Object.keys(FAM.nar||{}).length)+' تسجيلًا')+
       ptool('pKids','rose','users','الأطفال',n2a(FAM.kids.length)+' · الأسماء، والصيغة، والتقدّم')+
       ptool('pFrom','olive','radio','من الواحة والحسنية','تسجيلاتٌ من القسمين تضيفونها إلى الإذاعة والمجلّات')+
@@ -5497,6 +5506,11 @@ function wahaGo(o){
   try{ if(o&&o.dad&&parentOn()) sessionStorage.setItem('kz-parent-until',String(PARENT_UNTIL)); }catch(e){}
   location.href=wahaURL(o);
 }
+/* the Hasaniya's parents' screen, carrying the session opened here */
+function hasaniyaParent(){
+  try{ if(parentOn()) sessionStorage.setItem('kz-parent-until',String(PARENT_UNTIL)); }catch(e){}
+  location.href='../hasaniya/index.html?parent=1'+(KID?'&kid='+encodeURIComponent(KID.id):'');
+}
 function wahaDoor(){
   return '<button class="door wide waha-door" type="button" data-act="waha" style="--ax:var(--olive)"><span class="door-t">🌴 واحة اللسان العربي</span>'+
     '<span class="door-d">نخيل الجذور من محفوظك، وألغاز، وشعر، وحكايات، وصحيفة الواحة، ورحلةٌ كلَّ يوم مع رفيقك.</span></button>';
@@ -5791,7 +5805,7 @@ var ACT={
   diag:needKid(function(){startDiag();}), pReport:function(t,ds){pReport(ds.id,ds.v);}, exReport:function(t,ds){exReport(ds.id,ds.v);},
   pFamily:function(){pFamily();}, pFamilyOne:function(t,ds){pFamily(ds.id);}, fsDone:function(t,ds){fsDone(ds.id);}, fsSkip:function(){fsSkip();},
   presentMag:function(t,ds){presentMag(ds.id);}, presentRadio:function(){presentRadio();},
-  waha:needKid(function(){wahaGo({kid:KID.id});}), pWaha:function(){wahaGo({dad:1,kid:KID&&KID.id});},
+  waha:needKid(function(){wahaGo({kid:KID.id});}), pWaha:function(){wahaGo({dad:1,kid:KID&&KID.id});}, pHasaniya:function(){hasaniyaParent();},
   rm:needKid(function(){rmView();}), rmOne:needKid(function(t,ds){rmOne(ds.id);}), rmPick:function(t,ds){rmPick(+ds.i);},
   lab:needKid(function(){labView();}), labPair:needKid(function(t,ds){labPair(ds.id);}), labRec:needKid(function(t,ds){labRec(ds.id);}),
   pVoice:function(){pVoice();}, pVoiceOne:function(t,ds){pVoiceOne(ds.id);}, pVoiceG:function(t,ds){if(NV) pVoiceOne(NV.id,ds.v);},
@@ -5810,7 +5824,7 @@ var ACT={
 };
 var confirmIdea=false;
 var GUEST_ACTS=['vplay','rzG','rzPick','rzReveal','rzHint','rzSelf'];
-var PARENT_ACTS=['pWaha','pReport','exReport','pFamily','pFamilyOne','fsDone','fsSkip','pVoice','pVoiceOne','pVoiceG','narRec','narDel','pGarden','pCerts','exCert','exRiddle','pKids','pProg','pApproved','pCode','pWeekly','setWeekly','passWeekly','pImport','extDel','pFrom','fromAdd','fromAll','pBackup','backupMake','pWork','rub','approve','returnWork','unapprove','pDelWork',
+var PARENT_ACTS=['pWaha','pHasaniya','pReport','exReport','pFamily','pFamilyOne','fsDone','fsSkip','pVoice','pVoiceOne','pVoiceG','narRec','narDel','pGarden','pCerts','exCert','exRiddle','pKids','pProg','pApproved','pCode','pWeekly','setWeekly','passWeekly','pImport','extDel','pFrom','fromAdd','fromAll','pBackup','backupMake','pWork','rub','approve','returnWork','unapprove','pDelWork',
   'exTeacher','exGift','exContrib','manualReply','kidAdd','kidEdit','kidDel','kidReset','magExport','magBack','magPublishLocal','pMag'];
 function route(g){
   if(!KID&&g!=='parent') return who();
@@ -5928,7 +5942,10 @@ window.appBack=function(){
   if(hr.indexOf('r=')===0) return riddleGuest(parseRiddleHash(hr)||{bad:1});
   IN_KUNUZ=!!hr;
   if(!FAM.pin) return setupWelcome();
-  if(hr==='parent'){ if(FAM.cur&&kidById(FAM.cur)) selectKid(FAM.cur); return needParent(parentHome); }
+  if(hr==='parent'){ if(FAM.cur&&kidById(FAM.cur)) selectKid(FAM.cur);
+    /* a session opened with the code on another board comes along (the parents' hub, 2.8) */
+    try{ var pu=+sessionStorage.getItem('kz-parent-until')||0; sessionStorage.removeItem('kz-parent-until'); if(pu>Date.now()) PARENT_UNTIL=Math.min(pu,Date.now()+15*60*1000); }catch(e){}
+    return needParent(parentHome); }
   if(!(FAM.cur&&kidById(FAM.cur))) return who();
   selectKid(FAM.cur);
   var h=(location.hash||'').replace('#','');

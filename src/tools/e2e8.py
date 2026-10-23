@@ -122,7 +122,7 @@ async def main():
 
         # ---- the parent: one daily line, one approvals summary
         await oasis(p, 'هند')
-        await p.click('#whoBtn'); await p.click('#ksDad'); await p.wait_for_selector('#pinIn'); await p.fill('#pinIn', '1234'); await p.click('#pinOk')
+        await p.click('#whoBtn'); await p.click('#ksParent'); await p.click('#ksDad'); await p.wait_for_selector('#pinIn'); await p.fill('#pinIn', '1234'); await p.click('#pinOk')
         await p.wait_for_selector('#ddBody'); await p.wait_for_timeout(600)
         t = await p.inner_text('#ddBody')
         ok('💎 كنوز البيان: «' in t and '🐪 الحسنية:' in t and 'ختمت محطة' in t, 'daily line covers the chambers and the Hasaniya')
@@ -174,7 +174,7 @@ async def main():
         ok(len(h) == 2 and h[1]['ok'] == h[1]['n'], 'second measure recorded (%s/%s)' % (h[-1]['ok'], h[-1]['n']))
         # parent sees the curve and the first/last table; the Friday report mentions it
         # the parent's session ended when the oasis went back to the child's pages, so the board asks for the PIN again
-        await p.click('#whoBtn'); await p.click('#ksDad'); await p.wait_for_selector('#sheet:not([hidden]) #pinIn')
+        await p.click('#whoBtn'); await p.click('#ksParent'); await p.click('#ksDad'); await p.wait_for_selector('#sheet:not([hidden]) #pinIn')
         await p.fill('#pinIn', '1234'); await p.click('#pinOk'); await p.wait_for_selector('#ddTabs')
         await p.locator('#ddTabs button', has_text='التقدّم').click(); await p.wait_for_timeout(400)
         t = await p.inner_text('#ddBody')

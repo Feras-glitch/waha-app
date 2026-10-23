@@ -302,6 +302,10 @@ mark.cn{background:var(--sky-soft);color:var(--sky);font-weight:700}
 .sand{border-radius:22px;overflow:hidden;cursor:pointer;position:relative}.sand .tap{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:var(--paper);color:var(--ink);border-radius:999px;padding:6px 14px;font-weight:800;box-shadow:0 2px 8px rgba(0,0,0,.15);animation:tapPulse 1.4s infinite}@keyframes tapPulse{50%{transform:translateX(-50%) scale(1.08)}}
 .sand svg{display:block;width:100%}
 .tiny{font-size:.85rem;color:var(--muted);background:none;border:none;cursor:pointer;font:inherit;text-decoration:underline}
+/* للوالدين: مدخلٌ واحد */
+.hub{display:flex;flex-direction:column;gap:8px}
+.hubi{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:start;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);border-radius:14px;padding:12px 14px;font:inherit;cursor:pointer;min-height:56px}
+.hubi b{font-size:1.05rem}.hubi span{font-size:.85rem;color:var(--muted)}
 /* التلاوة */
 .tl-seg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 10px}
 .tl-seg button{border:1.5px solid var(--line);background:var(--paper);color:var(--ink);border-radius:14px;padding:10px 8px;font:inherit;font-weight:700;cursor:pointer;min-height:56px;display:flex;flex-direction:column;align-items:center;gap:2px}
@@ -2046,8 +2050,11 @@ function renderDad(){
     C.querySelector('#ddHome').addEventListener('click', () => { TEACHER = false; go('home'); }); renderReview($('ddRec'), true); return; }
   const tabs = [['today','سطر اليوم'],['progress','التقدّم'],['rec','التسجيلات'],['gift','الهدايا'],['amal','اعمل به'],['voice','صوت الرفيق'],['kidset','واجهة الطفل'],['tri','ثلاث لغات'],['week','تقرير الجمعة'],['write','الكتابات'],['kq','أسئلة الأبناء']];
   C.innerHTML = `<div class="row" style="justify-content:space-between"><p class="lbl" style="margin:0">لوحة ولي الأمر — ${avatarHtml(K(), 28)} ${esc(K().name)} (${K().age} سنوات)</p><button class="back" type="button" id="ddHome">→ واحتي</button></div>
+   <div class="row" id="ddHub" style="gap:6px;flex-wrap:wrap;margin:2px 0 6px"><button class="btn ghost sm" type="button" data-hub="corner">💎 ركن وليّ الأمر</button><button class="btn ghost sm" type="button" data-hub="hasaniya">🐪 لوحة الحسنية</button></div>
    <div class="chips" id="ddTabs">${tabs.map(([k, l]) => `<button class="chip2" type="button" data-k="${k}" aria-pressed="${k === ddTab}">${l}</button>`).join('')}</div><div id="ddBody" style="display:flex;flex-direction:column;gap:10px"></div>`;
   C.querySelector('#ddHome').addEventListener('click', () => { LIB = false; go('home'); });
+  C.querySelector('#ddHub').addEventListener('click', e => { const b = e.target.closest('[data-hub]'); const H = window.KZ_PARENT_HUB; if (b && H) H[b.dataset.hub](); });
+  if (!window.KZ_PARENT_HUB) C.querySelector('#ddHub').hidden = true;
   C.querySelector('#ddTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; ddTab = b.dataset.k; renderDad(); });
   const B = C.querySelector('#ddBody');
   if (ddTab === 'today'){ renderTodayLine(B).then(() => { if ('speechSynthesis' in window && !window.AndroidBridge && !pickVoice()) B.insertAdjacentHTML('afterbegin', '<p class="fb bad">لا يوجد صوتٌ عربي في هذا الجهاز، فلن تُسمع الأسئلة ولا 🔊. ثبّتوا صوتًا عربيًّا من إعدادات «تحويل النص إلى كلام» في الجهاز، أو سجّلوا جمل الرفيق في «صوت الرفيق».</p>'); }); }
@@ -3732,8 +3739,7 @@ if (typeof pinSet === 'function' && !pinSet() && typeof store.get('pin', null) !
     var s = $('sheet');
     s.innerHTML = '<div class="top"><h2 style="font-family:var(--f-ui);font-size:1.3rem">من يلعب؟</h2><button class="x" aria-label="إغلاق">✕</button></div>' +
       '<div id="kidRows" style="display:flex;flex-direction:column;gap:8px"></div>' +
-      '<div class="row" style="border-top:1px solid var(--line);padding-top:8px"><button class="btn ghost sm" type="button" id="ksDad">لوحة الواحة</button><button class="btn ghost sm" type="button" id="ksTeacher">المعلم</button><a class="btn ghost sm" href="kunuz/index.html#parent" id="ksCorner">ركن وليّ الأمر</a></div>' +
-      '<p class="note">«ركن وليّ الأمر» فيه ملفات الأطفال (الاسم والجنس وسنة الميلاد والصورة)، والموافقات، والنسخ الاحتياطي. وسنة الميلاد تحدّد طريقة اللعب هنا: حتى الثامنة يختار الطفل من خيارات، ومن التاسعة يكتب.</p>';
+      '<div class="row" style="border-top:1px solid var(--line);padding-top:8px"><button class="btn ghost sm" type="button" id="ksParent">👪 للوالدين</button></div>';
     var rows = s.querySelector('#kidRows');
     kids.forEach(function (k, i) {
       var r = el('div', 'row'); r.style.alignItems = 'center';
@@ -3741,10 +3747,29 @@ if (typeof pinSet === 'function' && !pinSet() && typeof store.get('pin', null) !
       b.addEventListener('click', function () { kid = i; store.set('kid', kid); setFamCur(i); closeSheet(); onKid(); });
       r.append(b); rows.appendChild(r);
     });
-    s.querySelector('#ksDad').addEventListener('click', function () { pinGate(function () { TEACHER = false; go('dad'); }); });
-    s.querySelector('#ksTeacher').addEventListener('click', function () { pinGate(function () { TEACHER = true; go('dad'); }); });
+    s.querySelector('#ksParent').addEventListener('click', function (e) { e.stopPropagation(); parentHub(); });
     showSheet(); s.querySelector('.x').addEventListener('click', closeSheet);
   };
+  /* one way in for the parents (2.8): the three boards are listed together, each a tap away, with the same code. A session opened
+     with the code is carried to the next board (sessionStorage, fifteen minutes at most), so the code is not asked again */
+  function handoff(url) { try { if (Date.now() < PARENT_UNTIL) sessionStorage.setItem('kz-parent-until', String(PARENT_UNTIL)); } catch (e) {} location.href = url; }
+  function hsURL() { var id = (window.KZ_IDS || [])[kid]; return 'hasaniya/index.html?parent=1' + (id ? '&kid=' + encodeURIComponent(id) : ''); }
+  function parentHub() {
+    var s = $('sheet');
+    s.innerHTML = '<div class="top"><h2 style="font-family:var(--f-ui);font-size:1.3rem">👪 للوالدين</h2><button class="x" aria-label="إغلاق">✕</button></div>' +
+      '<p class="note" style="margin:0 0 8px">مدخلٌ واحد للوحات الثلاث، برمز وليّ الأمر نفسه. وما دامت الجلسة مفتوحة تنتقلون بينها دون أن يُطلب الرمز مرةً أخرى.</p>' +
+      '<div class="hub">' +
+      '<button class="hubi" type="button" id="ksDad"><b>🌴 لوحة الواحة</b><span>سطر اليوم، والتقدّم، والتسجيلات، وتقرير الجمعة، وواجهة الطفل ومحفوظه</span></button>' +
+      '<button class="hubi" type="button" id="ksCorner"><b>💎 ركن وليّ الأمر</b><span>ملفات الأطفال، والرمز، والنسخ الاحتياطي، وأعمال الاستوديو، والمجلّات، وقارئ الأسبوع</span></button>' +
+      '<button class="hubi" type="button" id="ksHs"><b>🐪 لوحة الحسنية</b><span>حفظ المنظومة، وتسجيلاتها، وتقاريرها</span></button>' +
+      '<button class="hubi" type="button" id="ksTeacher"><b>المعلّم</b><span>مراجعة تسجيلات الواحة على هذا الجهاز</span></button></div>';
+    showSheet(); s.querySelector('.x').addEventListener('click', closeSheet);
+    s.querySelector('#ksDad').addEventListener('click', function () { pinGate(function () { TEACHER = false; go('dad'); }); });
+    s.querySelector('#ksTeacher').addEventListener('click', function () { pinGate(function () { TEACHER = true; go('dad'); }); });
+    s.querySelector('#ksCorner').addEventListener('click', function () { handoff('kunuz/index.html#parent'); });
+    s.querySelector('#ksHs').addEventListener('click', function () { handoff(hsURL()); });
+  }
+  window.KZ_PARENT_HUB = { open: parentHub, corner: function () { handoff('kunuz/index.html#parent'); }, hasaniya: function () { handoff(hsURL()); } };
   kidEditSheet = function () { location.href = 'kunuz/index.html#parent'; };
   if (typeof onKid === 'function') { var _onKid = onKid; onKid = function () { var r = _onKid.apply(this, arguments); walk(document.body); return r; }; }
 

@@ -10,7 +10,7 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
   'showUsersModal', 'openUserEditor', 'deleteUser', 'switchUser', 'exportBackup', 'importBackupFile', 'closePopup', 'appDismiss', 'showMap',
   'printCertificate', 'printTeacherReport', 'printAllCards', 'guideParentNote', 'selectParentNote', 'openHub', 'recAllForUser', 'learnedVerses',
   'completedCount', 'guideStreak', 'openGuideJournal', 'escapeHtml', 'activeUserId', 'pinUnavailable', 'pinLockState', 'pinLockSave', 'appBack',
-  'showNewAchievement', 'offerReview', 'guideBubbleEl', 'showParentScreen'];
+  'showNewAchievement', 'offerReview', 'guideBubbleEl', 'showParentScreen', 'parentEntry'];
 (function () {
   'use strict';
   var FAMKEY = 'kb-family-v1', HOME = '../index.html', CORNER = '../kunuz/index.html#parent';
@@ -34,7 +34,10 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
 
   /* ---------- the family PIN (needed by the gates) ---------- */
   var PARENT_UNTIL = 0, LAST_PIN = 0;
-  try { var pu = +sessionStorage.getItem('kz-parent-until') || 0; if (pu > Date.now()) PARENT_UNTIL = Math.min(pu, Date.now() + 15 * 60 * 1000); } catch (e) {}
+  try { var pu = +sessionStorage.getItem('kz-parent-until') || 0; sessionStorage.removeItem('kz-parent-until'); if (pu > Date.now()) PARENT_UNTIL = Math.min(pu, Date.now() + 15 * 60 * 1000); } catch (e) {}
+  /* read before the address is tidied (choosing the child below drops «?kid=…», and «?parent=1» with it) */
+  var WANT_PARENT = false, PU_KEPT = 0;
+  try { WANT_PARENT = !!new URLSearchParams(location.search).get('parent'); PU_KEPT = PARENT_UNTIL; } catch (e) {}
   function parentOn() { return Date.now() < PARENT_UNTIL; }
   async function famHash(salt, pin) {
     var txt = salt + ':' + pin;
@@ -276,7 +279,7 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
       return _require(cb, message);
     };
     var _map = showMap;
-    showMap = function () { PARENT_UNTIL = 0; return _map.apply(this, arguments); };
+    showMap = function () { PARENT_UNTIL = 0; var r = _map.apply(this, arguments); if (WANT_PARENT) openParentNow(); return r; };
     document.addEventListener('visibilitychange', function () { if (document.hidden) PARENT_UNTIL = 0; });
     var _showPin = showPinModal;
     showPinModal = function (title, subtitle) {
@@ -308,7 +311,11 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
     }
   } catch (e) {}
 
-  function toCorner() { location.href = CORNER; }
+  function toCorner() { try { if (parentOn()) sessionStorage.setItem('kz-parent-until', String(PARENT_UNTIL)); } catch (e) {} location.href = CORNER; }
+  /* «?parent=1»: opened from the parents' hub, straight to the parents' screen (the code, or the session carried with it),
+     once the Hasaniya has drawn its map (drawing the map ends a parent session, so the carried one is kept aside until then) */
+  function openParentNow() { if (!WANT_PARENT) return; WANT_PARENT = false; try { history.replaceState(history.state, '', location.pathname); } catch (e) {} if (PU_KEPT > Date.now()) PARENT_UNTIL = PU_KEPT; setTimeout(function () { try { parentEntry(); } catch (e) {} }, 60); }
+  window.addEventListener('load', function () { setTimeout(openParentNow, 1500); });
   /* one thing at a time on the child's screen: a new achievement, or the offer to recite what came before, waits until the
      window in front (the station's quiz, «لنكرّر هذه الأبيات»…) is closed, and the offer does not come with a second bubble */
   try {
@@ -320,8 +327,15 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
     if (typeof offerReview === 'function') { var _offer = offerReview; offerReview = function () {
       if (busy()) { if (!LATER.some(function (f) { return f.offer; })) { var f = function () { _offer(); quietGuide(); }; f.offer = 1; LATER.push(f); } return; }
       _offer(); quietGuide(); }; }
+    /* the parents' one way in (2.8): from here to the two other boards, carrying the open session */
+    var handoff = function (url) { try { if (parentOn()) sessionStorage.setItem('kz-parent-until', String(PARENT_UNTIL)); } catch (e) {} try { saveState(); } catch (e) {} location.href = url; };
+    var hubBar = function () { var ps = document.getElementById('parentScreen'); if (!ps || document.getElementById('kzHub')) return;
+      var d = document.createElement('div'); d.id = 'kzHub'; d.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px';
+      d.innerHTML = '<button class="tool-btn" type="button" data-to="corner">💎 ركن وليّ الأمر</button><button class="tool-btn" type="button" data-to="waha">🌴 لوحة الواحة</button>';
+      d.addEventListener('click', function (e) { var b = e.target.closest('[data-to]'); if (!b) return; handoff(b.dataset.to === 'corner' ? CORNER : HOME + '?dad=1'); });
+      ps.insertBefore(d, ps.firstChild); };
     /* no mistakes is not mastery when nothing has been learned yet */
-    if (typeof showParentScreen === 'function') { var _ps = showParentScreen; showParentScreen = function () { var r = _ps.apply(this, arguments);
+    if (typeof showParentScreen === 'function') { var _ps = showParentScreen; showParentScreen = function () { var r = _ps.apply(this, arguments); try { hubBar(); } catch (x) {}
       try { var pl = document.getElementById('parentMistakesList'), e = pl && pl.querySelector('.empty-state');
         if (e && !learnedVerses('all').length) e.textContent = isGirl() ? 'لم تبدأ الحفظ بعد.' : 'لم يبدأ الحفظ بعد.'; } catch (x) {} return r; }; }
     var quietGuide = function () { try { var b = guideBubbleEl(); if (b && document.getElementById('reviewOffer')) b.classList.remove('show'); } catch (e) {} };

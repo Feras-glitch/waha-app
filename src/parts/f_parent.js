@@ -13,6 +13,11 @@ function parentHome(){
     (FAM.pinResets.length?'<p class="tip">'+ICON.shield.replace('<svg','<svg class="ic-s"')+' أُعيد ضبط الرمز آخر مرة في '+fmtDate(FAM.pinResets[FAM.pinResets.length-1])+'، وأُلغيت الموافقات السابقة عندها.</p>':'')+
     (!FAM.rec?'<button class="banner rose" type="button" data-act="rcNew">'+ICON.lock+'<div class="bn-t"><strong>لا يوجد رمز استرداد بعد</strong><span>أنشئوه وأرسلوه إلى بريدكم؛ فبه وحده يُعاد ضبط الرمز إن نُسي.</span></div></button>':'')+
     (backupDue()?'<button class="banner gold" type="button" data-act="pBackup">'+ICON.shield+'<div class="bn-t"><strong>'+(FAM.lastBackup?'مضى أكثر من شهرٍ على آخر نسخةٍ احتياطية':'لم تحفظوا نسخةً احتياطية بعد')+'</strong><span>أصوات الأطفال وأعمالهم على هذا الجهاز وحده. احفظوا نسخةً مشفّرة في مكانٍ آمن.</span></div></button>':'')+
+    /* the parents' one way in: the three boards side by side (2.8) */
+    '<section class="hub-row" aria-label="لوحات العائلة"><span class="eyebrow">لوحات العائلة، برمزٍ واحد</span><div class="hub-btns">'+
+      '<button class="hub-b on" type="button" disabled><b>💎 ركن وليّ الأمر</b><span>أنتم هنا: الأعمال، والأطفال، والرمز، والنسخ</span></button>'+
+      '<button class="hub-b" type="button" data-act="pWaha"><b>🌴 لوحة الواحة</b><span>سطر اليوم، والتقدّم، والتسجيلات، وتقرير الجمعة</span></button>'+
+      '<button class="hub-b" type="button" data-act="pHasaniya"><b>🐪 لوحة الحسنية</b><span>حفظ المنظومة وتسجيلاتها وتقاريرها</span></button></div></section>'+
     (!IDB.db?'<p class="tip warn">هذا المتصفح لا يسمح بحفظ التسجيلات والرسوم بعد إغلاقه (ربما وضع التصفّح الخاص). افتحوا التطبيق في نافذةٍ عادية.</p>':'')+
     '<section><h2 class="h2">بانتظار مراجعتكم'+(pend.length?' · '+n2a(pend.length):'')+'</h2>'+
       (pend.length?'<ul class="wlist">'+pend.map(pRow).join('')+'</ul>':'<p class="muted">لا أعمال تنتظر المراجعة.</p>')+'</section>'+
@@ -22,7 +27,6 @@ function parentHome(){
       ptool('pCode','lapis','talk','ردّ المعلّم','ألصقوا الرمز الذي أرسله المعلّم، أو أدخلوا ردّه بأنفسكم')+
       ptool('pWeekly','gold','radio','قارئ الأسبوع',wk?Gx(esc(kidById(wk.kid).name)+' ⟨قارئ|قارئة⟩ هذا الأسبوع',gOf(kidById(wk.kid))):(weeklyTurn()?'تكريمٌ بالتناوب · هذا الأسبوع دور '+esc(weeklyTurn().name):'تكريمٌ يدور على الأطفال'))+
       ptool('pFamily','olive','users','جلسة العائلة','بطاقة هذا الأسبوع: '+plain(Gx(lessonById[fsCurrent().l].title,0)))+
-      ptool('pWaha','olive','palm','لوحة الواحة','تقدّم الأطفال في «واحة اللسان العربي»، ورسائلهم وأخبارهم وتسجيلاتهم للمراجعة')+
       ptool('pVoice','teal','mic','صوت البيت','سجّلوا شرح الدروس بصوتكم ليسمعه الأطفال · '+n2a(Object.keys(FAM.nar||{}).length)+' تسجيلًا')+
       ptool('pKids','rose','users','الأطفال',n2a(FAM.kids.length)+' · الأسماء، والصيغة، والتقدّم')+
       ptool('pFrom','olive','radio','من الواحة والحسنية','تسجيلاتٌ من القسمين تضيفونها إلى الإذاعة والمجلّات')+

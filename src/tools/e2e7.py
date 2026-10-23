@@ -81,7 +81,7 @@ async def main():
 
         # the current PIN cancels it — in the oasis …
         await fresh(p, URL); await p.wait_for_selector('#whoBtn'); await p.wait_for_timeout(500)
-        await p.click('#whoBtn'); await p.click('#ksDad'); await p.wait_for_selector('#pinIn')
+        await p.click('#whoBtn'); await p.click('#ksParent'); await p.click('#ksDad'); await p.wait_for_selector('#pinIn')
         await p.fill('#pinIn', '5678'); await p.click('#pinOk'); await p.wait_for_timeout(600)
         ok((await p.evaluate(FAM)).get('resetReq') is None, 'the PIN in the oasis cancels the request')
         await fresh(p, URL); await p.wait_for_selector('#whoBtn'); await p.wait_for_timeout(400)

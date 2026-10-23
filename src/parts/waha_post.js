@@ -135,8 +135,7 @@
     var s = $('sheet');
     s.innerHTML = '<div class="top"><h2 style="font-family:var(--f-ui);font-size:1.3rem">من يلعب؟</h2><button class="x" aria-label="إغلاق">✕</button></div>' +
       '<div id="kidRows" style="display:flex;flex-direction:column;gap:8px"></div>' +
-      '<div class="row" style="border-top:1px solid var(--line);padding-top:8px"><button class="btn ghost sm" type="button" id="ksDad">لوحة الواحة</button><button class="btn ghost sm" type="button" id="ksTeacher">المعلم</button><a class="btn ghost sm" href="kunuz/index.html#parent" id="ksCorner">ركن وليّ الأمر</a></div>' +
-      '<p class="note">«ركن وليّ الأمر» فيه ملفات الأطفال (الاسم والجنس وسنة الميلاد والصورة)، والموافقات، والنسخ الاحتياطي. وسنة الميلاد تحدّد طريقة اللعب هنا: حتى الثامنة يختار الطفل من خيارات، ومن التاسعة يكتب.</p>';
+      '<div class="row" style="border-top:1px solid var(--line);padding-top:8px"><button class="btn ghost sm" type="button" id="ksParent">👪 للوالدين</button></div>';
     var rows = s.querySelector('#kidRows');
     kids.forEach(function (k, i) {
       var r = el('div', 'row'); r.style.alignItems = 'center';
@@ -144,10 +143,29 @@
       b.addEventListener('click', function () { kid = i; store.set('kid', kid); setFamCur(i); closeSheet(); onKid(); });
       r.append(b); rows.appendChild(r);
     });
-    s.querySelector('#ksDad').addEventListener('click', function () { pinGate(function () { TEACHER = false; go('dad'); }); });
-    s.querySelector('#ksTeacher').addEventListener('click', function () { pinGate(function () { TEACHER = true; go('dad'); }); });
+    s.querySelector('#ksParent').addEventListener('click', function (e) { e.stopPropagation(); parentHub(); });
     showSheet(); s.querySelector('.x').addEventListener('click', closeSheet);
   };
+  /* one way in for the parents (2.8): the three boards are listed together, each a tap away, with the same code. A session opened
+     with the code is carried to the next board (sessionStorage, fifteen minutes at most), so the code is not asked again */
+  function handoff(url) { try { if (Date.now() < PARENT_UNTIL) sessionStorage.setItem('kz-parent-until', String(PARENT_UNTIL)); } catch (e) {} location.href = url; }
+  function hsURL() { var id = (window.KZ_IDS || [])[kid]; return 'hasaniya/index.html?parent=1' + (id ? '&kid=' + encodeURIComponent(id) : ''); }
+  function parentHub() {
+    var s = $('sheet');
+    s.innerHTML = '<div class="top"><h2 style="font-family:var(--f-ui);font-size:1.3rem">👪 للوالدين</h2><button class="x" aria-label="إغلاق">✕</button></div>' +
+      '<p class="note" style="margin:0 0 8px">مدخلٌ واحد للوحات الثلاث، برمز وليّ الأمر نفسه. وما دامت الجلسة مفتوحة تنتقلون بينها دون أن يُطلب الرمز مرةً أخرى.</p>' +
+      '<div class="hub">' +
+      '<button class="hubi" type="button" id="ksDad"><b>🌴 لوحة الواحة</b><span>سطر اليوم، والتقدّم، والتسجيلات، وتقرير الجمعة، وواجهة الطفل ومحفوظه</span></button>' +
+      '<button class="hubi" type="button" id="ksCorner"><b>💎 ركن وليّ الأمر</b><span>ملفات الأطفال، والرمز، والنسخ الاحتياطي، وأعمال الاستوديو، والمجلّات، وقارئ الأسبوع</span></button>' +
+      '<button class="hubi" type="button" id="ksHs"><b>🐪 لوحة الحسنية</b><span>حفظ المنظومة، وتسجيلاتها، وتقاريرها</span></button>' +
+      '<button class="hubi" type="button" id="ksTeacher"><b>المعلّم</b><span>مراجعة تسجيلات الواحة على هذا الجهاز</span></button></div>';
+    showSheet(); s.querySelector('.x').addEventListener('click', closeSheet);
+    s.querySelector('#ksDad').addEventListener('click', function () { pinGate(function () { TEACHER = false; go('dad'); }); });
+    s.querySelector('#ksTeacher').addEventListener('click', function () { pinGate(function () { TEACHER = true; go('dad'); }); });
+    s.querySelector('#ksCorner').addEventListener('click', function () { handoff('kunuz/index.html#parent'); });
+    s.querySelector('#ksHs').addEventListener('click', function () { handoff(hsURL()); });
+  }
+  window.KZ_PARENT_HUB = { open: parentHub, corner: function () { handoff('kunuz/index.html#parent'); }, hasaniya: function () { handoff(hsURL()); } };
   kidEditSheet = function () { location.href = 'kunuz/index.html#parent'; };
   if (typeof onKid === 'function') { var _onKid = onKid; onKid = function () { var r = _onKid.apply(this, arguments); walk(document.body); return r; }; }
 

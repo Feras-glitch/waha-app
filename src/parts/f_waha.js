@@ -17,6 +17,11 @@ function wahaGo(o){
   try{ if(o&&o.dad&&parentOn()) sessionStorage.setItem('kz-parent-until',String(PARENT_UNTIL)); }catch(e){}
   location.href=wahaURL(o);
 }
+/* the Hasaniya's parents' screen, carrying the session opened here */
+function hasaniyaParent(){
+  try{ if(parentOn()) sessionStorage.setItem('kz-parent-until',String(PARENT_UNTIL)); }catch(e){}
+  location.href='../hasaniya/index.html?parent=1'+(KID?'&kid='+encodeURIComponent(KID.id):'');
+}
 function wahaDoor(){
   return '<button class="door wide waha-door" type="button" data-act="waha" style="--ax:var(--olive)"><span class="door-t">🌴 واحة اللسان العربي</span>'+
     '<span class="door-d">نخيل الجذور من محفوظك، وألغاز، وشعر، وحكايات، وصحيفة الواحة، ورحلةٌ كلَّ يوم مع رفيقك.</span></button>';
