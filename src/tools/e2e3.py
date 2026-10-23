@@ -111,14 +111,18 @@ async def main():
         t = await text(p)
         ok('الاختبار الدوري' in t, 'diagnostic banner shows')
         await p.click('.banner[data-act="diag"]')
-        for k in range(60):
+        fbk = 0
+        for k in range(200):
+            await p.wait_for_timeout(80)
             if await p.locator('.score-big').count(): break
+            if await p.locator('#asItem .why, #asItem .fb-ok, #asItem .fb-no, #asItem [data-anext]').count(): fbk += 1
             if await p.locator('[data-anext]').count(): await p.click('[data-anext]'); continue
             if await p.locator('[data-a2]:not([disabled])').count(): await p.locator('[data-a2]:not([disabled])').first.click(); continue
             if await p.locator('[data-a]:not([disabled])').count(): await p.locator('[data-a]:not([disabled])').first.click(); continue
             if await p.locator('#typeAns:not([disabled])').count(): await p.fill('#typeAns', 'كتب'); await p.click('[data-check]'); continue
         t = await text(p)
         ok('نتيجة الاختبار الدوري' in t, 'diagnostic result page')
+        ok(fbk == 0, 'the diagnostic shows no right or wrong while it runs (it measures, it does not teach)')
         await enter_parent(p)
         await p.click('[data-act="pKids"]'); await p.click('[data-act="pProg"]'); await p.click('[data-act="pReport"]')
         await p.wait_for_selector('.report')

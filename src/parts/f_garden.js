@@ -13,11 +13,14 @@ function kidStats(kidId){
     approved:0,firstWork:null,teacher:0,firstTeacher:null,writings:0,mags:0,editorMag:null,weekly:0,riddles:0};
   LESSONS.forEach(function(l){ s.axN[l.ax]=(s.axN[l.ax]||0)+1; if(P[l.id]){ s.gems++; s.axHave[l.ax]=(s.axHave[l.ax]||0)+1; if(P[l.id].p) s.perfect++; } });
   AXES.forEach(function(a){ s.axDone[a.id]=(s.axHave[a.id]||0)===s.axN[a.id]; });
-  (S.tests||[]).forEach(function(x){
-    if(x.m==='axis'&&x.ax&&(!s.best[x.ax]||x.p>s.best[x.ax].p)) s.best[x.ax]={p:x.p,d:x.d};
+  var lastAx={};
+  (S.tests||[]).slice().sort(function(a,b){return dateOf(a.d)-dateOf(b.d);}).forEach(function(x){
+    /* a chamber's mastery counts the first attempt, or one at least a week after the attempt before it on that chamber:
+       retaking the same questions the same afternoon until they pass is not mastery */
+    if(x.m==='axis'&&x.ax){ var pv=lastAx[x.ax]; lastAx[x.ax]=x.d; if((!pv||dateOf(x.d)-dateOf(pv)>=7*864e5)&&(!s.best[x.ax]||x.p>s.best[x.ax].p)) s.best[x.ax]={p:x.p,d:x.d}; }
     if(x.m==='full'&&(!s.fullBest||x.p>s.fullBest.p)) s.fullBest={p:x.p,d:x.d};
   });
-  var D=S.daily||{}; s.alive=weekDaysN(D,t)>0||weekDaysN(D,addDays(weekOf(t),-1))>0;
+  s.alive=true;   // the fountain never stops: a garden takes nothing back
   var mine=WORKS.filter(function(w){return w.kid===kidId;});
   var appr=mine.filter(function(w){return w.status==='approved';}).sort(function(a,b){return (a.approvedAt||a.updated)-(b.approvedAt||b.updated);});
   s.approved=appr.length; s.firstWork=appr[0]||null;
@@ -43,7 +46,7 @@ AXES.forEach(function(a){
   CERTS.push({id:'mx-'+a.id,k:'x',c:a.c,t:'شهادة إتقان',sub:'خزانة «'+a.name+'»',patron:AX_PATRON[a.id],
     ok:function(s){var b=s.best[a.id];return b&&b.p>=80?{d:b.d,sc:b.p}:null;},
     body:function(n,aw){return 'تشهد «كنوز البيان» بأنّ ⟨الطالب|الطالبة⟩ '+n+' ⟨اجتاز|اجتازت⟩ اختبار خزانة «'+a.name+'» بدرجة '+n2a(aw.sc)+'٪ من المحاولة الأولى، ⟨فاستحقّ|فاستحقّت⟩ شهادة الإتقان.';},
-    need:function(s){var b=s.best[a.id];return '⟨اجتز|اجتازي⟩ «اختبار الخزانة» بثمانين في المئة أو أكثر.'+(b?' أفضل درجةٍ حتى الآن: '+n2a(b.p)+'٪.':'');},
+    need:function(s){var b=s.best[a.id];return '⟨اجتز|اجتازي⟩ «اختبار الخزانة» بثمانين في المئة أو أكثر (في أول محاولة، أو بعد أسبوعٍ من المحاولة التي قبلها).'+(b?' أفضل درجةٍ حتى الآن: '+n2a(b.p)+'٪.':'');},
     prog:function(s){var b=s.best[a.id];return [b?Math.min(b.p,80):0,80];}});
 });
 CERTS.push({id:'mx-full',k:'x',c:'gold',t:'شهادة الإتقان الشامل',sub:'الخزائن '+axWord(),patron:'من الخليل بن أحمد إلى الدكتور فاضل السامرائي',
@@ -288,7 +291,7 @@ function gardenView(kidId,asParent){
     (fresh.length?'<p class="tip new-tip">✨ جديدٌ في حديقتك: '+gardenNews(fresh)+'.</p>':'')+
     (!its.length&&!asParent?'<p class="tip">🌱 حديقتك تنتظر أول وردة: ⟨أكمل|أكملي⟩ درسًا واحدًا، ⟨وتعال|وتعالَي⟩ ⟨لتراها|لتريها⟩ تنبت هنا.</p>':'')+
     '<div class="garden">'+gardenSVG(s,its,{id:'gv',fresh:fresh,label:'حديقة '+k.name})+'</div>'+
-    (s.alive?'':'<p class="muted small center">النافورة تجري في كل أسبوعٍ ⟨تزور|تزورين⟩ فيه «جوهرة اليوم»، وتعود حين ⟨تعود|تعودين⟩.</p>')+
+
     '<section><h2 class="h2">'+(asParent?'كيف تنمو الحديقة؟':'كيف تنمو حديقتك؟')+'</h2><ul class="gleg">'+GLEG.map(function(g){
       var p=g[3](s,c), done=p[0]>=p[1];
       return '<li class="'+(done?'done':'')+'"><span class="gl-e" aria-hidden="true">'+g[0]+'</span><span class="gl-m"><span class="gl-t">'+g[1]+'</span><span class="gl-d">'+g[2]+'</span>'+

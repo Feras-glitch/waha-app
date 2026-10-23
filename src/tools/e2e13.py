@@ -167,6 +167,33 @@ async def main():
             await p.goto('about:blank'); await p.goto(KZ + '#kunuz'); await p.wait_for_selector('.hello')
             ok(await p.locator('.banner', has_text='دورك في «قارئ الأسبوع»').count() == 1, 'هند\'s home: «هذا الأسبوع دورك في قارئ الأسبوع»')
 
+            # ---- honest learning in the oasis
+            await p.goto('about:blank'); await p.goto(URL); await p.wait_for_selector('#whoBtn'); await p.wait_for_timeout(400)
+            await p.evaluate("kid = 0; store.set('kid', 0); store.set('cmp:0', {kind:'camel', name:'ناجي'}); store.set('planted:0', Date.now()); onKid()"); await p.wait_for_timeout(300)
+            m = await p.evaluate("""(() => { const id = POOL.hk()[0]; const r = []; award('hk', id, true); r.push(mget('hk', id).streak); award('hk', id, true); r.push(mget('hk', id).streak);
+                const m = mget('hk', id); m.lc = dayN() - 1; store.set(MK('hk', id), m); award('hk', id, true); r.push(mget('hk', id).streak, mget('hk', id).due - dayN());
+                award('hk', id, false); const w = mget('hk', id); r.push(w.streak, w.due - dayN()); return r; })()""")
+            ok(m == [1, 1, 2, 3, 1, 1], 'one step a day; right on two days = mastered (due in 3 days); a mistake drops one step and comes back tomorrow (%s)' % m)
+            ok(await p.evaluate("(() => { const id = POOL.hk()[1]; awardAfter('hk', id, true); return mget('hk', id).due - dayN(); })()") == 1, 'right after its lesson: not a step, but asked again tomorrow')
+            r = await p.evaluate("""(() => { TRIP = {cards: [{g: 'hk', id: POOL.hk()[2], ...GEN.hk(POOL.hk()[2])}, {g: 'tell', id: 'tell', q: 'x'}], i: 0, res: [], key: 'trip:0:x'}; go('trip', 'kidTrip');
+                const c = TRIP.cards[0]; const b = [...document.querySelectorAll('#kidTrip .opt')].find(x => x.__o !== c.a); b.click(); return TRIP.cards.map(x => x.g + (x.retry ? ':retry' : '')); })()""")
+            ok(r == ['hk', 'hk:retry', 'tell'], 'a wrong answer is asked again before the trip ends (%s)' % r)
+            d0 = await p.evaluate("dates()")
+            await p.evaluate("""(() => { TRIP = {cards: [{g: 'hk', id: POOL.hk()[3], ...GEN.hk(POOL.hk()[3])}], i: 0, res: [], key: null}; go('trip', 'kidTrip'); const c = TRIP.cards[0]; [...document.querySelectorAll('#kidTrip .opt')].find(x => x.__o === c.a).click(); })()""")
+            ok(await p.evaluate("dates()") == d0, 'an extra trip earns no dates')
+            ex = await p.evaluate("(() => { store.set(MK('hk', POOL.hk()[4]), {n: 2, ok: 2, streak: 2, wrong: 0, due: dayN() - 1, lc: dayN() - 4, f: dayN() - 9}); const s = seen('hk'); s.push(POOL.hk()[4]); store.set('seen:0:hk', s); return buildTrip(true).map(c => c.kind || c.g); })()")
+            ok(ex and all(k in ('review', 'learn') for k in ex), 'an extra trip is review only (%s)' % ex)
+            pal = await p.evaluate("(() => { const a = learnedN(); ['hys', 'wh'].forEach(g => POOL[g]().slice(0, 10).forEach(id => { store.set(MK(g, id), {n: 3, ok: 3, streak: 3, wrong: 0, lc: dayN() - 5}); const s = seen(g); s.push(id); store.set(`seen:0:${g}`, s); })); return [a, learnedN()]; })()")
+            ok(pal[1] >= pal[0] + 40, 'the palm grows with what is known (%s)' % pal)
+            mem = await p.evaluate("(() => { const all = POOL.fill().length; store.set('memo:0', ['j30']); const j30 = POOL.fill().length; const ok = POOL.fill().every(id => { const sa = id.split('|')[1].split(':').map(Number); return sa[0] >= 78; }); store.set('memo:0', null); return [all, j30, ok]; })()")
+            ok(mem[1] < mem[0] and mem[2], 'ticking «جزء عمّ» alone keeps the verses of the trip inside it (%s)' % mem[:2])
+            gap = await p.evaluate("(() => { store.keys().filter(k => k.startsWith('dailyDone:0:')).forEach(k => store.del(k)); const d = new Date(); d.setDate(d.getDate() - 5); store.set(`dailyDone:0:${ymd(d)}`, true); return companionMemory(true).join(' '); })()")
+            ok('غبت' not in gap and 'أهلًا بعودتكِ' in gap, 'after days away: a welcome back, no count of days missed (%s)' % gap[:40])
+            await p.evaluate("store.set(`trip:0:${today()}`, {v: TRIP_V, cards: [], i: 0, res: [], done: true}); store.keys().filter(k => k.startsWith('m:0:')).forEach(k => { const m = store.get(k); m.due = null; store.set(k, m); }); go('kid')"); await p.wait_for_timeout(600)
+            ok(await p.locator('#kidHome .bigplay').count() == 0 and 'نلتقي غدًا' in await p.inner_text('#kidHome'), 'the day is closed: nothing due, no «رحلة إضافية»')
+            wt = await p.evaluate("weekOne(kidWeek(0, []), weekDays())")
+            ok('ما أحسنت فيه' in wt and 'يتعثّر' not in wt and 'تتعثّر' not in wt and 'يوسف' not in wt, 'the Friday text is hers alone, strengths first, nothing of what she stumbles on')
+
             # ---- the recitation in the oasis
             await p.goto('about:blank'); await p.goto(URL); await p.wait_for_selector('#whoBtn'); await p.wait_for_timeout(400)
             ok(await p.evaluate("!!window.WAHA_AUDIO && OASES.find(o => o.id === 'rec').tabs.some(t => t[0] === 'tilawa')"), 'with the pack, «رفّ التسجيلات» has «التلاوة»')
@@ -209,6 +236,16 @@ async def main():
             await p.click('#sheet .tl-go'); await until(p, "!!(TL.a && TL.a.src)", 3000)
             await p.click('#sheet .x'); await p.wait_for_timeout(200)
             ok(await p.evaluate("TL.a === null"), 'closing the page stops its recitation')
+
+            lc = await p.evaluate("(() => { const id = POOL.kz()[0] || KZD.lessons[0].id + '|0'; const L = LEARN.kz(id); return [L.quiet.includes(L.big), !!L.qv]; })()")
+            ok(lc == [True, True], 'a chamber verse in the trip is never read by the device voice (%s)' % lc)
+            await p.evaluate("(() => { const id = KZD.lessons[0].id + '|0'; const L = learnCard('kz', id); TRIP = {cards: [L], i: 0, res: [], key: null}; go('trip', 'kidTrip'); })()"); await p.wait_for_timeout(300)
+            rb = p.locator('#kidTrip .tiny', has_text='الحصري')
+            ok(await rb.count() == 1, 'its card offers «استمعي إلى الآية بصوت الحصري»')
+            if await rb.count():
+                await rb.click(); await p.wait_for_timeout(200)
+                ok(await p.evaluate("!!(TL.a && /audio\\/h\\/\\d{6}\\.mp3$/.test(TL.a.src))"), 'and plays it from the pack')
+            await p.evaluate("voiceStop(); TRIP = null")
 
             # ---- «كنوز البيان»: a verse is heard in the app
             await p.goto('about:blank'); await p.goto(KZ + '#kunuz'); await p.wait_for_selector('.hello')

@@ -45,7 +45,7 @@ const fs = require('fs'), vm = require('vm'); const ctx = {}; vm.createContext(c
 vm.runInContext(fs.readFileSync(process.argv[1], 'utf8') + '\n;this.__L = LESSONS; this.__A = AXES;', ctx);
 const axes = {}; ctx.__A.forEach(a => { axes[a.id] = String(a.name || '').replace(/[:\s]+$/, ''); });
 const lessons = ctx.__L.map(l => ({ id: l.id, ax: l.ax, title: l.title, take: l.take || '',
-  secret: (l.secret || []).filter(s => typeof s === 'string'), verses: (l.verses || []).map(v => ({ t: v.t, n: v.n, a: v.a })),
+  secret: (l.secret || []).filter(s => typeof s === 'string'), verses: (l.verses || []).map(v => ({ t: v.t, n: v.n, s: v.s, a: v.a, a2: v.a2 })),
   quiz: (l.quiz || []).map(q => ({ q: q.q, o: q.o, why: q.why || '' })) }));
 process.stdout.write(JSON.stringify({ axes, lessons }));
 """
