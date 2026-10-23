@@ -32,6 +32,10 @@ def main(args):
     web = os.path.join(REPO, 'web')
     if not os.path.isdir(DIST):
         raise SystemExit('build first: python3 src/tools/build.py')
+    # a build that stopped half-way leaves dist/ partial; copying it would delete most of web/
+    missing = [f for f in ('index.html', 'sw.js', 'kunuz/index.html', 'hasaniya/index.html') if not os.path.isfile(os.path.join(DIST, f))]
+    if missing:
+        raise SystemExit('src/dist/ is incomplete (%s): the last build did not finish. Run python3 src/tools/build.py' % ', '.join(missing))
     added, changed, removed = plan(web)
     if '--check' in args:
         if added or changed or removed:

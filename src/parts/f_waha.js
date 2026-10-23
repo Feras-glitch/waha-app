@@ -150,3 +150,87 @@ async function oasisForget(id){
       t.oncomplete=res; t.onerror=res; t.onabort=res; }catch(e){res();} }); }
   d.close();
 }
+
+/* ---------- recordings from the oasis and the Hasaniya → «إذاعة الباكورة» and the magazines ---------- */
+/* Nothing crosses by itself: the parent adds a recording here, in the PIN-gated corner. It then becomes an approved work of this app
+   (its sound copied), so the radio, the magazines, the teacher export and their consent rules treat it like any other work.
+   A Quran recitation becomes «قراءتي», which has no magazine section: it plays in the radio at home and leaves only through the teacher.
+   Everything else (a hadith, a proverb, a poem, a text, a verse of the Hasaniya) becomes «بيتٌ وحكمة». */
+var HS_VERSES=/*@HS_VERSES@*/{};
+var OA_QURAN=['آية','صفحة'], OA_PRIVATE=['أخبرني','رأيتُها اليوم','كلمة','جملة','من أبي'];   /* the oasis keeps these between the child and the parent */
+var FROM={list:[],urls:[]};
+function idbAll(d,store){
+  return new Promise(function(res){ try{ var q=d.transaction(store).objectStore(store).getAll(); q.onsuccess=function(){res(q.result||[]);}; q.onerror=function(){res([]);}; }catch(e){res([]);} });
+}
+async function fromRecs(){
+  var out=[], ids={}; FAM.kids.forEach(function(k){ids[k.id]=1;});
+  var d=await oasisDB(false);
+  if(d&&d.objectStoreNames.contains('rec')){
+    (await idbAll(d,'rec')).forEach(function(r){
+      var kid=typeof r.kid==='string'&&r.kid.charAt(0)==='@'?r.kid.slice(1):null;
+      if(!kid||!ids[kid]||r.status!=='approved'||r.source==='import'||!(r.blob instanceof Blob)) return;
+      if(OA_PRIVATE.indexOf(r.kind)>=0||String(r.type||r.blob.type||'').indexOf('audio/')!==0) return;
+      var q=OA_QURAN.indexOf(r.kind)>=0, text=String(r.text||'').trim();
+      out.push({src:'oasis',id:String(r.id),kid:kid,quran:q,shaykh:r.approvedBy==='المعلم',kind:r.kind,
+        title:q?r.kind+' · '+(r.ref||''):clip(text.split(/\n+/)[0]||r.ref||r.kind,60),who:q||r.kind==='نص حر'?'':String(r.ref||''),text:text,when:r.date||'',t:Date.parse(r.date||'')||0,blob:r.blob});
+    });
+  }
+  try{if(d) d.close();}catch(e){}
+  var h=await hsDB();
+  if(h){
+    (await idbAll(h,'recs')).forEach(function(r){
+      var m=/^kz_([^|]+)\|/.exec(String(r.key||''));
+      if(!m||!ids[m[1]]||r.uid==='author'||!(r.blob instanceof Blob)||r.blob.size<800) return;
+      var v=HS_VERSES[r.verseId], text=String(r.text||(v?v[0]:'')).trim();
+      out.push({src:'hasaniya',id:String(r.key),kid:m[1],quran:false,kind:r.kind==='section'?'مقطع':'بيت',
+        title:text?clip(text.split(/\n+/)[0],60):'من المنظومة الحسنية',who:'المنظومة الحسنية'+(v&&v[1]?' · '+v[1]:''),text:text,when:r.at?dstr(new Date(r.at)):'',t:r.at||0,blob:r.blob});
+    });
+    try{h.close();}catch(e){}
+  }
+  return out.sort(function(a,b){return (a.kid<b.kid?-1:a.kid>b.kid?1:0)||String(b.when).localeCompare(String(a.when));});
+}
+function fromWork(x){ for(var i=0;i<WORKS.length;i++){var f=WORKS[i].from; if(f&&f.src===x.src&&f.id===x.id) return WORKS[i];} return null; }
+function blobDur(b){
+  return new Promise(function(res){ var u=URL.createObjectURL(b), a=new Audio(), t=setTimeout(done,3000);
+    function done(){clearTimeout(t); var s=a.duration; try{URL.revokeObjectURL(u);}catch(e){} res(isFinite(s)&&s>0?Math.round(s):0);}
+    a.preload='metadata'; a.onloadedmetadata=done; a.onerror=done; a.src=u; });
+}
+async function fromAddOne(x){
+  if(!x||fromWork(x)) return null;
+  var now=Date.now(), w={id:uid('w'),kid:x.kid,type:x.quran?'read':'hikma',src:'text',title:x.title,text:x.text,who:x.who,status:'approved',notes:[],
+    pub:{fam:true,mag:!x.quran},log:[{t:now,a:'from',s:x.src}],from:{src:x.src,id:x.id},created:now,updated:now,approvedAt:now,seen:false};
+  var key='a-'+w.id+'-'+now.toString(36);
+  try{await blobPut(key,x.blob);}catch(e){toast('تعذّر نسخ التسجيل: قد تكون مساحة الجهاز ممتلئة.'); return null;}
+  w.audio=key; w.dur=await blobDur(x.blob);
+  WORKS.push(w); saveWorks(); return w;
+}
+async function fromAdd(i){ if(await fromAddOne(FROM.list[i])){ toast('أُضيف إلى «إذاعة الباكورة».'); pFrom(); } }
+async function fromAll(){
+  var n=0; for(var i=0;i<FROM.list.length;i++){ if(!fromWork(FROM.list[i])&&await fromAddOne(FROM.list[i])) n++; }
+  if(n) toast('أُضيف '+n2a(n)+' '+(n===1?'تسجيل':'تسجيلات')+' إلى «إذاعة الباكورة».'); pFrom();
+}
+async function pFrom(){
+  L=null;
+  FROM.urls.forEach(function(u){try{URL.revokeObjectURL(u);}catch(e){}}); FROM.urls=[];
+  go('<div class="ax-page" style="--ax:var(--olive)"><button class="back" type="button" data-act="parent">'+BACK+' ركن وليّ الأمر</button>'+
+    '<header class="page-head"><h1 class="h1">من الواحة والحسنية</h1><p class="lead">تسجيلات الأطفال في القسمين. ما تضيفونه يدخل «إذاعة الباكورة»، ويستطيع الطفل أن يضعه في مجلّة. ولا يخرج شيءٌ من الجهاز إلا بموافقتكم كالعادة.</p></header>'+
+    '<div id="fromBox"><p class="muted">…</p></div></div>');
+  var list=await fromRecs(), box=document.getElementById('fromBox'); if(!box) return;
+  FROM.list=list;
+  if(!list.length){ box.innerHTML='<p class="muted">لا تسجيلات بعد. في الواحة تظهر هنا التسجيلات التي اعتمدتموها في «لوحة الواحة»، وفي الحسنية كلّ ما سجّله الطفل من أبياتها.</p>'; return; }
+  var left=list.filter(function(x){return !fromWork(x);}).length, by={};
+  list.forEach(function(x,i){(by[x.kid]=by[x.kid]||[]).push(i);});
+  box.innerHTML=(left>1?'<div class="actions"><button class="btn" type="button" data-act="fromAll">'+ICON.plus+' أضيفوا الكلّ ('+n2a(left)+')</button></div>':'')+
+    FAM.kids.filter(function(k){return by[k.id];}).map(function(k){
+      return '<section><h2 class="h2">'+avatarHTML(k,'s')+' '+esc(k.name)+'</h2><ul class="from-list">'+by[k.id].map(function(i){
+        var x=list[i], w=fromWork(x);
+        return '<li class="from-row"><div class="from-h"><span class="from-tag">'+(x.src==='oasis'?'الواحة':'الحسنية')+' · '+esc(x.kind)+'</span>'+
+          (x.quran&&!x.shaykh?'<span class="state st-mid from-note">القرآن: للإذاعة في البيت، ولا يدخل المجلّات</span>':'')+(x.t?'<span class="muted small">'+fmtDate(x.t)+'</span>':'')+'</div>'+
+          '<p class="from-t">'+esc(x.title)+'</p>'+(x.quran&&x.text?'<p class="from-v">'+esc(clip(x.text,160))+'</p>':'')+(x.who&&x.who!==x.title?'<p class="muted small">'+esc(x.who)+'</p>':'')+
+          '<audio controls preload="none" data-from="'+i+'" aria-label="'+escA('تسجيل '+k.name+': '+x.title)+'"></audio>'+
+          (w?'<p class="state st-ok">في «إذاعة الباكورة»'+(w.pub&&w.pub.mag?' والمجلّات':'')+'</p>':
+            '<div class="actions"><button class="btn ghost" type="button" data-act="fromAdd" data-i="'+i+'">'+ICON.radio.replace('<svg','<svg class="ic-s"')+' '+(x.quran?'أضيفوه إلى الإذاعة':'أضيفوه إلى الإذاعة والمجلّات')+'</button></div>')+'</li>';
+      }).join('')+'</ul></section>';
+    }).join('');
+  [].slice.call(box.querySelectorAll('audio[data-from]')).forEach(function(a){ var u=URL.createObjectURL(list[+a.getAttribute('data-from')].blob); FROM.urls.push(u); a.src=u; });
+}

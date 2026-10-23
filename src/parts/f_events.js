@@ -25,6 +25,7 @@ var ACT={
   kidReset:function(t,ds){kidResetProgress(ds.id);},
   pKids:function(){pKids();}, pProg:function(t,ds){pProg(ds.id);}, pApproved:function(){pApproved();}, pCode:function(){pCode();},
   pWeekly:function(){pWeekly();}, setWeekly:function(t,ds){setWeekly(ds.id);}, pImport:function(){pImport();}, extDel:function(t,ds){extDel(ds.id);},
+  pFrom:function(){pFrom();}, fromAdd:function(t,ds){fromAdd(+ds.i);}, fromAll:function(){fromAll();},
   pBackup:function(){pBackup();}, backupMake:function(){backupMake();}, pWork:function(t,ds){pWork(ds.id);},
   rub:function(t,ds){ if(!RV) return; RV.r[ds.k]=+ds.v; [].slice.call(t.parentNode.children).forEach(function(b){b.classList.toggle('on',b===t);}); },
   chip:function(t,ds){ var n=document.getElementById('rvNote'); if(!n) return; n.value=(n.value?n.value.trim()+' ':'')+t.textContent; n.focus(); },
@@ -80,7 +81,7 @@ var ACT={
 };
 var confirmIdea=false;
 var GUEST_ACTS=['rzG','rzPick','rzReveal','rzHint','rzSelf'];
-var PARENT_ACTS=['pWaha','pReport','exReport','pFamily','pFamilyOne','fsDone','fsSkip','pVoice','pVoiceOne','pVoiceG','narRec','narDel','pGarden','pCerts','exCert','exRiddle','pKids','pProg','pApproved','pCode','pWeekly','setWeekly','pImport','extDel','pBackup','backupMake','pWork','rub','approve','returnWork','unapprove','pDelWork',
+var PARENT_ACTS=['pWaha','pReport','exReport','pFamily','pFamilyOne','fsDone','fsSkip','pVoice','pVoiceOne','pVoiceG','narRec','narDel','pGarden','pCerts','exCert','exRiddle','pKids','pProg','pApproved','pCode','pWeekly','setWeekly','pImport','extDel','pFrom','fromAdd','fromAll','pBackup','backupMake','pWork','rub','approve','returnWork','unapprove','pDelWork',
   'exTeacher','exGift','exContrib','manualReply','kidAdd','kidEdit','kidDel','kidReset','magExport','magBack','magPublishLocal','pMag'];
 function route(g){
   if(!KID&&g!=='parent') return who();
