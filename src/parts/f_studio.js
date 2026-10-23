@@ -47,7 +47,7 @@ function newWork(type,extra){
   WORKS.unshift(w); saveWorks(); return w;
 }
 function isEmptyWork(w){return w.status==='draft'&&!w.audio&&!w.image&&!(w.text||'').trim()&&!(w.title||'').trim()&&!(w.w1||w.w2||w.q||w.ans||w.to||'').trim()&&!(w.type==='lamsa'&&w.lesson);}
-function pruneEmpty(){var n=WORKS.length;WORKS=WORKS.filter(function(w){return !(isEmptyWork(w)&&Date.now()-w.created>2000&&(!CUR||CUR.id!==w.id));});if(WORKS.length!==n) saveWorks();}
+function pruneEmpty(){var n=WORKS.length;WORKS=WORKS.filter(function(w){return !(isEmptyWork(w)&&Date.now()-w.created>2000&&(!CUR||CUR.id!==w.id)&&!(REC.mr&&REC.wid===w.id));});if(WORKS.length!==n) saveWorks();}
 async function deleteWork(w){
   if(w.audio) await blobDel(w.audio); if(w.image) await blobDel(w.image);
   WORKS=WORKS.filter(function(x){return x.id!==w.id;});
@@ -222,7 +222,7 @@ async function submitWork(){
 async function delWork(){
   var w=CUR; if(!w) return;
   var ok=await ask({title:'حذف هذا العمل؟',c:'rose',ok:'احذفه',danger:1,html:'<p>سيُحذف «'+esc(titleOf(w))+'» وتسجيله ورسمته من هذا الجهاز.</p>'});
-  if(!ok) return; recAbort(); await deleteWork(w); CUR=null; toast('حُذف العمل.'); worksView();
+  if(!ok) return; recDiscard(); await deleteWork(w); CUR=null; toast('حُذف العمل.'); worksView();
 }
 
 /* ---------- read-only view (child) ---------- */
@@ -305,22 +305,26 @@ function recCleanup(){
   REC.stream=null; REC.ctx=null;
 }
 async function recDone(){
-  var dur=(Date.now()-REC.t0)/1000, type=(REC.mr&&REC.mr.mimeType)||'audio/webm', wid=REC.wid, discard=REC.discard, sink=REC.sink;
+  var dur=(Date.now()-REC.t0)/1000, type=(REC.mr&&REC.mr.mimeType)||'audio/webm', wid=REC.wid, discard=REC.discard, sink=REC.sink, left=REC.left; REC.left=false;
   var blob=new Blob(REC.chunks,{type:type.split(';')[0]==='audio/mp4'?'audio/mp4':type});
   recCleanup(); REC.mr=null; REC.chunks=[]; REC.sink=null; REC.narId=null;
   if(discard){ if(sink&&sink.after) sink.after(); return; }
-  if(blob.size<800||dur<1){ if(sink){toast('التسجيل قصيرٌ جدًّا.'); if(sink.after) sink.after(); return;} renderRec(); return recMsg('التسجيل قصيرٌ جدًّا. ⟨أعِد|أعيدي⟩ المحاولة.'); }
+  if(blob.size<800||dur<1){ if(left) return; if(sink){toast('التسجيل قصيرٌ جدًّا.'); if(sink.after) sink.after(); return;} renderRec(); return recMsg('التسجيل قصيرٌ جدًّا. ⟨أعِد|أعيدي⟩ المحاولة.'); }
   if(sink) return sink.save(blob,dur);
-  await setWorkAudio(wid,blob,dur);
+  await setWorkAudio(wid,blob,dur,left);
 }
-function recAbort(){ if(REC.mr){REC.discard=true;recStop();} }
-async function setWorkAudio(wid,blob,dur){
+function recDiscard(){ if(REC.mr){REC.discard=true;recStop();} }
+/* leaving the page (back, home, another child) stops a work's recording and keeps it: a long story is not lost to one tap.
+   A recording made for something else (the narrator's voice) is dropped, as its page is gone. */
+function recAbort(){ if(REC.mr){ if(REC.sink) REC.discard=true; else REC.left=true; recStop(); } }
+async function setWorkAudio(wid,blob,dur,left){
   var w=workById(wid); if(!w) return;
   var key='a-'+w.id+'-'+Date.now().toString(36);
   try{await blobPut(key,blob);}catch(e){return recMsg('تعذّر حفظ التسجيل: قد تكون مساحة الجهاز ممتلئة.');}
   if(w.audio) await blobDel(w.audio);
   w.audio=key; w.dur=dur; w.updated=Date.now(); saveWorks();
-  if(CUR&&CUR.id===w.id){ renderRec(); toast('حُفظ تسجيلك.'); }
+  if(CUR&&CUR.id===w.id&&!left){ renderRec(); toast('حُفظ تسجيلك.'); }
+  else toast('حُفظ التسجيل في «'+clip(titleOf(w),30)+'».');
 }
 async function recDel(){
   var w=CUR; if(!w||!w.audio) return;

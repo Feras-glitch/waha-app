@@ -76,10 +76,18 @@
   }
   pinSet = function () { return true; };
   pinSave = async function () {};
+  /* the PIN lock shared with كنوز البيان and the Hasaniya (key kb-pin-lock): every fifth wrong entry locks for 1, 2, 4 … 15 minutes */
+  var LOCK_KEY = 'kb-pin-lock', LOCK_MAX = 15 * 60000;
+  function lockGet() { try { var o = JSON.parse(localStorage.getItem(LOCK_KEY) || '{}') || {}; return { fails: +o.fails || 0, until: Math.min(+o.until || 0, Date.now() + LOCK_MAX) }; } catch (e) { return { fails: 0, until: 0 }; } }
+  function lockLeft() { return Math.max(0, lockGet().until - Date.now()); }
+  function lockFail() { var o = lockGet(); o.fails++; if (o.fails % 5 === 0) o.until = Date.now() + Math.min(LOCK_MAX, 60000 * Math.pow(2, o.fails / 5 - 1)); try { localStorage.setItem(LOCK_KEY, JSON.stringify(o)); } catch (e) {} }
+  function lockMsg() { var s = Math.ceil(lockLeft() / 1000); return 'محاولاتٌ خاطئةٌ كثيرة. ' + (s >= 60 ? 'انتظروا ' + Math.ceil(s / 60) + ' دقيقة.' : 'انتظروا ' + s + ' ثانية.'); }
   pinCheck = async function (v) {
     var F = famGet(); if (!F || !F.pin) return false;
+    if (lockLeft()) { setTimeout(function () { var fb = $('pinFb'); if (fb) fb.textContent = lockMsg(); }, 0); return false; }
     var ok = (await famHash(F.salt || '', String(v).trim())) === F.pin;
-    if (ok) { PARENT_UNTIL = Date.now() + 15 * 60 * 1000; LAST_PIN = Date.now(); resetCancelByPin(); }
+    if (ok) { try { localStorage.removeItem(LOCK_KEY); } catch (e) {} PARENT_UNTIL = Date.now() + 15 * 60 * 1000; LAST_PIN = Date.now(); resetCancelByPin(); }
+    else { lockFail(); if (lockLeft()) setTimeout(function () { var fb = $('pinFb'); if (fb) fb.textContent = lockMsg(); }, 0); }
     return ok;
   };
   /* a pending «forgot PIN» request (made in the parent corner) is cancelled by anyone who knows the current PIN, and shown to everyone meanwhile */
@@ -88,8 +96,18 @@
     F.resetReq = null; (F.pinLog = F.pinLog || []).push({ t: Date.now(), k: 'cancel-pin-oasis' }); famSet(F);
     var b = document.getElementById('kzReset'); if (b) b.remove();
   }
+  /* a pending request counts the days it was seen and notices a clock moved back (the same function as resetSeen in كنوز البيان) */
+  function resetSeen(F) {
+    var r = F && F.resetReq, now = Date.now(); if (!r) return false;
+    var max = Math.max(+r.max || 0, +r.at || 0);
+    if (now < max - 2 * 3600e3) { r.due = Math.max(+r.due || 0, now + 72 * 3600e3); r.days = []; r.back = (+r.back || 0) + 1; }
+    r.max = Math.max(max, now); var t = new Date(now), d = t.getFullYear() + '-' + (t.getMonth() + 1) + '-' + t.getDate();
+    r.days = Array.isArray(r.days) ? r.days : []; if (r.days.indexOf(d) < 0) r.days = r.days.concat(d).slice(-10);
+    return true;
+  }
   (function resetBanner() {
     var F = famGet(); if (!F || !F.resetReq) return;
+    if (resetSeen(F)) famSet(F);
     var d = function (t) { try { return new Date(t).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' }); } catch (e) { return ''; } };
     var b = document.createElement('a'); b.id = 'kzReset'; b.href = 'kunuz/index.html#parent'; b.setAttribute('role', 'status');
     b.style.cssText = 'display:block;margin:8px 12px;padding:10px 14px;border-radius:12px;background:#fde8e4;color:#7a2318;border:1px solid #e9a99c;text-decoration:none;font-family:var(--f-ui);line-height:1.7';
@@ -99,6 +117,8 @@
   try { var pu = +sessionStorage.getItem('kz-parent-until') || 0; sessionStorage.removeItem('kz-parent-until'); if (pu > Date.now()) PARENT_UNTIL = Math.min(pu, Date.now() + 15 * 60 * 1000); } catch (e) {}
   if (typeof pinGate === 'function') { var _gate = pinGate; pinGate = function (then, opts) { if (Date.now() < PARENT_UNTIL) { PARENT_UNTIL = Date.now() + 15 * 60 * 1000; return then(); } return _gate(then, opts); }; }
   function needParent() { return Date.now() < PARENT_UNTIL ? Promise.resolve(true) : new Promise(function (res) { pinGate(function () { res(true); }); }); }
+  /* the parent's session ends as soon as the oasis shows anything but the parent board */
+  if (typeof go === 'function') { var _goP = go; go = function (o) { if (o !== 'dad') PARENT_UNTIL = 0; return _goP.apply(this, arguments); }; }
   /* before anything leaves the device the PIN is typed for that very action (an open dashboard is not enough) */
   function freshParent() { return Date.now() - LAST_PIN < 30000 ? Promise.resolve(true) : new Promise(function (res) { _gate(function () { res(true); }); }); }
 

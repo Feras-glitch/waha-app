@@ -149,8 +149,9 @@ async def main():
         ok(len(h) == 2 and h[1]['ok'] > h[0]['ok'], 'second measure higher (%s → %s)' % (h[0]['ok'], h[1]['ok']))
         ok('أكثر من المرة الماضية' in await p.inner_text('#kidMs'), 'the child hears the progress (girl: «أجبتِ»)' if 'أجبتِ' in await p.inner_text('#kidMs') else 'progress message')
         # parent sees the curve and the first/last table; the Friday report mentions it
-        await p.click('#whoBtn'); await p.click('#ksDad'); await p.wait_for_selector('#ddTabs')
-        if await p.locator('#pinIn').count(): await p.fill('#pinIn', '1234'); await p.click('#pinOk'); await p.wait_for_selector('#ddTabs')
+        # the parent's session ended when the oasis went back to the child's pages, so the board asks for the PIN again
+        await p.click('#whoBtn'); await p.click('#ksDad'); await p.wait_for_selector('#sheet:not([hidden]) #pinIn')
+        await p.fill('#pinIn', '1234'); await p.click('#pinOk'); await p.wait_for_selector('#ddTabs')
         await p.locator('#ddTabs button', has_text='التقدّم').click(); await p.wait_for_timeout(400)
         t = await p.inner_text('#ddBody')
         ok('قياس الشهر' in t and 'أول قياس' in t and 'كنوز البيان' in t, 'parent sees the measure curve and the sections')

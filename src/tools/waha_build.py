@@ -94,7 +94,7 @@ def check_unknown_words(D):
         raise SystemExit('waha data.json, unknown words:\n  ' + '\n  '.join(bad))
 
 
-def build(verbose=True, icon=''):
+def build(verbose=True, icon='', csp=''):
     page, data, app = rd('parts', 'waha', 'page.html'), rd('parts', 'waha', 'data.json'), rd('parts', 'waha', 'app.js')
     import json as _j
     D = _j.loads(data)
@@ -108,7 +108,7 @@ def build(verbose=True, icon=''):
     page, n = GFONTS.subn('', page)
     if n != 1:
         raise SystemExit('waha: expected one Google Fonts link in page.html, found %d' % n)
-    page = page.replace('<meta charset="utf-8">', '<meta charset="utf-8">' + HEAD.replace('@ICON@', icon) + '<style>' + css + '</style>', 1)
+    page = page.replace('<meta charset="utf-8">', '<meta charset="utf-8">' + csp + HEAD.replace('@ICON@', icon) + '<style>' + css + '</style>', 1)
     out = (page.rstrip() + '\n<script>\n' + bridge + '\n</script>\n'
            '<script id="data" type="application/json">' + data + '</script>\n'
            '<script>\n' + app + '\n</script>\n<script>\n' + post + '\n</script>\n' + SW + '\n')

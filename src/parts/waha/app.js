@@ -57,7 +57,10 @@ const T = (m, f) => fem() ? f : m;
 let kid = store.get('kid', 0); if (kid >= kids.length) kid = 0;
 const K = () => kids[kid];
 const tier = () => (K().age <= 8 ? 'small' : 'big');
-function avatarHtml(k, size){ return k.photo ? `<img src="${k.photo}" alt="" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;vertical-align:middle">` : `<span style="display:inline-grid;place-items:center;width:${size}px;height:${size}px;border-radius:50%;background:var(--date-soft);color:var(--ink);font-weight:800;font-size:${Math.round(size*.45)}px;vertical-align:middle">${esc((k.name || '?').slice(0, 1))}</span>`; }
+/* a photo is only ever a small image data URL (the profile's 96px JPEG); anything else — e.g. from an imported gift file — is dropped */
+const PHOTO_RE = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+\/]+=*$/;
+const safePhoto = p => (typeof p === 'string' && p.length < 400000 && PHOTO_RE.test(p)) ? p : null;
+function avatarHtml(k, size){ size = Math.max(8, Math.min(400, +size || 32)); const ph = safePhoto(k.photo); return ph ? `<img src="${ph}" alt="" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;vertical-align:middle">` : `<span style="display:inline-grid;place-items:center;width:${size}px;height:${size}px;border-radius:50%;background:var(--date-soft);color:var(--ink);font-weight:800;font-size:${Math.round(size*.45)}px;vertical-align:middle">${esc((k.name || '?').slice(0, 1))}</span>`; }
 function renderWho(){ $('whoBtn').innerHTML = avatarHtml(K(), 26) + ' ' + esc(K().name) + ' ▾'; }
 function kidsSheet(){
   const s = $('sheet'); s.innerHTML = `<div class="top"><h2 style="font-family:var(--f-ui);font-size:1.3rem">من يلعب؟</h2><button class="x" aria-label="إغلاق">✕</button></div><div id="kidRows" style="display:flex;flex-direction:column;gap:8px"></div>
@@ -405,7 +408,8 @@ $('dadBtn').addEventListener('click', () => pinGate(() => { TEACHER = false; go(
 function onKid(){ TEACHER = false; renderWho(); bankPref = null; resetGames(); renderGrove(); renderPalm(); go('home'); }
 let SHEET_T = 0;
 function showSheet(){ $('sheet').hidden = false; SHEET_T = performance.now(); }
-function closeSheet(){ $('sheet').hidden = true; }
+/* closing the sheet (✕, Esc, a tap outside) also ends a recording started in it: the microphone does not stay on, and the sound is not filed under the next text */
+function closeSheet(){ const s = $('sheet'); s.hidden = true; try { if (VX.rec && VX.rec.owner && s.contains(VX.rec.owner)) micAbort(); } catch (e) {} }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
 document.addEventListener('click', e => { const s = $('sheet'); if (!s.hidden && performance.now() - SHEET_T > 250 && !s.contains(e.target)) closeSheet(); });
 
@@ -1225,6 +1229,7 @@ async function recDel(id){ const d = await idb(); return new Promise((res, rej) 
 async function recCountApproved(){ const all = await recAll(); kids.forEach((k, i) => store.set(`recApproved:${i}`, all.filter(r => r.kid === i && r.status === 'approved' && r.source !== 'import').length)); checkStages(); }
 const b64 = blob => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.onerror = () => rej(fr.error); fr.readAsDataURL(blob); });
 function unb64(s, type){ const bin = atob(s); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new Blob([u], {type: type || 'audio/mpeg'}); }
+const ST_OK = ['pending', 'fix', 'approved'];
 const STATUS = {pending:['بانتظار المراجعة','wait'], approved:['معتمد','ok'], fix:['فيه ملاحظات','wait']};
 const isQuran = r => r.kind === 'آية' || r.kind === 'صفحة';
 const PRIVATE_K = new Set(['أخبرني', 'رأيتُها اليوم', 'كلمة', 'جملة', 'من أبي']);   // تسجيلات بين الطفل وأبيه: لا تُهدى ولا تُصدَّر إلى المعلم ولا تدخل الإذاعة
@@ -1282,9 +1287,11 @@ async function importFile(f, fb, teacher){
   if (!pkg || !Array.isArray(pkg.items)){ fb.textContent = 'الملف ليس ملف تسجيلات.'; fb.className = 'fb bad'; return; }
   const all = await recAll(); const byId = Object.fromEntries(all.map(r => [r.id, r])); let n = 0;
   for (const it of pkg.items){
-    const notes = (it.notes || []).map(x => ({by:x.by, text:x.text, marks:x.marks || [], date:x.date, audio: x.audio && x.audio.b64 ? unb64(x.audio.b64, x.audio.type) : null}));
-    if (teacher){ if (byId[it.id] && byId[it.id].source !== 'import') continue; await recPut({...byId[it.id], id:it.id, kid:-1, kidName:it.kidName, kind:it.kind, ref:it.ref, text:it.text, date:it.date, type:it.type, blob: unb64(it.b64, it.type), status: byId[it.id] ? byId[it.id].status : it.status, notes: byId[it.id] ? byId[it.id].notes : notes, source:'import'}); n++; }
-    else { const r = byId[it.id]; if (!r || r.source === 'import') continue; if (pkg.type !== 'teacher-review') continue; r.status = it.status; if (it.status === 'approved') r.approvedBy = 'المعلم'; r.notes = [...(r.notes || []).filter(x => x.by !== 'المعلم'), ...notes]; await recPut(r); n++; }
+    if (!it || typeof it.id !== 'string') continue;
+    const st = ST_OK.includes(it.status) ? it.status : 'pending', aud = t => /^audio\/[\w.+-]+$/.test(t || '') ? t : 'audio/webm';
+    const notes = (Array.isArray(it.notes) ? it.notes : []).slice(0, 20).map(x => ({by: String((x && x.by) || '').slice(0, 30), text: String((x && x.text) || '').slice(0, 2000), marks: Array.isArray(x && x.marks) ? x.marks.filter(m => Number.isInteger(m)).slice(0, 200) : [], date: String((x && x.date) || '').slice(0, 20), audio: x && x.audio && x.audio.b64 ? unb64(x.audio.b64, aud(x.audio.type)) : null}));
+    if (teacher){ if (byId[it.id] && byId[it.id].source !== 'import') continue; await recPut({...byId[it.id], id:it.id, kid:-1, kidName:String(it.kidName || '').slice(0, 40), kind:String(it.kind || '').slice(0, 30), ref:String(it.ref || '').slice(0, 120), text:String(it.text || '').slice(0, 4000), date:String(it.date || '').slice(0, 20), type:aud(it.type), blob: unb64(it.b64, aud(it.type)), status: byId[it.id] ? byId[it.id].status : st, notes: byId[it.id] ? byId[it.id].notes : notes, source:'import'}); n++; }
+    else { const r = byId[it.id]; if (!r || r.source === 'import') continue; if (pkg.type !== 'teacher-review') continue; r.status = st; if (st === 'approved') r.approvedBy = 'المعلم'; r.notes = [...(r.notes || []).filter(x => x.by !== 'المعلم'), ...notes.filter(x => x.by === 'المعلم')];   /* the reply echoes the parent's notes back: keep only the teacher's */ await recPut(r); n++; }
   }
   fb.textContent = n ? (teacher ? `استُوردت ${n} تسجيلات للمراجعة.` : `وصل ردّ المعلم على ${n} تسجيلات.`) : 'لم أجد في الملف ما يخص هذا الجهاز.'; fb.className = 'fb ' + (n ? 'ok' : 'bad');
   if (!teacher) { recCountApproved(); renderShelf(); } else renderReview($('ddRec'), true);
@@ -1365,7 +1372,7 @@ async function importGiftFile(f, fb){
   if (!f) return; let pkg; try { pkg = JSON.parse(await f.text()); } catch (e) { fb.textContent = 'الملف ليس ملف هدايا.'; fb.className = 'fb bad'; return; }
   if (!pkg || !Array.isArray(pkg.items)){ fb.textContent = 'الملف ليس ملف هدايا.'; fb.className = 'fb bad'; return; }
   const all = await dbAll('gift'); let n = 0;
-  if (pkg.type === 'gift'){ for (const it of pkg.items){ if (all.some(g => g.id === it.id)) continue; await dbPut('gift', {id: it.id, from: -1, fromName: it.fromName, fromPhoto: it.fromPhoto || null, to: kid, toName: K().name, kind: it.kind, ref: it.ref, text: it.text, type: it.type, blob: unb64(it.b64, it.type), date: it.date, chain: it.chain || [], status:'sent', source:'import'}); n++; } fb.textContent = n ? `وصلتك ${n} هدايا.` : 'لا هدايا جديدة في الملف.'; }
+  if (pkg.type === 'gift'){ for (const it of pkg.items){ if (!it || typeof it.id !== 'string' || !/^[\w-]{1,40}$/.test(it.id) || all.some(g => g.id === it.id)) continue; await dbPut('gift', {id: it.id, from: -1, fromName: String(it.fromName || '').slice(0, 40), fromPhoto: safePhoto(it.fromPhoto), to: kid, toName: K().name, kind: String(it.kind || '').slice(0, 30), ref: String(it.ref || '').slice(0, 120), text: String(it.text || '').slice(0, 4000), type: /^audio\/[\w.+-]+$/.test(it.type || '') ? it.type : 'audio/webm', blob: unb64(it.b64, /^audio\/[\w.+-]+$/.test(it.type || '') ? it.type : 'audio/webm'), date: String(it.date || '').slice(0, 20), chain: Array.isArray(it.chain) ? it.chain.slice(0, 12).map(x => String(x).slice(0, 40)) : [], status:'sent', source:'import'}); n++; } fb.textContent = n ? `وصلتك ${n} هدايا.` : 'لا هدايا جديدة في الملف.'; }
   else if (pkg.type === 'gift-reply'){ for (const it of pkg.items){ const g = all.find(x => x.id === it.id && x.from >= 0); if (!g || g.status === 'mastered') continue; g.status = 'mastered'; g.masteredDate = it.date; await dbPut('gift', g); bump(`giftsMastered:${g.from}`); n++; } fb.textContent = n ? `أتمّ ${pkg.items[0] && pkg.items[0].by ? esc(pkg.items[0].by) : 'صديقك'} هديتك؛ نبتت شجرتك.` : 'لا ردود جديدة.'; }
   else { fb.textContent = 'الملف ليس ملف هدايا.'; fb.className = 'fb bad'; return; }
   fb.className = 'fb ' + (n ? 'ok' : 'bad'); checkStages(); renderGifts();
@@ -1803,8 +1810,9 @@ function micWidget(box, opts){
   const fin = async blob => { clearInterval(tick); b.classList.remove('on'); lab.textContent = opts.again || '⟨سجّل|سجّلي⟩ مرة أخرى'; prev.innerHTML = ''; const a = audioEl(blob); a.dataset.keep = '1'; prev.appendChild(a); if (opts.onSaved) opts.onSaved(blob); let waited = 0; const t = setInterval(() => { waited += 300; const busy = VX.audio || ('speechSynthesis' in window && speechSynthesis.speaking); if (busy && waited < 8000) return; clearInterval(t); try { const pp = a.play(); if (pp && pp.catch) pp.catch(() => {}); } catch (e) {} }, 300); };
   b.addEventListener('click', async () => {
     if (!MIC_OK){ lab.textContent = 'هذا الجهاز لا يسجّل من هنا؛ ⟨أرفق|أرفقي⟩ تسجيلًا من الجهاز'; const f = document.createElement('input'); f.type = 'file'; f.accept = 'audio/*'; f.setAttribute('capture', ''); f.onchange = () => f.files[0] && fin(f.files[0]); f.click(); return; }
+    if (VX.rec && VX.rec.owner !== b) micAbort();   /* a recording left by another button is dropped, never saved here */
     if (VX.rec){ const blob = await micStop(); if (blob && blob.size && document.body.contains(b)) fin(blob); return; }
-    try { await micStart(); b.classList.add('on'); const t0 = Date.now(); lab.textContent = 'أسمعك… ⟨اضغط|اضغطي⟩ ⟨لتتوقف|لتتوقفي⟩'; tick = setInterval(() => { if (!document.body.contains(b)){ clearInterval(tick); return; } lab.textContent = `أسمعك… ${Math.round((Date.now() - t0) / 1000)} ث · ⟨اضغط|اضغطي⟩ ⟨لتتوقف|لتتوقفي⟩`; if (Date.now() - t0 > (opts.max || 120000)) b.click(); }, 500); if (VX.rec) VX.rec.tick = tick; }
+    try { await micStart(); b.classList.add('on'); const t0 = Date.now(); lab.textContent = 'أسمعك… ⟨اضغط|اضغطي⟩ ⟨لتتوقف|لتتوقفي⟩'; tick = setInterval(() => { if (!document.body.contains(b)){ clearInterval(tick); return; } lab.textContent = `أسمعك… ${Math.round((Date.now() - t0) / 1000)} ث · ⟨اضغط|اضغطي⟩ ⟨لتتوقف|لتتوقفي⟩`; if (Date.now() - t0 > (opts.max || 120000)) b.click(); }, 500); if (VX.rec){ VX.rec.tick = tick; VX.rec.owner = b; } }
     catch (e) { lab.textContent = '⟨اسمح|اسمحي⟩ للتطبيق باستعمال الميكروفون ثم ⟨حاول|حاولي⟩'; if (!w.querySelector('.tiny')){ const alt = el('button','tiny','أو ⟨أرفق|أرفقي⟩ تسجيلًا من الجهاز'); alt.type = 'button'; alt.addEventListener('click', () => { const f = document.createElement('input'); f.type = 'file'; f.accept = 'audio/*'; f.setAttribute('capture', ''); f.onchange = () => f.files[0] && fin(f.files[0]); f.click(); }); w.appendChild(alt); } }
   });
 }
@@ -1924,7 +1932,7 @@ async function renderKidHome(){
   try { const msgs = (await recAll()).filter(r => r.kind === 'من أبي' && r.to === kid && !r.heard).sort((a, b) => b.id.localeCompare(a.id)); if (msgs.length){ const m = msgs[0]; const box = el('div','kcard msg'); box.innerHTML = `<p class="kq" style="margin:0">💌 ${T('رسالة لك من أبيك', 'رسالة لكِ من أبيكِ')}${m.text ? `: ${esc(m.text)}` : ''}</p>`; const pl = el('button','bigplay','▶ ' + T('اسمعها', 'اسمعيها')); pl.type = 'button'; pl.style.marginTop = '6px';
     pl.addEventListener('click', async () => { voiceStop(); if (m.blob){ const a = new Audio(URL.createObjectURL(m.blob)); a.dataset.keep = '1'; VX.audio = a; companionTalk(true); a.onended = () => companionTalk(false); a.play().catch(() => {}); } else if (m.text) say(m.text); m.heard = true; try { await recPut(m); } catch (e) {} pl.textContent = '✓ ' + T('سمعتَها', 'سمعتِها'); cmpHappy(); }); box.appendChild(pl); C.appendChild(box); } } catch (e) {}
   { const y = store.get(`bag:${kid}`, []).find(w => w.day === dayN() - 1 || w.day === dayN() - 2); if (firstToday && y && !tripDone && C.firstChild && C.firstChild.textContent.includes(y.w)){ const rv = el('button','tiny', ((cmpGet() || {}).kind === 'owl' ? 'أريني المعنى' : 'أرني المعنى')); rv.type = 'button'; rv.addEventListener('click', () => { rv.replaceWith(el('p','lrn', `${y.w}: ${y.m}`)); say([y.w, y.m]); }); C.appendChild(rv); } }
-  const sc = el('div','kscene'); const ds = dayStreak(); sc.innerHTML = kidScene(u, '') + `<span class="cnt">🌴 ${tripsDone()} · 🟤 ${dates()}${secCounts()}${ds > 1 ? ` · 🔥 ${ds}` : ''}</span>` + (K().photo ? `<span class="kav">${avatarHtml(K(), 44)}</span>` : ''); C.appendChild(sc);
+  const sc = el('div','kscene'); const ds = dayStreak(); sc.innerHTML = kidScene(u, '') + `<span class="cnt">🌴 ${tripsDone()} · 🟤 ${dates()}${secCounts()}${ds > 1 ? ` · 🔥 ${ds}` : ''}</span>` + (safePhoto(K().photo) ? `<span class="kav">${avatarHtml(K(), 44)}</span>` : ''); C.appendChild(sc);
   if (!tripDone){ const nx = el('p','note', T(`رحلة اليوم تكبر نخلتك وتأتيك بهدية جديدة`, `رحلة اليوم تكبر نخلتكِ وتأتيكِ بهدية جديدة`)); nx.style.cssText = 'text-align:center;margin:0'; C.appendChild(nx); }
   const t = store.get(`trip:${kid}:${today()}`, null);
   const play = el('button', 'bigplay' + (tripDone ? ' done' : ''), tripDone ? '▶ رحلة إضافية' : t && t.i > 0 ? '▶ ⟨أكمل|أكملي⟩ رحلة اليوم' : '▶ رحلة اليوم'); play.type = 'button';

@@ -118,6 +118,7 @@ function pApproved(){
 /* ---------- consent before anything leaves the device ---------- */
 /* what: list of plain labels; returns {name} or false */
 async function consent(o){
+  if(!(await freshParent())) return false;
   var k=o.kid, f=gOf(k);
   var r=await ask({title:'قبل أن يخرج هذا من الجهاز',c:'rose',ok:'أوافق، أصدِروا الملف',
     html:'<div class="consent">'+
@@ -199,9 +200,11 @@ function parseReply(txt){
   if(!o||o.k!=='review'||typeof o.w!=='string') return {err:'هذا الرمز ليس ردَّ مراجعة.'};
   if(o.f!==FAM.fid) return {err:'هذا الرمز لعملٍ من جهازٍ آخر أو عائلةٍ أخرى.'};
   var w=workById(o.w); if(!w) return {err:'العمل الذي يخصّه الرمز لم يعد موجودًا على هذا الجهاز.'};
+  /* a code is read once: pasting an old reply again must not re-approve a work that was sent back since */
+  if((w.tcodes||[]).indexOf(m[2])>=0) return {err:'هذا الردّ أُدخل من قبل. إن راجع المعلّم العمل من جديد فاطلبوا منه رمزًا جديدًا.'};
   var d=o.d==='ok'?'ok':o.d==='fix'?'fix':null; if(!d) return {err:'الرمز لا يحمل قرارًا صالحًا.'};
   var r=null; if(o.r&&typeof o.r==='object'){r={};['m','h','t'].forEach(function(x){var v=+o.r[x];if(v>=1&&v<=3) r[x]=v;}); if(!Object.keys(r).length) r=null;}
-  return {w:w,d:d,r:r,n:String(o.n||'').slice(0,600),tn:String(o.tn||'').slice(0,40)};
+  return {w:w,d:d,r:r,n:String(o.n||'').slice(0,600),tn:String(o.tn||'').slice(0,40),code:m[2]};
 }
 function pCode(){
   L=null;
@@ -224,6 +227,7 @@ async function applyReply(p){
     html:'<p><strong>القرار:</strong> '+(p.d==='ok'?'اعتماد ✓':'يحتاج تعديلًا')+'</p>'+(p.r?'<p class="rub-line">'+rubStars(p.r)+'</p>':'')+(p.n?'<div class="note note-t"><p>'+esc(p.n).replace(/\n/g,'<br>')+'</p></div>':'')+
       (p.d==='fix'?'<p class="muted small">سيعود العمل إلى '+esc(k?k.name:'الطفل')+' مع ملاحظة المعلّم.</p>':'')});
   if(!ok) return;
+  if(p.code){ if((w.tcodes||[]).indexOf(p.code)>=0) return toast('هذا الردّ أُدخل من قبل.'); w.tcodes=(w.tcodes||[]).concat(p.code).slice(-30); }
   w.notes.push({by:'t',t:p.n,r:p.r,d:Date.now(),name:p.tn||''});
   if(p.r) w.trub=p.r;
   w.teacher={st:p.d,d:Date.now(),sentAt:w.teacher&&w.teacher.sentAt};
@@ -409,6 +413,7 @@ async function decryptStr(o,pass){
 }
 function canEncrypt(){return !!(window.crypto&&crypto.subtle&&window.TextEncoder);}
 async function backupMake(){
+  if(!(await freshParent('النسخة الاحتياطية تحمل بيانات الأطفال وأصواتهم، فتحتاج رمز وليّ الأمر الآن.'))) return;
   var opt=await ask({title:'نسخةٌ احتياطية مشفّرة',c:'plum',ok:'احفظوا النسخة',
     html:'<p>اختاروا كلمة سرٍّ تحفظونها جيدًا: لا يُفتح الملف إلا بها، ولا يمكن استرجاعها إن نُسيت.</p>'+
       (canEncrypt()?'<label class="lbl" for="bk1">كلمة السر (ستة أحرف أو أكثر)</label><input id="bk1" type="password" autocomplete="new-password">'+
@@ -425,17 +430,25 @@ async function backupMake(){
     }});
   if(!opt) return;
   toast('نُجهّز النسخة…');
-  var kids={}; FAM.kids.forEach(function(k){kids[k.id]=kidLoad(k.id);});
-  var keys=[]; try{keys=await blobKeys();}catch(e){}
-  var blobs={}; for(var i=0;i<keys.length;i++){var b=await blobGet(keys[i]); if(b) blobs[keys[i]]=await blobToDataURL(b);}
-  FAM.lastBackup=Date.now(); saveFam();
-  var oasis=null; try{oasis=await oasisExport();}catch(e){}
-  var hasaniya=null; try{hasaniya=await hasaniyaExport();}catch(e){}
-  var data=JSON.stringify({kind:'kb-backup',v:1,at:Date.now(),fam:FAM,works:WORKS,kids:kids,blobs:blobs,oasis:oasis,hasaniya:hasaniya});
+  /* «last backup» is written only once the file is made: a failed backup must not hide the monthly reminder */
+  var data, miss=[];
+  try{
+    var kids={}; FAM.kids.forEach(function(k){kids[k.id]=kidLoad(k.id);});
+    var keys=await blobKeys();
+    var blobs={}; for(var i=0;i<keys.length;i++){var b=await blobGet(keys[i]); if(b) blobs[keys[i]]=await blobToDataURL(b);}
+    var oasis=null; try{oasis=await oasisExport();}catch(e){miss.push('الواحة');}
+    var hasaniya=null; try{hasaniya=await hasaniyaExport();}catch(e){miss.push('الحسنية');}
+    var at=Date.now(), fam=JSON.parse(JSON.stringify(FAM)); fam.lastBackup=at; fam.lastBackupEnc=!!opt.pass;
+    data=JSON.stringify({kind:'kb-backup',v:1,at:at,fam:fam,works:WORKS,kids:kids,blobs:blobs,oasis:oasis,hasaniya:hasaniya});
+  }catch(e){ return toast('تعذّر تجهيز النسخة: '+(e&&e.message||'')+'. لم يُحفظ شيء.'); }
   if(opt.pass){ try{ data=await encryptStr(data,opt.pass); }catch(e){ return toast('تعذّر التشفير: '+(e&&e.message||'')); } }
-  var u=URL.createObjectURL(new Blob([data],{type:'application/json'})), a=document.createElement('a');
-  a.href=u; a.download='كنوز-البيان-نسخة-'+today()+(opt.pass?'-مشفّرة':'')+'.json'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(u);},60000);
-  FAM.lastBackupEnc=!!opt.pass; saveFam();
+  try{
+    var u=URL.createObjectURL(new Blob([data],{type:'application/json'})), a=document.createElement('a');
+    a.href=u; a.download='كنوز-البيان-نسخة-'+today()+(opt.pass?'-مشفّرة':'')+'.json'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(u);},60000);
+  }catch(e){ return toast('تعذّر حفظ الملف: '+(e&&e.message||'')); }
+  data=null;
+  FAM.lastBackup=Date.now(); FAM.lastBackupEnc=!!opt.pass; saveFam();
+  if(miss.length){ toast('حُفظت النسخة، لكن بلا '+miss.join(' و')+': تعذّرت قراءتها.'); return; }
   toast(opt.pass?'حُفظت النسخة المشفّرة في التنزيلات.':'حُفظت النسخة في التنزيلات.');
 }
 async function restorePicked(file){
@@ -454,12 +467,15 @@ async function restorePicked(file){
   var ok=await ask({title:'استعادة النسخة؟',c:'rose',ok:'استعيدوها',danger:1,html:'<p>نسخةٌ بتاريخ '+fmtDate(o.at)+' فيها '+n2a((o.fam.kids||[]).length)+' أطفال و'+n2a(o.works.length)+' عمل. <strong>ستحلّ محلّ كل ما على هذا الجهاز الآن.</strong></p>'});
   if(!ok) return;
   try{
-    var old=await blobKeys(); for(var i=0;i<old.length;i++) await blobDel(old[i]);
-    var bk=Object.keys(o.blobs||{}); for(var j=0;j<bk.length;j++){var b=dataURLToBlob(o.blobs[bk[j]]); if(b) await blobPut(bk[j],b);}
-    FAM.kids.forEach(function(k){try{localStorage.removeItem(kidKey(k.id));}catch(e){}});
+    /* the backup's files are written first, and only then is what it does not hold removed: a full disk or a broken file
+       stops the restore with this device's data still whole */
+    var old=await blobKeys(), bk=Object.keys(o.blobs||{});
+    for(var j=0;j<bk.length;j++){var b=dataURLToBlob(o.blobs[bk[j]]); if(b) await blobPut(bk[j],b);}
+    Object.keys(o.kids||{}).forEach(function(id){ if(!lsSet(kidKey(id),o.kids[id])) throw new Error('مساحة الجهاز'); });
+    for(var i=0;i<old.length;i++){ if(bk.indexOf(old[i])<0) await blobDel(old[i]); }
+    FAM.kids.forEach(function(k){ if(!(o.kids||{})[k.id]) try{localStorage.removeItem(kidKey(k.id));}catch(e){} });
     FAM=o.fam; FAM.mags=FAM.mags||[]; FAM.weekly=FAM.weekly||{}; FAM.ext=FAM.ext||{}; FAM.pinResets=FAM.pinResets||[]; FAM.nar=FAM.nar||{}; FAM.fs=FAM.fs||{done:{}};
     WORKS=o.works; saveFam(); saveWorks();
-    Object.keys(o.kids||{}).forEach(function(id){lsSet(kidKey(id),o.kids[id]);});
     if(o.oasis) await oasisImport(o.oasis);
     if(o.hasaniya) await hasaniyaImport(o.hasaniya);
     for(var x=0;x<FAM.kids.length;x++){if(FAM.kids[x].photo) await mediaURL('photo-'+FAM.kids[x].id);}

@@ -204,9 +204,15 @@ async function fromAddOne(x){
   w.audio=key; w.dur=await blobDur(x.blob);
   WORKS.push(w); saveWorks(); return w;
 }
-async function fromAdd(i){ if(await fromAddOne(FROM.list[i])){ toast('أُضيف إلى «إذاعة الباكورة».'); pFrom(); } }
+/* copying a sound takes a moment: a second tap meanwhile would add the same recording twice */
+var FROM_BUSY=false;
+async function fromAdd(i){
+  if(FROM_BUSY) return; FROM_BUSY=true;
+  try{ if(await fromAddOne(FROM.list[i])){ toast('أُضيف إلى «إذاعة الباكورة».'); pFrom(); } } finally{ FROM_BUSY=false; }
+}
 async function fromAll(){
-  var n=0; for(var i=0;i<FROM.list.length;i++){ if(!fromWork(FROM.list[i])&&await fromAddOne(FROM.list[i])) n++; }
+  if(FROM_BUSY) return; FROM_BUSY=true; var n=0;
+  try{ for(var i=0;i<FROM.list.length;i++){ if(!fromWork(FROM.list[i])&&await fromAddOne(FROM.list[i])) n++; } } finally{ FROM_BUSY=false; }
   if(n) toast('أُضيف '+n2a(n)+' '+(n===1?'تسجيل':'تسجيلات')+' إلى «إذاعة الباكورة».'); pFrom();
 }
 async function pFrom(){

@@ -14,7 +14,7 @@ var ACT={
   resetDo:function(){resetDo();},
   resetCancel:function(){resetCancel();},
   setupPin:function(){ if(FAM.pin) needParent(function(){setupPin(false);}); else setupPin(false); },
-  pickKid:function(t,ds){selectKid(ds.id); if(!IN_KUNUZ) return toOasis(); home();},
+  pickKid:function(t,ds){PARENT_UNTIL=0; selectKid(ds.id); if(!IN_KUNUZ) return toOasis(); home();},
   kfG:function(t,ds){KF.name=(document.getElementById('kfName')||{}).value||KF.name;KF.g=ds.v;renderKidForm();},
   kfAv:function(t,ds){KF.name=(document.getElementById('kfName')||{}).value||KF.name;KF.av=ds.v;renderKidForm();},
   kfC:function(t,ds){KF.name=(document.getElementById('kfName')||{}).value||KF.name;KF.c=ds.v;renderKidForm();},
@@ -56,7 +56,12 @@ var ACT={
   magPreview:function(t,ds){magPreview(ds.id);}, magExport:function(t,ds){magExport(ds.id);}, magBack:function(t,ds){magBack(ds.id);}, magPublishLocal:function(t,ds){magPublishLocal(ds.id);},
   magRadio:function(){magRadio();},
   pMag:function(t,ds){magParent(ds.id);},
-  print:function(){ try{window.print();}catch(e){} },
+  /* printing can also save the page as a file or send it (Android's print screen), so it is the parent's step, logged like an export */
+  print:async function(){
+    if(!(await freshParent('الطباعة قد تحفظ الصفحة ملفًّا أو ترسلها، فتحتاج رمز وليّ الأمر.'))) return;
+    (FAM.waLog=FAM.waLog||[]).push({d:Date.now(),name:'طباعة: '+String(document.title||'').slice(0,60),kid:KID?KID.id:null}); if(FAM.waLog.length>200) FAM.waLog=FAM.waLog.slice(-200); saveFam();
+    try{window.print();}catch(e){}
+  },
   install:function(){doInstall();},
   narPlay:function(t,ds){narPlay(ds.id,t);},
   diag:needKid(function(){startDiag();}), pReport:function(t,ds){pReport(ds.id,ds.v);}, exReport:function(t,ds){exReport(ds.id,ds.v);},
@@ -105,8 +110,9 @@ APP.addEventListener('click',function(e){
     if(PARENT_ACTS.indexOf(ds.act)>=0) parentTouch();
     return fn(t,ds);
   }
-  if(t.id==='homeBtn'||t.hasAttribute('data-home')) return KID?home():who();
-  if(t.id==='kidChip') return who();
+  /* leaving for the child's pages ends the parent's session (the next parent step asks for the PIN again) */
+  if(t.id==='homeBtn'||t.hasAttribute('data-home')){ PARENT_UNTIL=0; return KID?home():who(); }
+  if(t.id==='kidChip'){ PARENT_UNTIL=0; return who(); }
   if(t.id==='footParent') return needParent(parentHome);
   if(t.id==='speak') return speak(t);
   if(!KID) return;

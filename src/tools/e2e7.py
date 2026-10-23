@@ -103,7 +103,7 @@ async def main():
 
         # after 72 hours: a new PIN, approvals revoked, a new recovery code, and the date shows in every consent
         await request_reset(p)
-        await p.evaluate("(()=>{var f=" + FAM + "; f.resetReq.due=Date.now()-1000; localStorage.setItem('kb-family-v1',JSON.stringify(f));})()")
+        await p.evaluate("(()=>{var f=" + FAM + "; f.resetReq.due=Date.now()-1000; f.resetReq.days=['2000-1-1','2000-1-2','2000-1-3']; localStorage.setItem('kb-family-v1',JSON.stringify(f));})()")
         await forgot(p); await p.wait_for_selector('[data-act="resetDo"]'); await p.click('[data-act="resetDo"]')
         await p.wait_for_selector('#setPinForm'); await p.fill('#p1', '2468'); await p.fill('#p2', '2468'); await p.click('#setPinForm button[type=submit]')
         await p.wait_for_selector('#recCode'); code3 = (await p.inner_text('#recCode')).strip()

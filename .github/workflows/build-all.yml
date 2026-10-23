@@ -1,8 +1,9 @@
 # بناء كل نسخ «واحة اللسان العربي» من مصدر واحد (web/) مع كل رفع إلى main:
 #   1) اختبار الدخان (رحلة طفل كاملة في المتصفح) — لا يُبنى شيء إن فشل
-#   2) أندرويد APK موقّع بالمفتاح الثابت (أو نسخة تجريبية إن لم تُضف المفاتيح بعد)
+#   2) أندرويد APK موقّع بالمفتاح الثابت. قبل إضافة المفاتيح تُبنى نسخة تجريبية للفحص فقط: تبقى مرفقًا في صفحة التشغيل
+#      ولا تُنشر في Releases، لأن مفتاحها التجريبي في المستودع، فأيّ أحد يستطيع أن يوقّع به تطبيقًا يُثبََّت فوقها ويقرأ بياناتها.
 #   3) ويندوز ولينكس (Electron)، وملفات الويب
-#   4) إصدار في صفحة Releases باسم رقم النسخة، فيه كل الملفات
+#   4) إصدار في صفحة Releases باسم رقم النسخة، فيه كل الملفات. نسخةٌ نُشرت لا تُستبدل ملفاتها: دمجٌ بلا رفع versionName لا يُصدر شيئًا.
 # المصدر في src/، وweb/ (إلا web/tests) يُبنى منه: python3 src/tools/build.py ثم python3 src/tools/publish.py
 #   الواحة web/index.html، و«كنوز البيان» web/kunuz/، والحسنية web/hasaniya/ (نسخة مثبّتة من مستودعها + طبقة تكامل)، وعامل خدمة واحد web/sw.js.
 #   مهمة e2e تتحقق أن web/ هو ناتج src/ فعلًا، ثم تشغّل اختبارات التطبيق كلها (src/tools/test_all.py).
@@ -15,6 +16,11 @@ on:
 
 permissions:
   contents: write
+
+# one run at a time on main: two quick merges must not race to publish the same release
+concurrency:
+  group: build-all-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   ELECTRON_VERSION: 37.3.1
@@ -84,7 +90,7 @@ jobs:
             echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/waha.jks"
             echo "path=$RUNNER_TEMP/waha.jks" >> "$GITHUB_OUTPUT"
           else
-            echo "::warning::لم تُضف أسرار التوقيع؛ ستُبنى نسخة تجريبية. انظر SIGNING-AR.md"
+            echo "::warning::لم تُضف أسرار التوقيع؛ ستُبنى نسخة تجريبية للفحص فقط ولن تُنشر في Releases. انظر SIGNING-AR.md"
           fi
       - name: Build signed release APK
         if: steps.key.outputs.path != ''
@@ -97,16 +103,25 @@ jobs:
         run: |
           gradle assembleRelease --no-daemon
           mkdir -p "$GITHUB_WORKSPACE/out" && cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/out/waha.apk"
-      - name: Build debug APK (no signing key yet)
+      - name: Build debug APK for testing only (no signing key yet)
         if: steps.key.outputs.path == ''
         working-directory: android
         run: |
           gradle assembleDebug --no-daemon
-          mkdir -p "$GITHUB_WORKSPACE/out" && cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/out/waha-debug.apk"
-      - uses: actions/upload-artifact@v4
+          mkdir -p "$GITHUB_WORKSPACE/test-only" && cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/test-only/waha-TEST-ONLY-debug.apk"
+      - name: Keep the signed APK for the release
+        if: steps.key.outputs.path != ''
+        uses: actions/upload-artifact@v4
         with:
           name: waha-apk
-          path: out/*.apk
+          path: out/waha.apk
+      - name: Keep the test APK on this run only (never in Releases)
+        if: steps.key.outputs.path == ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-only-debug-apk
+          path: test-only/*.apk
+          retention-days: 7
 
   packages:
     needs: [test, e2e]
@@ -164,28 +179,37 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/download-artifact@v4
-        with:
-          path: dist
-          merge-multiple: true
       - name: Version
         id: ver
-        run: echo "v=$(grep -oP 'versionName "\K[^"]+' android/app/build.gradle)" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V="$(grep -oP 'versionName "\K[^"]+' android/app/build.gradle)"
+          echo "v=$V" >> "$GITHUB_OUTPUT"
+          if gh release view "v$V" > /dev/null 2>&1; then
+            echo "::notice::الإصدار v$V منشورٌ من قبل، فلا يُستبدل. لإصدارٍ جديد ارفعوا versionName وversionCode في android/app/build.gradle."
+            echo "skip=1" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/download-artifact@v4
+        if: steps.ver.outputs.skip != '1'
+        with:
+          path: dist
+          pattern: waha-*
+          merge-multiple: true
       - name: Publish all versions to Releases
+        if: steps.ver.outputs.skip != '1'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="v${{ steps.ver.outputs.v }}"
+          APK="- أندرويد: waha.apk"
+          [ -f dist/waha.apk ] || APK="- أندرويد: لا ملف بعد؛ يظهر waha.apk بعد إضافة مفتاح التوقيع (SIGNING-AR.md)"
           NOTES="واحة اللسان العربي — النسخة ${{ steps.ver.outputs.v }}
-          - أندرويد: waha.apk (أو waha-debug.apk قبل إضافة مفتاح التوقيع)
+          $APK
           - ويندوز: waha-windows.zip (فك الضغط ثم شغّل Waha.exe)
           - لينكس: waha-linux.zip (فك الضغط ثم شغّل ./Waha)
           - ملفات الويب: waha-web.zip
           آخر تحديث: $(date -u '+%Y-%m-%d %H:%M') UTC"
           ls -la dist
-          if gh release view "$TAG" > /dev/null 2>&1; then
-            gh release upload "$TAG" dist/* --clobber
-            gh release edit "$TAG" --notes "$NOTES" --target "$GITHUB_SHA"
-          else
-            gh release create "$TAG" dist/* --title "واحة اللسان العربي $TAG" --notes "$NOTES" --target "$GITHUB_SHA"
-          fi
+          if ls dist/*debug* > /dev/null 2>&1; then echo "::error::a debug APK must never be published"; exit 1; fi
+          gh release create "$TAG" dist/* --title "واحة اللسان العربي $TAG" --notes "$NOTES" --target "$GITHUB_SHA"

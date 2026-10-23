@@ -30,7 +30,8 @@ function itemBody(w,o){
 function magById(id){return FAM.mags.filter(function(m){return m.id===id;})[0]||null;}
 function magItems(m){
   return (m.items||[]).map(function(it){
-    if(it.w){var w=workById(it.w); if(!w) return null; return {key:'w:'+w.id,w:w,sec:w.type,kid:kidById(w.kid),name:(kidById(w.kid)||{}).name||'',g:gOf(kidById(w.kid))};}
+    /* only works that are approved for the magazines now: a work sent back, or approved for the radio only, leaves the issue */
+    if(it.w){var w=workById(it.w); if(!w||w.status!=='approved'||(w.pub&&w.pub.mag===false)) return null; return {key:'w:'+w.id,w:w,sec:w.type,kid:kidById(w.kid),name:(kidById(w.kid)||{}).name||'',g:gOf(kidById(w.kid))};}
     if(it.x){var x=FAM.ext[it.x]; if(!x) return null; return {key:'x:'+x.id,w:x,sec:x.type,ext:1,name:x.author,g:x.g==='f'};}
     return null;
   }).filter(Boolean);
@@ -159,6 +160,8 @@ function magBack(id){var m=magById(id); if(!m) return; m.status='draft'; saveFam
 function magPublishLocal(id){var m=magById(id); if(!m) return; m.status='published'; m.pubAt=Date.now(); saveFam(); toast('اعتُمدت المجلة داخل البيت.'); magParent(id);}
 async function magExport(id){
   var m=magById(id); if(!m) return; var items=magItems(m);
+  if(!items.length) return toast('لا أعمال معتمدة للمجلّات في هذا العدد.');
+  if(!(await freshParent())) return;
   var keys=[]; items.forEach(function(i){if(i.w.audio) keys.push(i.w.audio); if(i.w.image) keys.push(i.w.image);});
   var media=await mediaMap(keys), size=sizeOfMap(media);
   var fam=[]; items.forEach(function(i){if(!i.ext&&i.kid&&fam.indexOf(i.kid)<0) fam.push(i.kid);}); var ed=kidById(m.editor); if(ed&&fam.indexOf(ed)<0) fam.push(ed);
@@ -177,7 +180,7 @@ async function magExport(id){
       return map;
     }});
   if(!r) return;
-  var names={}; items.forEach(function(i){if(!i.ext&&i.kid) names[i.key]=r[i.kid];}); if(ed) names.ed=r[ed.id];
+  var names={}; items.forEach(function(i){if(!i.ext&&i.kid) names[i.key]=r[i.kid.id];}); if(ed) names.ed=r[ed.id];
   var date=m.pubAt||Date.now();
   var html=pageShell('«'+m.name+'» العدد '+n2a(m.no),'<main class="xp">'+magBody(m,{media:'data',map:media,names:names,forExport:1,date:date})+'</main>',MAG_JS);
   var res=await shareFile(safeName(m.name+' - العدد '+m.no)+'.html',html,'مجلة '+m.name);
@@ -237,9 +240,11 @@ async function magRadio(){
 }
 
 /* ---------- exported pages ---------- */
-var FONTS='<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Noto+Naskh+Arabic:wght@400;600;700&family=Reem+Kufi:wght@500;700&display=swap">';
+/* A file that leaves the device asks nothing of the network: no web fonts (they would tell a font server who opened it, and when),
+   and a policy that lets the page load nothing from outside. Its sounds and pictures are inside it (data: URLs). */
+var EXPORT_CSP='<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; script-src \'unsafe-inline\'; img-src data:; media-src data:; font-src data:; base-uri \'none\'; form-action \'none\'">';
 function pageShell(title,body,js,pkg){
-  return '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(title)+'</title>'+FONTS+
+  return '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">'+EXPORT_CSP+'<meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(title)+'</title>'+
     '<style>'+EXPORT_CSS+'</style></head><body>'+body+
     (pkg?'<script type="application/json" id="kb-pkg">'+JSON.stringify(pkg).replace(/</g,'\\u003c')+'<\/script>':'')+
     (js?'<script>'+js+'<\/script>':'')+'</body></html>';

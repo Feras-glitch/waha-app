@@ -17,12 +17,18 @@ ERRS = []
 def ok(c, m):
     print(('PASS ' if c else 'FAIL ') + m)
     if not c: ERRS.append(m)
+async def until(p, js, timeout=10000):
+    """wait_for_function evaluates its text with eval, which the pages' content policy refuses; this asks the page instead"""
+    for _ in range(int(timeout / 100)):
+        if await p.evaluate(js): return
+        await asyncio.sleep(0.1)
+    raise TimeoutError('still false: ' + js)
 async def shot(p, n, full=False): await p.screenshot(path=os.path.join(SHOTS, n + '.png'), full_page=full)
 async def add_kid(p, name, g, by):
     await p.wait_for_selector('#kidForm'); await p.fill('#kfName', name); await p.click('[data-act="kfG"][data-v="%s"]' % g)
     await p.select_option('#kfBy', str(by)); await p.click('#kidForm button[type=submit]')
 async def oasis_ready(p): await p.wait_for_selector('#whoBtn'); await p.wait_for_timeout(700)
-async def hs_ready(p): await p.wait_for_selector('#kzHome'); await p.wait_for_function("typeof users!=='undefined'&&users.length>0&&!!state"); await p.wait_for_timeout(500)
+async def hs_ready(p): await p.wait_for_selector('#kzHome'); await until(p, "typeof users!=='undefined'&&users.length>0&&!!state"); await p.wait_for_timeout(500)
 async def corner(p):
     await p.goto('about:blank'); await p.goto(KZ + '#parent'); await p.wait_for_selector('#pinIn, .ph-top')
     if await p.locator('#pinIn').count():

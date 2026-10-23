@@ -22,6 +22,12 @@ ERRS = []
 def ok(c, m):
     print(('PASS ' if c else 'FAIL ') + m)
     if not c: ERRS.append(m)
+async def until(p, js, timeout=10000):
+    """wait_for_function evaluates its text with eval, which the pages' content policy refuses; this asks the page instead"""
+    for _ in range(int(timeout / 100)):
+        if await p.evaluate(js): return
+        await asyncio.sleep(0.1)
+    raise TimeoutError('still false: ' + js)
 async def shot(p, n, full=False): await p.screenshot(path=os.path.join(SHOTS, n + '.png'), full_page=full)
 FAMJS = "JSON.parse(localStorage.getItem('kb-family-v1'))"
 WORKSJS = "JSON.parse(localStorage.getItem('kb-works-v1')||'[]')"
@@ -83,7 +89,7 @@ async def main():
         ok(await p.evaluate("document.documentElement.scrollWidth <= innerWidth"), 'no horizontal scroll at 390px')
 
         # adding: all at once, and only once
-        await p.click('[data-act="fromAll"]'); await p.wait_for_function("document.querySelectorAll('[data-act=\"fromAdd\"]').length===0 && document.querySelectorAll('.from-row').length===3")
+        await p.click('[data-act="fromAll"]'); await until(p, "document.querySelectorAll('[data-act=\"fromAdd\"]').length===0 && document.querySelectorAll('.from-row').length===3")
         ws = await p.evaluate(WORKSJS)
         ok(len(ws) == 3 and all(w['status'] == 'approved' and w['kid'] == kid and w.get('audio') for w in ws), 'three approved works, each with its own copy of the sound')
         q = [w for w in ws if w['from']['id'] == 'r2']

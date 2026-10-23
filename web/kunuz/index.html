@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="utf-8">
+<meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file: 'unsafe-inline'; style-src 'self' file: 'unsafe-inline'; img-src 'self' file: data: blob:; media-src 'self' file: data: blob:; font-src 'self' file: data:; connect-src 'self' file: data: blob:; worker-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>كنوز البيان</title>
 <meta name="description" content="تطبيقٌ عائلي لأسرار العربية والقرآن: دروسٌ وتحدّيات، واستوديو يسجّل فيه الأطفال ويكتبون ويرسمون، ومجلّاتٌ يصنعونها بإشراف وليّ الأمر.">
@@ -15,6 +15,7 @@
 <meta name="apple-mobile-web-app-title" content="واحة اللسان">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="stylesheet" href="../fonts/fonts.css">
+<script src="../js/android-shim.js"></script>
 <style>
 /* Layout: a one-column "treasury" (max 760px) under an illuminated lapis band.
    Home → four chambers → lessons; each lesson is a 4-step path: اللغز · السرّ · التحدّي · الجوهرة.
@@ -2468,6 +2469,23 @@ function selectKid(id){
   var ol=document.getElementById('oasisLink'); if(ol){ol.hidden=false; ol.href=wahaURL({kid:id});}
 }
 function kidSave(){if(!KID||!KD) return; KD.prog=prog; KD.st=ST; lsSet(kidKey(KID.id),KD);}
+/* The app open twice (two tabs, or the oasis in one and this in another) shares these records. When the other copy saves, this one
+   takes the new records at once, so its next save does not write back an old copy over the other's changes. */
+window.addEventListener('storage',function(e){
+  try{
+    if(e.storageArea!==localStorage||!e.key||e.newValue==null) return;
+    if(e.key===FKEY){
+      var f=JSON.parse(e.newValue); if(!f||typeof f!=='object'||!Array.isArray(f.kids)) return;
+      f.mags=f.mags||[]; f.weekly=f.weekly||{}; f.ext=f.ext||{}; f.pinResets=f.pinResets||[]; FAM=f;
+      if(KID){ var k=kidById(KID.id); if(k) KID=k; else { KID=null; KD=null; prog={}; ST=freshST(); } }
+    }else if(e.key===WKEY){
+      var w=JSON.parse(e.newValue); if(!Array.isArray(w)) return; WORKS=w;
+      if(typeof CUR!=='undefined'&&CUR&&CUR.id){ CUR=workById(CUR.id)||CUR; }
+    }else if(KID&&e.key===kidKey(KID.id)){
+      KD=kidLoad(KID.id); prog=KD.prog; ST=KD.st;
+    }
+  }catch(err){}
+});
 
 /* ---------- avatars ---------- */
 var AVC=['lapis','teal','rose','gold','plum','olive'];
@@ -2520,14 +2538,25 @@ function ask(o){
       }
       if(e.target===el) closeModal();
     });
-    el.addEventListener('keydown',function(e){if(e.key==='Escape') closeModal();});
+    el.addEventListener('keydown',function(e){
+      if(e.key==='Escape') closeModal();
+      else if(e.key==='Enter'&&e.target.tagName==='INPUT'&&/^(text|password|number|)$/.test(e.target.type||'')){var b=el.querySelector('[data-m="1"]'); if(b){e.preventDefault();b.click();}}
+    });
     var f=el.querySelector('input,textarea,select,[data-m="1"]')||el.querySelector('[data-m]'); if(f){try{f.focus();}catch(e){}}
   });
 }
 function modalErr(el,msg){var e=el.querySelector('#mErr'); if(e) e.textContent=G(msg); return false;}
 
 /* ---------- parent PIN ---------- */
-var PARENT_UNTIL=0, PIN_FAILS=0, PIN_LOCK=0, AFTER_PIN=null;
+var PARENT_UNTIL=0, LAST_PIN=0, AFTER_PIN=null;
+/* one lock for the three sections (here, the oasis and the Hasaniya), kept across reloads: every fifth wrong entry
+   (PIN or recovery code) locks for a minute, then 2, 4, 8 … up to 15 minutes; a right entry clears it */
+var PIN_LOCK_KEY='kb-pin-lock', PIN_LOCK_MAX=15*60000;
+function pinLock(){try{var o=JSON.parse(localStorage.getItem(PIN_LOCK_KEY)||'{}')||{};return {fails:+o.fails||0,until:+o.until||0};}catch(e){return {fails:0,until:0};}}
+function pinLockLeft(){var o=pinLock(),u=o.until-Date.now(); if(u>PIN_LOCK_MAX){o.until=Date.now()+PIN_LOCK_MAX;try{localStorage.setItem(PIN_LOCK_KEY,JSON.stringify(o));}catch(e){} u=PIN_LOCK_MAX;} return u>0?u:0;}
+function pinFail(){var o=pinLock(); o.fails++; if(o.fails%5===0) o.until=Date.now()+Math.min(PIN_LOCK_MAX,60000*Math.pow(2,o.fails/5-1)); try{localStorage.setItem(PIN_LOCK_KEY,JSON.stringify(o));}catch(e){}}
+function pinOk(){try{localStorage.removeItem(PIN_LOCK_KEY);}catch(e){} LAST_PIN=Date.now(); parentTouch();}
+function pinLockMsg(){var s=Math.ceil(pinLockLeft()/1000); return 'محاولاتٌ خاطئةٌ كثيرة. أعيدوا المحاولة بعد '+(s>=60?n2a(Math.ceil(s/60))+' دقيقة':n2a(s)+' ثانية')+'.';}
 function parentOn(){return Date.now()<PARENT_UNTIL;}
 function parentTouch(){PARENT_UNTIL=Date.now()+15*60*1000;}
 async function hashPin(pin,salt){
@@ -2558,13 +2587,28 @@ function pinGate(){
 }
 async function pinSubmit(){
   var inp=document.getElementById('pinIn'), err=document.getElementById('pinErr'); if(!inp) return;
-  if(Date.now()<PIN_LOCK){err.textContent='محاولاتٌ كثيرة. انتظروا دقيقةً ثم أعيدوا المحاولة.';return;}
+  if(pinLockLeft()){inp.value='';err.textContent=pinLockMsg();return;}
   var h=await hashPin(inp.value.trim(),FAM.salt||'');
-  if(h===FAM.pin){PIN_FAILS=0;parentTouch();resetCancelByPin();var n=AFTER_PIN;AFTER_PIN=null;return n?n():parentHome();}
-  PIN_FAILS++; inp.value='';
-  if(PIN_FAILS>=5){PIN_LOCK=Date.now()+60000;PIN_FAILS=0;err.textContent='محاولاتٌ كثيرة. انتظروا دقيقة.';}
-  else err.textContent='الرمز غير صحيح.';
+  if(h===FAM.pin){pinOk();resetCancelByPin();var n=AFTER_PIN;AFTER_PIN=null;return n?n():parentHome();}
+  pinFail(); inp.value='';
+  err.textContent=pinLockLeft()?pinLockMsg():'الرمز غير صحيح.';
   try{inp.focus();}catch(e){}
+}
+/* before anything leaves the device (a file, a backup, a print) the PIN is typed for that very step: an open parent corner is not enough.
+   It is asked in a dialog, so the page under it (a certificate, a report) stays as it is. */
+async function freshParent(why){
+  if(Date.now()-LAST_PIN<30000) return true;
+  if(!FAM.pin) return false;
+  var msg='';
+  for(;;){
+    var r=await ask({title:'رمز وليّ الأمر',c:'plum',ok:'تابعوا',
+      html:'<p>'+(why||'هذه الخطوة تُخرج شيئًا من الجهاز، فتحتاج رمز وليّ الأمر الآن.')+'</p><label class="lbl" for="fpIn">الرمز</label>'+
+        '<input id="fpIn" class="pin-in" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off">'+(msg?'<p class="form-err" role="alert">'+msg+'</p>':''),
+      check:function(el){var v=el.querySelector('#fpIn').value.trim(); if(pinLockLeft()) return modalErr(el,pinLockMsg()); if(!v) return modalErr(el,'اكتبوا الرمز.'); return {p:v};}});
+    if(!r) return false;
+    if((await hashPin(r.p,FAM.salt||''))===FAM.pin){pinOk();resetCancelByPin();return true;}
+    pinFail(); msg=pinLockLeft()?pinLockMsg():'الرمز غير صحيح.';
+  }
 }
 /* ---------- forgotten PIN: the recovery code, or a request that waits 72 hours ----------
    No server and no e-mail: the proof is the recovery code shown once when the PIN was made (the parent mails it to himself or writes it down).
@@ -2610,6 +2654,21 @@ async function rcRenew(){
   rcShow(await rcCodeNew(),function(){pBackup();});
 }
 function resetDue(){ return FAM.resetReq&&FAM.resetReq.due||0; }
+/* The 72 hours are counted on this device's clock, which a child can move. So the request must also have been seen on three
+   different days (in any of the three sections, where its banner shows), and a clock moved back restarts the wait.
+   The same function is in waha_post.js and hasaniya_late.js. */
+var RESET_DAYS=3;
+function resetSeen(F){
+  var r=F&&F.resetReq, now=Date.now(); if(!r) return false;
+  var max=Math.max(+r.max||0,+r.at||0);
+  if(now<max-2*3600e3){ r.due=Math.max(+r.due||0,now+RESET_WAIT); r.days=[]; r.back=(+r.back||0)+1; }
+  r.max=Math.max(max,now); var t=new Date(now), d=t.getFullYear()+'-'+(t.getMonth()+1)+'-'+t.getDate();
+  r.days=Array.isArray(r.days)?r.days:[]; if(r.days.indexOf(d)<0) r.days=r.days.concat(d).slice(-10);
+  return true;
+}
+function resetDays(){ return FAM.resetReq&&Array.isArray(FAM.resetReq.days)?FAM.resetReq.days.length:0; }
+function resetReady(){ return !!FAM.resetReq&&Date.now()>=resetDue()&&resetDays()>=RESET_DAYS; }
+if(resetSeen(FAM)) saveFam();
 function resetBanner(){
   if(!FAM.resetReq) return '';
   return '<div class="banner rose reset-banner" role="status">'+ICON.lock+'<div class="bn-t"><strong>طُلبت إعادة ضبط رمز وليّ الأمر يوم '+fmtDate(FAM.resetReq.at)+'</strong>'+
@@ -2636,10 +2695,10 @@ function pinForgot(){
 }
 async function rcSubmit(){
   var inp=document.getElementById('rcIn'), err=document.getElementById('rcErr'); if(!inp||!FAM.rec) return;
-  if(Date.now()<PIN_LOCK){err.textContent='محاولاتٌ كثيرة. انتظروا دقيقةً ثم أعيدوا المحاولة.';return;}
+  if(pinLockLeft()){err.textContent=pinLockMsg();return;}
   var ok=(await hashPin(rcNorm(inp.value),FAM.rec.salt))===FAM.rec.h;
-  if(!ok){ PIN_FAILS++; if(PIN_FAILS>=5){PIN_LOCK=Date.now()+60000;PIN_FAILS=0;} err.textContent='رمز الاسترداد غير صحيح.'; return; }
-  PIN_FAILS=0; FAM.pin=null; FAM.resetReq=null; (FAM.pinLog=FAM.pinLog||[]).push({t:Date.now(),k:'code'}); saveFam();
+  if(!ok){ pinFail(); err.textContent=pinLockLeft()?pinLockMsg():'رمز الاسترداد غير صحيح.'; return; }
+  try{localStorage.removeItem(PIN_LOCK_KEY);}catch(e){} FAM.pin=null; FAM.resetReq=null; (FAM.pinLog=FAM.pinLog||[]).push({t:Date.now(),k:'code'}); saveFam();
   setupPin(true);
 }
 async function resetRequest(){
@@ -2648,7 +2707,7 @@ async function resetRequest(){
     html:'<p>يمكن ضبط رمزٍ جديد بعد ٧٢ ساعة، أي بعد '+fmtDate(due)+'. تظهر اللافتة طوال هذه المدة، وأيّ إدخالٍ صحيح للرمز الحالي يلغي الطلب.</p>'+
       '<p>وعند ضبط الرمز الجديد <strong>تُلغى كلّ الموافقات السابقة</strong>: تعود الأعمال المعتمدة إلى «بانتظار المراجعة»، والمجلّات غير الصادرة إلى المسوّدة. الأعمال والتسجيلات نفسها لا تُحذف.</p>'});
   if(!ok) return;
-  FAM.resetReq={at:Date.now(),due:due}; (FAM.pinLog=FAM.pinLog||[]).push({t:Date.now(),k:'request'}); saveFam();
+  FAM.resetReq={at:Date.now(),due:due}; resetSeen(FAM); (FAM.pinLog=FAM.pinLog||[]).push({t:Date.now(),k:'request'}); saveFam();
   resetPage();
 }
 function resetPage(){
@@ -2657,13 +2716,15 @@ function resetPage(){
     '<header class="page-head center-head"><span class="ch-ico big">'+ICON.lock+'</span><h1 class="h1">طلب إعادة ضبط الرمز</h1>'+
     '<p class="lead">سُجّل الطلب يوم '+fmtDate(FAM.resetReq.at)+'.</p></header>'+
     (left>0?'<p>يمكن ضبط رمزٍ جديد بعد '+fmtDate(due)+' (بعد نحو '+n2a(Math.ceil(left/3600000))+' ساعة).</p>'
-      :'<div class="actions"><button class="btn danger" type="button" data-act="resetDo">اضبطوا رمزًا جديدًا</button></div>')+
+      :resetReady()?'<div class="actions"><button class="btn danger" type="button" data-act="resetDo">اضبطوا رمزًا جديدًا</button></div>'
+      :'<p>مضت المدة، وبقي أن يُفتح التطبيق في '+n2a(RESET_DAYS)+' أيامٍ مختلفة منذ الطلب (فُتح حتى الآن في '+n2a(resetDays())+'). هذا يحمي الرمز من تقديم ساعة الجهاز.</p>')+
+    (FAM.resetReq.back?'<p class="muted small">رُجعت ساعة الجهاز إلى الوراء بعد الطلب، فبدأت المدة من جديد.</p>':'')+
     '<p class="muted small">إن لم تطلبوا هذا، فأدخلوا الرمز الحالي في ركن وليّ الأمر فيُلغى، أو ألغوه من هنا.</p>'+
     '<div class="actions"><button class="btn ghost" type="button" data-act="resetCancel">ألغوا الطلب</button></div></div>');
 }
 function resetCancel(){ FAM.resetReq=null; (FAM.pinLog=FAM.pinLog||[]).push({t:Date.now(),k:'cancel'}); saveFam(); toast('أُلغي الطلب، وبقي الرمز كما هو.'); who(); }
 function resetDo(){
-  if(!FAM.resetReq||Date.now()<resetDue()) return resetPage();
+  if(!resetReady()) return resetPage();
   WORKS.forEach(function(w){ if(w.status==='approved'){w.status='sent';w.updated=Date.now();} });
   FAM.mags.forEach(function(m){ if(m.status!=='published') m.status='draft'; });
   FAM.pin=null; FAM.resetReq=null; FAM.pinResets.push(Date.now()); saveWorks(); saveFam();
@@ -2919,7 +2980,7 @@ function newWork(type,extra){
   WORKS.unshift(w); saveWorks(); return w;
 }
 function isEmptyWork(w){return w.status==='draft'&&!w.audio&&!w.image&&!(w.text||'').trim()&&!(w.title||'').trim()&&!(w.w1||w.w2||w.q||w.ans||w.to||'').trim()&&!(w.type==='lamsa'&&w.lesson);}
-function pruneEmpty(){var n=WORKS.length;WORKS=WORKS.filter(function(w){return !(isEmptyWork(w)&&Date.now()-w.created>2000&&(!CUR||CUR.id!==w.id));});if(WORKS.length!==n) saveWorks();}
+function pruneEmpty(){var n=WORKS.length;WORKS=WORKS.filter(function(w){return !(isEmptyWork(w)&&Date.now()-w.created>2000&&(!CUR||CUR.id!==w.id)&&!(REC.mr&&REC.wid===w.id));});if(WORKS.length!==n) saveWorks();}
 async function deleteWork(w){
   if(w.audio) await blobDel(w.audio); if(w.image) await blobDel(w.image);
   WORKS=WORKS.filter(function(x){return x.id!==w.id;});
@@ -3094,7 +3155,7 @@ async function submitWork(){
 async function delWork(){
   var w=CUR; if(!w) return;
   var ok=await ask({title:'حذف هذا العمل؟',c:'rose',ok:'احذفه',danger:1,html:'<p>سيُحذف «'+esc(titleOf(w))+'» وتسجيله ورسمته من هذا الجهاز.</p>'});
-  if(!ok) return; recAbort(); await deleteWork(w); CUR=null; toast('حُذف العمل.'); worksView();
+  if(!ok) return; recDiscard(); await deleteWork(w); CUR=null; toast('حُذف العمل.'); worksView();
 }
 
 /* ---------- read-only view (child) ---------- */
@@ -3177,22 +3238,26 @@ function recCleanup(){
   REC.stream=null; REC.ctx=null;
 }
 async function recDone(){
-  var dur=(Date.now()-REC.t0)/1000, type=(REC.mr&&REC.mr.mimeType)||'audio/webm', wid=REC.wid, discard=REC.discard, sink=REC.sink;
+  var dur=(Date.now()-REC.t0)/1000, type=(REC.mr&&REC.mr.mimeType)||'audio/webm', wid=REC.wid, discard=REC.discard, sink=REC.sink, left=REC.left; REC.left=false;
   var blob=new Blob(REC.chunks,{type:type.split(';')[0]==='audio/mp4'?'audio/mp4':type});
   recCleanup(); REC.mr=null; REC.chunks=[]; REC.sink=null; REC.narId=null;
   if(discard){ if(sink&&sink.after) sink.after(); return; }
-  if(blob.size<800||dur<1){ if(sink){toast('التسجيل قصيرٌ جدًّا.'); if(sink.after) sink.after(); return;} renderRec(); return recMsg('التسجيل قصيرٌ جدًّا. ⟨أعِد|أعيدي⟩ المحاولة.'); }
+  if(blob.size<800||dur<1){ if(left) return; if(sink){toast('التسجيل قصيرٌ جدًّا.'); if(sink.after) sink.after(); return;} renderRec(); return recMsg('التسجيل قصيرٌ جدًّا. ⟨أعِد|أعيدي⟩ المحاولة.'); }
   if(sink) return sink.save(blob,dur);
-  await setWorkAudio(wid,blob,dur);
+  await setWorkAudio(wid,blob,dur,left);
 }
-function recAbort(){ if(REC.mr){REC.discard=true;recStop();} }
-async function setWorkAudio(wid,blob,dur){
+function recDiscard(){ if(REC.mr){REC.discard=true;recStop();} }
+/* leaving the page (back, home, another child) stops a work's recording and keeps it: a long story is not lost to one tap.
+   A recording made for something else (the narrator's voice) is dropped, as its page is gone. */
+function recAbort(){ if(REC.mr){ if(REC.sink) REC.discard=true; else REC.left=true; recStop(); } }
+async function setWorkAudio(wid,blob,dur,left){
   var w=workById(wid); if(!w) return;
   var key='a-'+w.id+'-'+Date.now().toString(36);
   try{await blobPut(key,blob);}catch(e){return recMsg('تعذّر حفظ التسجيل: قد تكون مساحة الجهاز ممتلئة.');}
   if(w.audio) await blobDel(w.audio);
   w.audio=key; w.dur=dur; w.updated=Date.now(); saveWorks();
-  if(CUR&&CUR.id===w.id){ renderRec(); toast('حُفظ تسجيلك.'); }
+  if(CUR&&CUR.id===w.id&&!left){ renderRec(); toast('حُفظ تسجيلك.'); }
+  else toast('حُفظ التسجيل في «'+clip(titleOf(w),30)+'».');
 }
 async function recDel(){
   var w=CUR; if(!w||!w.audio) return;
@@ -3395,6 +3460,7 @@ function pApproved(){
 /* ---------- consent before anything leaves the device ---------- */
 /* what: list of plain labels; returns {name} or false */
 async function consent(o){
+  if(!(await freshParent())) return false;
   var k=o.kid, f=gOf(k);
   var r=await ask({title:'قبل أن يخرج هذا من الجهاز',c:'rose',ok:'أوافق، أصدِروا الملف',
     html:'<div class="consent">'+
@@ -3476,9 +3542,11 @@ function parseReply(txt){
   if(!o||o.k!=='review'||typeof o.w!=='string') return {err:'هذا الرمز ليس ردَّ مراجعة.'};
   if(o.f!==FAM.fid) return {err:'هذا الرمز لعملٍ من جهازٍ آخر أو عائلةٍ أخرى.'};
   var w=workById(o.w); if(!w) return {err:'العمل الذي يخصّه الرمز لم يعد موجودًا على هذا الجهاز.'};
+  /* a code is read once: pasting an old reply again must not re-approve a work that was sent back since */
+  if((w.tcodes||[]).indexOf(m[2])>=0) return {err:'هذا الردّ أُدخل من قبل. إن راجع المعلّم العمل من جديد فاطلبوا منه رمزًا جديدًا.'};
   var d=o.d==='ok'?'ok':o.d==='fix'?'fix':null; if(!d) return {err:'الرمز لا يحمل قرارًا صالحًا.'};
   var r=null; if(o.r&&typeof o.r==='object'){r={};['m','h','t'].forEach(function(x){var v=+o.r[x];if(v>=1&&v<=3) r[x]=v;}); if(!Object.keys(r).length) r=null;}
-  return {w:w,d:d,r:r,n:String(o.n||'').slice(0,600),tn:String(o.tn||'').slice(0,40)};
+  return {w:w,d:d,r:r,n:String(o.n||'').slice(0,600),tn:String(o.tn||'').slice(0,40),code:m[2]};
 }
 function pCode(){
   L=null;
@@ -3501,6 +3569,7 @@ async function applyReply(p){
     html:'<p><strong>القرار:</strong> '+(p.d==='ok'?'اعتماد ✓':'يحتاج تعديلًا')+'</p>'+(p.r?'<p class="rub-line">'+rubStars(p.r)+'</p>':'')+(p.n?'<div class="note note-t"><p>'+esc(p.n).replace(/\n/g,'<br>')+'</p></div>':'')+
       (p.d==='fix'?'<p class="muted small">سيعود العمل إلى '+esc(k?k.name:'الطفل')+' مع ملاحظة المعلّم.</p>':'')});
   if(!ok) return;
+  if(p.code){ if((w.tcodes||[]).indexOf(p.code)>=0) return toast('هذا الردّ أُدخل من قبل.'); w.tcodes=(w.tcodes||[]).concat(p.code).slice(-30); }
   w.notes.push({by:'t',t:p.n,r:p.r,d:Date.now(),name:p.tn||''});
   if(p.r) w.trub=p.r;
   w.teacher={st:p.d,d:Date.now(),sentAt:w.teacher&&w.teacher.sentAt};
@@ -3686,6 +3755,7 @@ async function decryptStr(o,pass){
 }
 function canEncrypt(){return !!(window.crypto&&crypto.subtle&&window.TextEncoder);}
 async function backupMake(){
+  if(!(await freshParent('النسخة الاحتياطية تحمل بيانات الأطفال وأصواتهم، فتحتاج رمز وليّ الأمر الآن.'))) return;
   var opt=await ask({title:'نسخةٌ احتياطية مشفّرة',c:'plum',ok:'احفظوا النسخة',
     html:'<p>اختاروا كلمة سرٍّ تحفظونها جيدًا: لا يُفتح الملف إلا بها، ولا يمكن استرجاعها إن نُسيت.</p>'+
       (canEncrypt()?'<label class="lbl" for="bk1">كلمة السر (ستة أحرف أو أكثر)</label><input id="bk1" type="password" autocomplete="new-password">'+
@@ -3702,17 +3772,25 @@ async function backupMake(){
     }});
   if(!opt) return;
   toast('نُجهّز النسخة…');
-  var kids={}; FAM.kids.forEach(function(k){kids[k.id]=kidLoad(k.id);});
-  var keys=[]; try{keys=await blobKeys();}catch(e){}
-  var blobs={}; for(var i=0;i<keys.length;i++){var b=await blobGet(keys[i]); if(b) blobs[keys[i]]=await blobToDataURL(b);}
-  FAM.lastBackup=Date.now(); saveFam();
-  var oasis=null; try{oasis=await oasisExport();}catch(e){}
-  var hasaniya=null; try{hasaniya=await hasaniyaExport();}catch(e){}
-  var data=JSON.stringify({kind:'kb-backup',v:1,at:Date.now(),fam:FAM,works:WORKS,kids:kids,blobs:blobs,oasis:oasis,hasaniya:hasaniya});
+  /* «last backup» is written only once the file is made: a failed backup must not hide the monthly reminder */
+  var data, miss=[];
+  try{
+    var kids={}; FAM.kids.forEach(function(k){kids[k.id]=kidLoad(k.id);});
+    var keys=await blobKeys();
+    var blobs={}; for(var i=0;i<keys.length;i++){var b=await blobGet(keys[i]); if(b) blobs[keys[i]]=await blobToDataURL(b);}
+    var oasis=null; try{oasis=await oasisExport();}catch(e){miss.push('الواحة');}
+    var hasaniya=null; try{hasaniya=await hasaniyaExport();}catch(e){miss.push('الحسنية');}
+    var at=Date.now(), fam=JSON.parse(JSON.stringify(FAM)); fam.lastBackup=at; fam.lastBackupEnc=!!opt.pass;
+    data=JSON.stringify({kind:'kb-backup',v:1,at:at,fam:fam,works:WORKS,kids:kids,blobs:blobs,oasis:oasis,hasaniya:hasaniya});
+  }catch(e){ return toast('تعذّر تجهيز النسخة: '+(e&&e.message||'')+'. لم يُحفظ شيء.'); }
   if(opt.pass){ try{ data=await encryptStr(data,opt.pass); }catch(e){ return toast('تعذّر التشفير: '+(e&&e.message||'')); } }
-  var u=URL.createObjectURL(new Blob([data],{type:'application/json'})), a=document.createElement('a');
-  a.href=u; a.download='كنوز-البيان-نسخة-'+today()+(opt.pass?'-مشفّرة':'')+'.json'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(u);},60000);
-  FAM.lastBackupEnc=!!opt.pass; saveFam();
+  try{
+    var u=URL.createObjectURL(new Blob([data],{type:'application/json'})), a=document.createElement('a');
+    a.href=u; a.download='كنوز-البيان-نسخة-'+today()+(opt.pass?'-مشفّرة':'')+'.json'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(u);},60000);
+  }catch(e){ return toast('تعذّر حفظ الملف: '+(e&&e.message||'')); }
+  data=null;
+  FAM.lastBackup=Date.now(); FAM.lastBackupEnc=!!opt.pass; saveFam();
+  if(miss.length){ toast('حُفظت النسخة، لكن بلا '+miss.join(' و')+': تعذّرت قراءتها.'); return; }
   toast(opt.pass?'حُفظت النسخة المشفّرة في التنزيلات.':'حُفظت النسخة في التنزيلات.');
 }
 async function restorePicked(file){
@@ -3731,12 +3809,15 @@ async function restorePicked(file){
   var ok=await ask({title:'استعادة النسخة؟',c:'rose',ok:'استعيدوها',danger:1,html:'<p>نسخةٌ بتاريخ '+fmtDate(o.at)+' فيها '+n2a((o.fam.kids||[]).length)+' أطفال و'+n2a(o.works.length)+' عمل. <strong>ستحلّ محلّ كل ما على هذا الجهاز الآن.</strong></p>'});
   if(!ok) return;
   try{
-    var old=await blobKeys(); for(var i=0;i<old.length;i++) await blobDel(old[i]);
-    var bk=Object.keys(o.blobs||{}); for(var j=0;j<bk.length;j++){var b=dataURLToBlob(o.blobs[bk[j]]); if(b) await blobPut(bk[j],b);}
-    FAM.kids.forEach(function(k){try{localStorage.removeItem(kidKey(k.id));}catch(e){}});
+    /* the backup's files are written first, and only then is what it does not hold removed: a full disk or a broken file
+       stops the restore with this device's data still whole */
+    var old=await blobKeys(), bk=Object.keys(o.blobs||{});
+    for(var j=0;j<bk.length;j++){var b=dataURLToBlob(o.blobs[bk[j]]); if(b) await blobPut(bk[j],b);}
+    Object.keys(o.kids||{}).forEach(function(id){ if(!lsSet(kidKey(id),o.kids[id])) throw new Error('مساحة الجهاز'); });
+    for(var i=0;i<old.length;i++){ if(bk.indexOf(old[i])<0) await blobDel(old[i]); }
+    FAM.kids.forEach(function(k){ if(!(o.kids||{})[k.id]) try{localStorage.removeItem(kidKey(k.id));}catch(e){} });
     FAM=o.fam; FAM.mags=FAM.mags||[]; FAM.weekly=FAM.weekly||{}; FAM.ext=FAM.ext||{}; FAM.pinResets=FAM.pinResets||[]; FAM.nar=FAM.nar||{}; FAM.fs=FAM.fs||{done:{}};
     WORKS=o.works; saveFam(); saveWorks();
-    Object.keys(o.kids||{}).forEach(function(id){lsSet(kidKey(id),o.kids[id]);});
     if(o.oasis) await oasisImport(o.oasis);
     if(o.hasaniya) await hasaniyaImport(o.hasaniya);
     for(var x=0;x<FAM.kids.length;x++){if(FAM.kids[x].photo) await mediaURL('photo-'+FAM.kids[x].id);}
@@ -3791,7 +3872,8 @@ function itemBody(w,o){
 function magById(id){return FAM.mags.filter(function(m){return m.id===id;})[0]||null;}
 function magItems(m){
   return (m.items||[]).map(function(it){
-    if(it.w){var w=workById(it.w); if(!w) return null; return {key:'w:'+w.id,w:w,sec:w.type,kid:kidById(w.kid),name:(kidById(w.kid)||{}).name||'',g:gOf(kidById(w.kid))};}
+    /* only works that are approved for the magazines now: a work sent back, or approved for the radio only, leaves the issue */
+    if(it.w){var w=workById(it.w); if(!w||w.status!=='approved'||(w.pub&&w.pub.mag===false)) return null; return {key:'w:'+w.id,w:w,sec:w.type,kid:kidById(w.kid),name:(kidById(w.kid)||{}).name||'',g:gOf(kidById(w.kid))};}
     if(it.x){var x=FAM.ext[it.x]; if(!x) return null; return {key:'x:'+x.id,w:x,sec:x.type,ext:1,name:x.author,g:x.g==='f'};}
     return null;
   }).filter(Boolean);
@@ -3920,6 +4002,8 @@ function magBack(id){var m=magById(id); if(!m) return; m.status='draft'; saveFam
 function magPublishLocal(id){var m=magById(id); if(!m) return; m.status='published'; m.pubAt=Date.now(); saveFam(); toast('اعتُمدت المجلة داخل البيت.'); magParent(id);}
 async function magExport(id){
   var m=magById(id); if(!m) return; var items=magItems(m);
+  if(!items.length) return toast('لا أعمال معتمدة للمجلّات في هذا العدد.');
+  if(!(await freshParent())) return;
   var keys=[]; items.forEach(function(i){if(i.w.audio) keys.push(i.w.audio); if(i.w.image) keys.push(i.w.image);});
   var media=await mediaMap(keys), size=sizeOfMap(media);
   var fam=[]; items.forEach(function(i){if(!i.ext&&i.kid&&fam.indexOf(i.kid)<0) fam.push(i.kid);}); var ed=kidById(m.editor); if(ed&&fam.indexOf(ed)<0) fam.push(ed);
@@ -3938,7 +4022,7 @@ async function magExport(id){
       return map;
     }});
   if(!r) return;
-  var names={}; items.forEach(function(i){if(!i.ext&&i.kid) names[i.key]=r[i.kid];}); if(ed) names.ed=r[ed.id];
+  var names={}; items.forEach(function(i){if(!i.ext&&i.kid) names[i.key]=r[i.kid.id];}); if(ed) names.ed=r[ed.id];
   var date=m.pubAt||Date.now();
   var html=pageShell('«'+m.name+'» العدد '+n2a(m.no),'<main class="xp">'+magBody(m,{media:'data',map:media,names:names,forExport:1,date:date})+'</main>',MAG_JS);
   var res=await shareFile(safeName(m.name+' - العدد '+m.no)+'.html',html,'مجلة '+m.name);
@@ -3998,9 +4082,11 @@ async function magRadio(){
 }
 
 /* ---------- exported pages ---------- */
-var FONTS='<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Noto+Naskh+Arabic:wght@400;600;700&family=Reem+Kufi:wght@500;700&display=swap">';
+/* A file that leaves the device asks nothing of the network: no web fonts (they would tell a font server who opened it, and when),
+   and a policy that lets the page load nothing from outside. Its sounds and pictures are inside it (data: URLs). */
+var EXPORT_CSP='<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; script-src \'unsafe-inline\'; img-src data:; media-src data:; font-src data:; base-uri \'none\'; form-action \'none\'">';
 function pageShell(title,body,js,pkg){
-  return '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(title)+'</title>'+FONTS+
+  return '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">'+EXPORT_CSP+'<meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(title)+'</title>'+
     '<style>'+EXPORT_CSS+'</style></head><body>'+body+
     (pkg?'<script type="application/json" id="kb-pkg">'+JSON.stringify(pkg).replace(/</g,'\\u003c')+'<\/script>':'')+
     (js?'<script>'+js+'<\/script>':'')+'</body></html>';
@@ -5523,9 +5609,15 @@ async function fromAddOne(x){
   w.audio=key; w.dur=await blobDur(x.blob);
   WORKS.push(w); saveWorks(); return w;
 }
-async function fromAdd(i){ if(await fromAddOne(FROM.list[i])){ toast('أُضيف إلى «إذاعة الباكورة».'); pFrom(); } }
+/* copying a sound takes a moment: a second tap meanwhile would add the same recording twice */
+var FROM_BUSY=false;
+async function fromAdd(i){
+  if(FROM_BUSY) return; FROM_BUSY=true;
+  try{ if(await fromAddOne(FROM.list[i])){ toast('أُضيف إلى «إذاعة الباكورة».'); pFrom(); } } finally{ FROM_BUSY=false; }
+}
 async function fromAll(){
-  var n=0; for(var i=0;i<FROM.list.length;i++){ if(!fromWork(FROM.list[i])&&await fromAddOne(FROM.list[i])) n++; }
+  if(FROM_BUSY) return; FROM_BUSY=true; var n=0;
+  try{ for(var i=0;i<FROM.list.length;i++){ if(!fromWork(FROM.list[i])&&await fromAddOne(FROM.list[i])) n++; } } finally{ FROM_BUSY=false; }
   if(n) toast('أُضيف '+n2a(n)+' '+(n===1?'تسجيل':'تسجيلات')+' إلى «إذاعة الباكورة».'); pFrom();
 }
 async function pFrom(){
@@ -5570,7 +5662,7 @@ var ACT={
   resetDo:function(){resetDo();},
   resetCancel:function(){resetCancel();},
   setupPin:function(){ if(FAM.pin) needParent(function(){setupPin(false);}); else setupPin(false); },
-  pickKid:function(t,ds){selectKid(ds.id); if(!IN_KUNUZ) return toOasis(); home();},
+  pickKid:function(t,ds){PARENT_UNTIL=0; selectKid(ds.id); if(!IN_KUNUZ) return toOasis(); home();},
   kfG:function(t,ds){KF.name=(document.getElementById('kfName')||{}).value||KF.name;KF.g=ds.v;renderKidForm();},
   kfAv:function(t,ds){KF.name=(document.getElementById('kfName')||{}).value||KF.name;KF.av=ds.v;renderKidForm();},
   kfC:function(t,ds){KF.name=(document.getElementById('kfName')||{}).value||KF.name;KF.c=ds.v;renderKidForm();},
@@ -5612,7 +5704,12 @@ var ACT={
   magPreview:function(t,ds){magPreview(ds.id);}, magExport:function(t,ds){magExport(ds.id);}, magBack:function(t,ds){magBack(ds.id);}, magPublishLocal:function(t,ds){magPublishLocal(ds.id);},
   magRadio:function(){magRadio();},
   pMag:function(t,ds){magParent(ds.id);},
-  print:function(){ try{window.print();}catch(e){} },
+  /* printing can also save the page as a file or send it (Android's print screen), so it is the parent's step, logged like an export */
+  print:async function(){
+    if(!(await freshParent('الطباعة قد تحفظ الصفحة ملفًّا أو ترسلها، فتحتاج رمز وليّ الأمر.'))) return;
+    (FAM.waLog=FAM.waLog||[]).push({d:Date.now(),name:'طباعة: '+String(document.title||'').slice(0,60),kid:KID?KID.id:null}); if(FAM.waLog.length>200) FAM.waLog=FAM.waLog.slice(-200); saveFam();
+    try{window.print();}catch(e){}
+  },
   install:function(){doInstall();},
   narPlay:function(t,ds){narPlay(ds.id,t);},
   diag:needKid(function(){startDiag();}), pReport:function(t,ds){pReport(ds.id,ds.v);}, exReport:function(t,ds){exReport(ds.id,ds.v);},
@@ -5661,8 +5758,9 @@ APP.addEventListener('click',function(e){
     if(PARENT_ACTS.indexOf(ds.act)>=0) parentTouch();
     return fn(t,ds);
   }
-  if(t.id==='homeBtn'||t.hasAttribute('data-home')) return KID?home():who();
-  if(t.id==='kidChip') return who();
+  /* leaving for the child's pages ends the parent's session (the next parent step asks for the PIN again) */
+  if(t.id==='homeBtn'||t.hasAttribute('data-home')){ PARENT_UNTIL=0; return KID?home():who(); }
+  if(t.id==='kidChip'){ PARENT_UNTIL=0; return who(); }
   if(t.id==='footParent') return needParent(parentHome);
   if(t.id==='speak') return speak(t);
   if(!KID) return;

@@ -47,6 +47,22 @@ style = rd('parts/style.css')
 tokens = re.sub(r'/\*.*?\*/', '', style[:style.index('*{box-sizing:border-box}')], flags=re.S)
 
 
+# Every page of the product says what it may load: its own files, and images/sounds/fonts made on the device (data:, blob:).
+# Nothing from another host — the "nothing leaves the device" promise is enforced by the browser, not only by our code.
+# Inline scripts stay allowed (the pages are single files); file: covers the desktop app, which opens the pages from disk.
+CSP = ("default-src 'self' file:; script-src 'self' file: 'unsafe-inline'; style-src 'self' file: 'unsafe-inline'; "
+       "img-src 'self' file: data: blob:; media-src 'self' file: data: blob:; font-src 'self' file: data:; "
+       "connect-src 'self' file: data: blob:; worker-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'")
+CSP_META = '<meta http-equiv="Content-Security-Policy" content="%s">' % CSP
+
+
+def with_csp(html, charset):
+    i, head_end = html.find(charset), html.find('</head>')
+    if i < 0 or head_end < 0 or i > head_end:
+        raise SystemExit('cannot place the CSP: no %s in the head' % charset)
+    return html[:i + len(charset)] + CSP_META + html[i + len(charset):]
+
+
 def mini(css):
     css = re.sub(r'/\*.*?\*/', '', css, flags=re.S)
     return re.sub(r'\s*\n\s*', '', css)
@@ -82,12 +98,17 @@ node_check('kunuz', '(function(){\n' + js + '\n})();')
 shell = rd('parts/shell.html')
 assert shell.count('/*@ICON@*/') == 1
 kunuz = shell.replace('/*@ICON@*/', ICON).replace('/*@CSS@*/', app_css).replace('/*@JS@*/', js)
+kunuz = with_csp(kunuz, '<meta charset="utf-8">')
+if 'src="../js/android-shim.js"' not in kunuz:
+    raise SystemExit('kunuz/index.html must load ../js/android-shim.js: without it the Android app cannot save or send any file')
 write('kunuz/index.html', kunuz)
 
 # ---------- the oasis (front page) ----------
 sys.path.insert(0, P('tools'))
 import waha_build
-waha_build.build(icon=ICON)
+waha_build.build(icon=ICON, csp=CSP_META)
+if CSP_META not in open(os.path.join(DIST, 'index.html'), encoding='utf-8').read():
+    raise SystemExit('the oasis page has no CSP')
 
 # ---------- hasaniya/ (pinned copy + adapter) ----------
 shutil.copytree(P('parts', 'hasaniya'), os.path.join(DIST, 'hasaniya'))
@@ -103,6 +124,7 @@ for old, new in (('<link rel="manifest" href="manifest.json">', '<link rel="mani
     if h.count(old) != 1:
         raise SystemExit('hasaniya/index.html changed upstream; adapter hook not found: ' + old)
     h = h.replace(old, new)
+h = with_csp(h, '<meta charset="UTF-8">')
 open(hp, 'w', encoding='utf-8').write(h)
 # the adapter must wrap the Hasaniya from both ends, and everything it overrides or calls must still exist upstream
 scripts = re.findall(r'<script[^>]*src="([^"]+)"', h)

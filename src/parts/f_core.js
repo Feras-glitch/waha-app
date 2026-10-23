@@ -144,6 +144,23 @@ function selectKid(id){
   var ol=document.getElementById('oasisLink'); if(ol){ol.hidden=false; ol.href=wahaURL({kid:id});}
 }
 function kidSave(){if(!KID||!KD) return; KD.prog=prog; KD.st=ST; lsSet(kidKey(KID.id),KD);}
+/* The app open twice (two tabs, or the oasis in one and this in another) shares these records. When the other copy saves, this one
+   takes the new records at once, so its next save does not write back an old copy over the other's changes. */
+window.addEventListener('storage',function(e){
+  try{
+    if(e.storageArea!==localStorage||!e.key||e.newValue==null) return;
+    if(e.key===FKEY){
+      var f=JSON.parse(e.newValue); if(!f||typeof f!=='object'||!Array.isArray(f.kids)) return;
+      f.mags=f.mags||[]; f.weekly=f.weekly||{}; f.ext=f.ext||{}; f.pinResets=f.pinResets||[]; FAM=f;
+      if(KID){ var k=kidById(KID.id); if(k) KID=k; else { KID=null; KD=null; prog={}; ST=freshST(); } }
+    }else if(e.key===WKEY){
+      var w=JSON.parse(e.newValue); if(!Array.isArray(w)) return; WORKS=w;
+      if(typeof CUR!=='undefined'&&CUR&&CUR.id){ CUR=workById(CUR.id)||CUR; }
+    }else if(KID&&e.key===kidKey(KID.id)){
+      KD=kidLoad(KID.id); prog=KD.prog; ST=KD.st;
+    }
+  }catch(err){}
+});
 
 /* ---------- avatars ---------- */
 var AVC=['lapis','teal','rose','gold','plum','olive'];
@@ -196,14 +213,25 @@ function ask(o){
       }
       if(e.target===el) closeModal();
     });
-    el.addEventListener('keydown',function(e){if(e.key==='Escape') closeModal();});
+    el.addEventListener('keydown',function(e){
+      if(e.key==='Escape') closeModal();
+      else if(e.key==='Enter'&&e.target.tagName==='INPUT'&&/^(text|password|number|)$/.test(e.target.type||'')){var b=el.querySelector('[data-m="1"]'); if(b){e.preventDefault();b.click();}}
+    });
     var f=el.querySelector('input,textarea,select,[data-m="1"]')||el.querySelector('[data-m]'); if(f){try{f.focus();}catch(e){}}
   });
 }
 function modalErr(el,msg){var e=el.querySelector('#mErr'); if(e) e.textContent=G(msg); return false;}
 
 /* ---------- parent PIN ---------- */
-var PARENT_UNTIL=0, PIN_FAILS=0, PIN_LOCK=0, AFTER_PIN=null;
+var PARENT_UNTIL=0, LAST_PIN=0, AFTER_PIN=null;
+/* one lock for the three sections (here, the oasis and the Hasaniya), kept across reloads: every fifth wrong entry
+   (PIN or recovery code) locks for a minute, then 2, 4, 8 … up to 15 minutes; a right entry clears it */
+var PIN_LOCK_KEY='kb-pin-lock', PIN_LOCK_MAX=15*60000;
+function pinLock(){try{var o=JSON.parse(localStorage.getItem(PIN_LOCK_KEY)||'{}')||{};return {fails:+o.fails||0,until:+o.until||0};}catch(e){return {fails:0,until:0};}}
+function pinLockLeft(){var o=pinLock(),u=o.until-Date.now(); if(u>PIN_LOCK_MAX){o.until=Date.now()+PIN_LOCK_MAX;try{localStorage.setItem(PIN_LOCK_KEY,JSON.stringify(o));}catch(e){} u=PIN_LOCK_MAX;} return u>0?u:0;}
+function pinFail(){var o=pinLock(); o.fails++; if(o.fails%5===0) o.until=Date.now()+Math.min(PIN_LOCK_MAX,60000*Math.pow(2,o.fails/5-1)); try{localStorage.setItem(PIN_LOCK_KEY,JSON.stringify(o));}catch(e){}}
+function pinOk(){try{localStorage.removeItem(PIN_LOCK_KEY);}catch(e){} LAST_PIN=Date.now(); parentTouch();}
+function pinLockMsg(){var s=Math.ceil(pinLockLeft()/1000); return 'محاولاتٌ خاطئةٌ كثيرة. أعيدوا المحاولة بعد '+(s>=60?n2a(Math.ceil(s/60))+' دقيقة':n2a(s)+' ثانية')+'.';}
 function parentOn(){return Date.now()<PARENT_UNTIL;}
 function parentTouch(){PARENT_UNTIL=Date.now()+15*60*1000;}
 async function hashPin(pin,salt){
@@ -234,13 +262,28 @@ function pinGate(){
 }
 async function pinSubmit(){
   var inp=document.getElementById('pinIn'), err=document.getElementById('pinErr'); if(!inp) return;
-  if(Date.now()<PIN_LOCK){err.textContent='محاولاتٌ كثيرة. انتظروا دقيقةً ثم أعيدوا المحاولة.';return;}
+  if(pinLockLeft()){inp.value='';err.textContent=pinLockMsg();return;}
   var h=await hashPin(inp.value.trim(),FAM.salt||'');
-  if(h===FAM.pin){PIN_FAILS=0;parentTouch();resetCancelByPin();var n=AFTER_PIN;AFTER_PIN=null;return n?n():parentHome();}
-  PIN_FAILS++; inp.value='';
-  if(PIN_FAILS>=5){PIN_LOCK=Date.now()+60000;PIN_FAILS=0;err.textContent='محاولاتٌ كثيرة. انتظروا دقيقة.';}
-  else err.textContent='الرمز غير صحيح.';
+  if(h===FAM.pin){pinOk();resetCancelByPin();var n=AFTER_PIN;AFTER_PIN=null;return n?n():parentHome();}
+  pinFail(); inp.value='';
+  err.textContent=pinLockLeft()?pinLockMsg():'الرمز غير صحيح.';
   try{inp.focus();}catch(e){}
+}
+/* before anything leaves the device (a file, a backup, a print) the PIN is typed for that very step: an open parent corner is not enough.
+   It is asked in a dialog, so the page under it (a certificate, a report) stays as it is. */
+async function freshParent(why){
+  if(Date.now()-LAST_PIN<30000) return true;
+  if(!FAM.pin) return false;
+  var msg='';
+  for(;;){
+    var r=await ask({title:'رمز وليّ الأمر',c:'plum',ok:'تابعوا',
+      html:'<p>'+(why||'هذه الخطوة تُخرج شيئًا من الجهاز، فتحتاج رمز وليّ الأمر الآن.')+'</p><label class="lbl" for="fpIn">الرمز</label>'+
+        '<input id="fpIn" class="pin-in" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off">'+(msg?'<p class="form-err" role="alert">'+msg+'</p>':''),
+      check:function(el){var v=el.querySelector('#fpIn').value.trim(); if(pinLockLeft()) return modalErr(el,pinLockMsg()); if(!v) return modalErr(el,'اكتبوا الرمز.'); return {p:v};}});
+    if(!r) return false;
+    if((await hashPin(r.p,FAM.salt||''))===FAM.pin){pinOk();resetCancelByPin();return true;}
+    pinFail(); msg=pinLockLeft()?pinLockMsg():'الرمز غير صحيح.';
+  }
 }
 /* ---------- forgotten PIN: the recovery code, or a request that waits 72 hours ----------
    No server and no e-mail: the proof is the recovery code shown once when the PIN was made (the parent mails it to himself or writes it down).
@@ -286,6 +329,21 @@ async function rcRenew(){
   rcShow(await rcCodeNew(),function(){pBackup();});
 }
 function resetDue(){ return FAM.resetReq&&FAM.resetReq.due||0; }
+/* The 72 hours are counted on this device's clock, which a child can move. So the request must also have been seen on three
+   different days (in any of the three sections, where its banner shows), and a clock moved back restarts the wait.
+   The same function is in waha_post.js and hasaniya_late.js. */
+var RESET_DAYS=3;
+function resetSeen(F){
+  var r=F&&F.resetReq, now=Date.now(); if(!r) return false;
+  var max=Math.max(+r.max||0,+r.at||0);
+  if(now<max-2*3600e3){ r.due=Math.max(+r.due||0,now+RESET_WAIT); r.days=[]; r.back=(+r.back||0)+1; }
+  r.max=Math.max(max,now); var t=new Date(now), d=t.getFullYear()+'-'+(t.getMonth()+1)+'-'+t.getDate();
+  r.days=Array.isArray(r.days)?r.days:[]; if(r.days.indexOf(d)<0) r.days=r.days.concat(d).slice(-10);
+  return true;
+}
+function resetDays(){ return FAM.resetReq&&Array.isArray(FAM.resetReq.days)?FAM.resetReq.days.length:0; }
+function resetReady(){ return !!FAM.resetReq&&Date.now()>=resetDue()&&resetDays()>=RESET_DAYS; }
+if(resetSeen(FAM)) saveFam();
 function resetBanner(){
   if(!FAM.resetReq) return '';
   return '<div class="banner rose reset-banner" role="status">'+ICON.lock+'<div class="bn-t"><strong>طُلبت إعادة ضبط رمز وليّ الأمر يوم '+fmtDate(FAM.resetReq.at)+'</strong>'+
@@ -312,10 +370,10 @@ function pinForgot(){
 }
 async function rcSubmit(){
   var inp=document.getElementById('rcIn'), err=document.getElementById('rcErr'); if(!inp||!FAM.rec) return;
-  if(Date.now()<PIN_LOCK){err.textContent='محاولاتٌ كثيرة. انتظروا دقيقةً ثم أعيدوا المحاولة.';return;}
+  if(pinLockLeft()){err.textContent=pinLockMsg();return;}
   var ok=(await hashPin(rcNorm(inp.value),FAM.rec.salt))===FAM.rec.h;
-  if(!ok){ PIN_FAILS++; if(PIN_FAILS>=5){PIN_LOCK=Date.now()+60000;PIN_FAILS=0;} err.textContent='رمز الاسترداد غير صحيح.'; return; }
-  PIN_FAILS=0; FAM.pin=null; FAM.resetReq=null; (FAM.pinLog=FAM.pinLog||[]).push({t:Date.now(),k:'code'}); saveFam();
+  if(!ok){ pinFail(); err.textContent=pinLockLeft()?pinLockMsg():'رمز الاسترداد غير صحيح.'; return; }
+  try{localStorage.removeItem(PIN_LOCK_KEY);}catch(e){} FAM.pin=null; FAM.resetReq=null; (FAM.pinLog=FAM.pinLog||[]).push({t:Date.now(),k:'code'}); saveFam();
   setupPin(true);
 }
 async function resetRequest(){
@@ -324,7 +382,7 @@ async function resetRequest(){
     html:'<p>يمكن ضبط رمزٍ جديد بعد ٧٢ ساعة، أي بعد '+fmtDate(due)+'. تظهر اللافتة طوال هذه المدة، وأيّ إدخالٍ صحيح للرمز الحالي يلغي الطلب.</p>'+
       '<p>وعند ضبط الرمز الجديد <strong>تُلغى كلّ الموافقات السابقة</strong>: تعود الأعمال المعتمدة إلى «بانتظار المراجعة»، والمجلّات غير الصادرة إلى المسوّدة. الأعمال والتسجيلات نفسها لا تُحذف.</p>'});
   if(!ok) return;
-  FAM.resetReq={at:Date.now(),due:due}; (FAM.pinLog=FAM.pinLog||[]).push({t:Date.now(),k:'request'}); saveFam();
+  FAM.resetReq={at:Date.now(),due:due}; resetSeen(FAM); (FAM.pinLog=FAM.pinLog||[]).push({t:Date.now(),k:'request'}); saveFam();
   resetPage();
 }
 function resetPage(){
@@ -333,13 +391,15 @@ function resetPage(){
     '<header class="page-head center-head"><span class="ch-ico big">'+ICON.lock+'</span><h1 class="h1">طلب إعادة ضبط الرمز</h1>'+
     '<p class="lead">سُجّل الطلب يوم '+fmtDate(FAM.resetReq.at)+'.</p></header>'+
     (left>0?'<p>يمكن ضبط رمزٍ جديد بعد '+fmtDate(due)+' (بعد نحو '+n2a(Math.ceil(left/3600000))+' ساعة).</p>'
-      :'<div class="actions"><button class="btn danger" type="button" data-act="resetDo">اضبطوا رمزًا جديدًا</button></div>')+
+      :resetReady()?'<div class="actions"><button class="btn danger" type="button" data-act="resetDo">اضبطوا رمزًا جديدًا</button></div>'
+      :'<p>مضت المدة، وبقي أن يُفتح التطبيق في '+n2a(RESET_DAYS)+' أيامٍ مختلفة منذ الطلب (فُتح حتى الآن في '+n2a(resetDays())+'). هذا يحمي الرمز من تقديم ساعة الجهاز.</p>')+
+    (FAM.resetReq.back?'<p class="muted small">رُجعت ساعة الجهاز إلى الوراء بعد الطلب، فبدأت المدة من جديد.</p>':'')+
     '<p class="muted small">إن لم تطلبوا هذا، فأدخلوا الرمز الحالي في ركن وليّ الأمر فيُلغى، أو ألغوه من هنا.</p>'+
     '<div class="actions"><button class="btn ghost" type="button" data-act="resetCancel">ألغوا الطلب</button></div></div>');
 }
 function resetCancel(){ FAM.resetReq=null; (FAM.pinLog=FAM.pinLog||[]).push({t:Date.now(),k:'cancel'}); saveFam(); toast('أُلغي الطلب، وبقي الرمز كما هو.'); who(); }
 function resetDo(){
-  if(!FAM.resetReq||Date.now()<resetDue()) return resetPage();
+  if(!resetReady()) return resetPage();
   WORKS.forEach(function(w){ if(w.status==='approved'){w.status='sent';w.updated=Date.now();} });
   FAM.mags.forEach(function(m){ if(m.status!=='published') m.status='draft'; });
   FAM.pin=null; FAM.resetReq=null; FAM.pinResets.push(Date.now()); saveWorks(); saveFam();

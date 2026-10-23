@@ -9,7 +9,7 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
   'applyKidMode', 'showToast', 'requirePin', 'cancelPin', 'verifyPin', 'hasPin', 'showPinModal', 'managePin', 'changePin', 'removePin', 'forgotPin',
   'showUsersModal', 'openUserEditor', 'deleteUser', 'switchUser', 'exportBackup', 'importBackupFile', 'closePopup', 'appDismiss', 'showMap',
   'printCertificate', 'printTeacherReport', 'printAllCards', 'guideParentNote', 'selectParentNote', 'openHub', 'recAllForUser', 'learnedVerses',
-  'completedCount', 'guideStreak', 'openGuideJournal', 'escapeHtml', 'activeUserId', 'pinUnavailable'];
+  'completedCount', 'guideStreak', 'openGuideJournal', 'escapeHtml', 'activeUserId', 'pinUnavailable', 'pinLockState', 'pinLockSave'];
 (function () {
   'use strict';
   var FAMKEY = 'kb-family-v1', HOME = '../index.html', CORNER = '../kunuz/index.html#parent';
@@ -261,11 +261,14 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
       if (ok) {
         PARENT_UNTIL = Date.now() + 15 * 60 * 1000; LAST_PIN = Date.now();
         /* whoever knows the current PIN cancels a pending «forgot PIN» request */
-        var G = famGet(); if (G && G.resetReq) { G.resetReq = null; (G.pinLog = G.pinLog || []).push({ t: Date.now(), k: 'cancel-pin-hasaniya' }); famSet(G); }
+        var G = famGet(); if (G && G.resetReq) { G.resetReq = null; (G.pinLog = G.pinLog || []).push({ t: Date.now(), k: 'cancel-pin-hasaniya' }); famSet(G); var rb = document.getElementById('kzReset'); if (rb) rb.remove(); }
       }
       return ok;
     };
     hasPin = function () { return true; };
+    /* the lock after wrong entries is the family's, shared with the oasis and كنوز البيان (key kb-pin-lock, the same counting as here) */
+    pinLockState = function () { try { var o = JSON.parse(localStorage.getItem('kb-pin-lock') || '{}') || {}; return { fails: +o.fails || 0, until: Math.min(+o.until || 0, Date.now() + 15 * 60000) }; } catch (e) { return { fails: 0, until: 0 }; } };
+    pinLockSave = function (o) { try { if (o && (o.fails || o.until)) localStorage.setItem('kb-pin-lock', JSON.stringify({ fails: +o.fails || 0, until: +o.until || 0 })); else localStorage.removeItem('kb-pin-lock'); } catch (e) {} };
     /* a parent who just typed the PIN is not asked again for the next screen; the session ends when the child's map is back */
     requirePin = function (cb, message) {
       if (parentOn()) { if (cb) setTimeout(cb, 0); return; }
@@ -280,6 +283,29 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
       var t = document.getElementById('pinSubtitle'); if (t) t.textContent = (subtitle ? subtitle + ' — ' : '') + 'وهو رمز وليّ الأمر نفسه في الواحة.';
     };
   } catch (e) { console.warn('waha: pin', e); }
+
+  /* a pending «forgot PIN» request: its banner shows here too, and the day is counted (the same function as resetSeen in كنوز البيان) */
+  function resetSeen(F) {
+    var r = F && F.resetReq, now = Date.now(); if (!r) return false;
+    var max = Math.max(+r.max || 0, +r.at || 0);
+    if (now < max - 2 * 3600e3) { r.due = Math.max(+r.due || 0, now + 72 * 3600e3); r.days = []; r.back = (+r.back || 0) + 1; }
+    r.max = Math.max(max, now); var t = new Date(now), d = t.getFullYear() + '-' + (t.getMonth() + 1) + '-' + t.getDate();
+    r.days = Array.isArray(r.days) ? r.days : []; if (r.days.indexOf(d) < 0) r.days = r.days.concat(d).slice(-10);
+    return true;
+  }
+  try {
+    var RF = famGet();
+    if (RF && RF.resetReq) {
+      if (resetSeen(RF)) famSet(RF);
+      window.addEventListener('DOMContentLoaded', function () {
+        var d = function (t) { try { return new Date(t).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' }); } catch (e) { return ''; } };
+        var b = document.createElement('a'); b.id = 'kzReset'; b.href = CORNER; b.setAttribute('role', 'status'); b.dir = 'rtl';
+        b.style.cssText = 'display:block;position:relative;z-index:50;margin:8px 12px;padding:10px 14px;border-radius:12px;background:#fde8e4;color:#7a2318;border:1px solid #e9a99c;text-decoration:none;line-height:1.7';
+        b.textContent = '⚠ طُلبت إعادة ضبط رمز وليّ الأمر يوم ' + d(RF.resetReq.at) + '، ويمكن تنفيذها بعد ' + d(RF.resetReq.due) + '. إن لم تطلبوها فادخلوا ركن وليّ الأمر برمزكم الحالي فيُلغى الطلب.';
+        document.body.insertBefore(b, document.body.firstChild);
+      });
+    }
+  } catch (e) {}
 
   function toCorner() { location.href = CORNER; }
   function cornerSheet(title, text) {
