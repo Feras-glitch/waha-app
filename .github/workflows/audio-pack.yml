@@ -3,13 +3,15 @@
 # التطبيق نفسه لا يتّصل بأي موقع: التلاوة في الجهاز.
 #   للتعلّم: الحصري (المصحف المعلّم) آيةً آية، من everyayah.com
 #   للاستماع: عبد الرحمن العوسي، السورة كاملة، من archive.org
-# تُشغَّل برفع وسمٍ يبدأ بـ audio-v (git tag audio-v1 && git push origin audio-v1)، أو يدويًّا من صفحة Actions.
+# تُشغَّل برفع وسمٍ يبدأ بـ audio-v (git tag audio-v1 && git push origin audio-v1)، أو برفع فرعٍ اسمه audio-pack
+# (فتُحفظ في audio-v1)، أو يدويًّا من صفحة Actions.
 # إن تغيّر المحفوظ أو آيات «كنوز البيان» فابنوا حزمةً جديدة (audio-v2) وغيّروا AUDIO_TAG في build-all.yml.
 name: Audio pack
 
 on:
   push:
     tags: [ 'audio-v*' ]
+    branches: [ 'audio-pack' ]
   workflow_dispatch:
     inputs:
       tag:
@@ -31,7 +33,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 150
     env:
-      TAG: ${{ inputs.tag || github.ref_name }}
+      TAG: ${{ inputs.tag || (startsWith(github.ref, 'refs/tags/') && github.ref_name || 'audio-v1') }}
       KBPS: ${{ inputs.kbps || '32' }}
     steps:
       - uses: actions/checkout@v5
