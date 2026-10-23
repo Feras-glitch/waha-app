@@ -61,10 +61,44 @@ def kunuz_for_trip():
     return _j.loads(r.stdout)
 
 
+_HARAKAT = re.compile(r'[ً-ِْٕٓ-ٰٟۖ-ۭـ]')
+
+
+def _skeleton(s, word=False):
+    """Consonants and shadda only (long vowels, harakat and Uthmani marks dropped), to compare a lemma with a word in a verse."""
+    for a, b in (('ٔ', 'ء'), ('ٱ', 'ا'), ('أ', 'ء'), ('إ', 'ء'), ('آ', 'ء'), ('ؤ', 'ء'), ('ئ', 'ء'), ('ى', 'ي'), ('ة', 'ت')):
+        s = s.replace(a, b)
+    s = _HARAKAT.sub('', s)
+    if word:  # a shadda made by the word before it: tanween/nun on the first letter, or a sun letter after ال
+        s = re.sub(r'^(.)ّ', r'\1', s)
+        s = re.sub(r'^([وفبك]?ل?ال?)(.)ّ', r'\1\2', s)
+    return re.sub('[اوي]', '', s)
+
+
+def check_unknown_words(D):
+    """«الكلمة المجهولة» asks the meaning of the highlighted word, so it must be the lemma itself (it once highlighted
+    «عِلْمَ» for «عَلَّام»). Every consonant and shadda of the lemma has to appear, in order, in the word."""
+    bad = []
+    for k, p in D['palms'].items():
+        for u in p.get('unknown') or []:
+            v = u.get('verse')
+            if not v:
+                continue
+            if v['word'] not in v['text'].split(' '):
+                bad.append('%s «%s»: «%s» is not a word of %s %s' % (k, u['lemma'], v['word'], v['name'], v['a']))
+                continue
+            it = iter(_skeleton(v['word'], True))
+            if not all(c in it for c in _skeleton(u['lemma'])):
+                bad.append('%s «%s»: the verse highlights «%s» (%s %s)' % (k, u['lemma'], v['word'], v['name'], v['a']))
+    if bad:
+        raise SystemExit('waha data.json, unknown words:\n  ' + '\n  '.join(bad))
+
+
 def build(verbose=True, icon=''):
     page, data, app = rd('parts', 'waha', 'page.html'), rd('parts', 'waha', 'data.json'), rd('parts', 'waha', 'app.js')
     import json as _j
     D = _j.loads(data)
+    check_unknown_words(D)
     D['kunuz'] = kunuz_for_trip()
     data = _j.dumps(D, ensure_ascii=False, separators=(',', ':'))
     css, bridge, post = rd('parts', 'waha.css'), rd('parts', 'waha_bridge.js'), rd('parts', 'waha_post.js')
