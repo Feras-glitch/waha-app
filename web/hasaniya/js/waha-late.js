@@ -9,7 +9,7 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
   'applyKidMode', 'showToast', 'requirePin', 'cancelPin', 'verifyPin', 'hasPin', 'showPinModal', 'managePin', 'changePin', 'removePin', 'forgotPin',
   'showUsersModal', 'openUserEditor', 'deleteUser', 'switchUser', 'exportBackup', 'importBackupFile', 'closePopup', 'appDismiss', 'showMap',
   'printCertificate', 'printTeacherReport', 'printAllCards', 'guideParentNote', 'selectParentNote', 'openHub', 'recAllForUser', 'learnedVerses',
-  'completedCount', 'guideStreak', 'openGuideJournal', 'escapeHtml', 'activeUserId', 'pinUnavailable', 'pinLockState', 'pinLockSave'];
+  'completedCount', 'guideStreak', 'openGuideJournal', 'escapeHtml', 'activeUserId', 'pinUnavailable', 'pinLockState', 'pinLockSave', 'appBack'];
 (function () {
   'use strict';
   var FAMKEY = 'kb-family-v1', HOME = '../index.html', CORNER = '../kunuz/index.html#parent';
@@ -308,6 +308,8 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
   } catch (e) {}
 
   function toCorner() { location.href = CORNER; }
+  /* Android back on the Hasaniya's map goes to the oasis (the front door), not out of the app */
+  try { if (typeof appBack === 'function') { var _back = appBack; appBack = function () { if (_back.apply(this, arguments)) return true; try { saveState(); } catch (e) {} location.href = HOME; return true; }; } } catch (e) {}
   function cornerSheet(title, text) {
     sheet(title, '<p style="line-height:1.9">' + text + '</p>', [{ t: 'افتحوا ركن وليّ الأمر', cls: 'btn-success', on: function () { toCorner(); } }, { t: 'إغلاق' }]);
   }
@@ -425,6 +427,14 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
       sw.register = function () { return _reg('../sw.js'); };
     }
   } catch (e) {}
+  /* layout fixes on top of the Hasaniya's own styles: the «سمّع» offer stays centred on a phone (its fade-in animation used to
+     drop the centring and push it half off the screen), and the header buttons are full-size tap targets */
+  window.addEventListener('DOMContentLoaded', function () {
+    var st = document.createElement('style'); st.id = 'kzFix';
+    st.textContent = '.review-offer{left:12px!important;right:12px!important;transform:none!important;margin-inline:auto;width:auto;max-width:520px}' +
+      '#mainHeader .icon-btn,#kzHome{min-width:44px;min-height:44px}';
+    document.head.appendChild(st);
+  });
   window.addEventListener('DOMContentLoaded', function () {
     var left = document.querySelector('#mainHeader .header-left'); if (!left || document.getElementById('kzHome')) return;
     var b = document.createElement('button'); b.id = 'kzHome'; b.className = 'icon-btn'; b.type = 'button'; b.textContent = '🌴';

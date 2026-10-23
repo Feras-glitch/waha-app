@@ -197,7 +197,8 @@ async def main():
         ok(await p.evaluate("appBack()") is True, 'back steps out of a parent page')
         await p.wait_for_selector('.ph-top')
         await p.goto('about:blank'); await p.goto(KZ + '#kunuz'); await p.wait_for_selector('.hello')
-        ok(await p.evaluate("appBack()") is False, 'back on the chambers home leaves to the oasis')
+        ok(await p.evaluate("appBack()") is True, 'back on the chambers home goes to the oasis (not out of the app)')
+        await p.wait_for_selector('#whoBtn'); ok('kunuz' not in p.url, 'and the oasis opens')
 
         # deleting a child removes her Hasaniya data, keeps her brother's
         await p.evaluate(OPEN_DB + "openHs().then(d=>new Promise(r=>{var t=d.transaction('recs','readwrite'),o=t.objectStore('recs');o.put({key:'author|line|x1',kind:'line',uid:'author',text:'يَا هِنْدُ',blob:new Blob(['a'])});o.put({key:'author|line|x2',kind:'line',uid:'author',text:'يا يوسف',blob:new Blob(['a'])});t.oncomplete=()=>{d.close();r();};}))")

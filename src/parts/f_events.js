@@ -182,6 +182,8 @@ window.appBack=function(){
   if(document.querySelector('.modal')){ var c=document.querySelector('.modal [data-m="0"]'); if(c) c.click(); else closeModal(); return true; }
   if(PR){ presentClose(); return true; }
   var b=document.querySelector('#view .back'); if(b){ b.click(); return true; }
+  /* on this section's home, back goes to the oasis (the front door), not out of the app */
+  if(!GUEST&&FAM.pin){ PARENT_UNTIL=0; toOasis(); return true; }
   return false;
 };
 

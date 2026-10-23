@@ -367,6 +367,8 @@ details.adult p{margin:.5rem 0 0;font-size:.95rem;color:var(--ink-2);max-width:6
 /* ---------- footer ---------- */
 .foot{padding-block:22px 30px;border-top:1px solid var(--line);color:var(--ink-2);font-size:.92rem;display:flex;flex-direction:column;gap:10px}
 .foot p{margin:0;max-width:72ch}
+.foot-more summary{cursor:pointer;min-height:44px;display:flex;align-items:center;color:var(--ink);font-family:var(--font-display)}
+.foot-more p{margin:0 0 8px}
 .foot strong{color:var(--ink);font-family:var(--font-display);font-weight:500}
 .reset{all:unset;cursor:pointer;align-self:flex-start;font-size:.88rem;color:var(--rose);text-decoration:underline;text-underline-offset:4px}
 .reset:focus-visible{outline:2px solid var(--rose);outline-offset:2px}
@@ -666,11 +668,12 @@ img.drawn{max-width:100%;border-radius:12px;border:1px solid var(--line)}
   box-shadow:0 20px 50px rgba(0,0,0,.25);animation:rise .2s ease-out}
 .modal-card p{margin:0}
 @keyframes rise{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
-.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translate(-50%,30px);opacity:0;pointer-events:none;z-index:60;
+/* at the top: a message never covers the buttons a child or a parent is about to press (they sit at the bottom) */
+.toast{position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translate(-50%,-30px);opacity:0;pointer-events:none;z-index:60;
   max-width:min(92vw,520px);padding:10px 18px;border-radius:12px;background:var(--ink);color:var(--paper);font-family:var(--font-body);font-size:1rem;line-height:1.7;
   box-shadow:0 10px 30px rgba(0,0,0,.25);transition:transform .2s,opacity .2s;text-align:center}
 .toast.on{transform:translate(-50%,0);opacity:1}
-.foot-parent{all:unset;cursor:pointer;align-self:flex-start;display:inline-flex;align-items:center;gap:8px;font-family:var(--font-display);color:var(--plum);font-size:1rem}
+.foot-parent{all:unset;cursor:pointer;align-self:flex-start;display:inline-flex;align-items:center;gap:8px;min-height:44px;font-family:var(--font-display);color:var(--plum);font-size:1rem}
 .foot-parent svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .foot-parent:focus-visible{outline:2px solid var(--plum);outline-offset:2px}
 
@@ -1065,8 +1068,10 @@ body.guest .foot,body.guest #kidChip,body.guest #tray{display:none!important}
 
   <footer class="wrap foot">
     <button class="foot-parent" id="footParent" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg> ركن وليّ الأمر</button>
-    <p><strong>للوالدين والمعلّمين:</strong> كل فائدةٍ هنا منسوبةٌ إلى صاحبها وكتابه، وفي «المصدر وحاشية للكبار» تفصيلٌ وخلافٌ لم نُثقل به الصغار. القواعد البيانية المذكورة استقراءٌ أغلبيّ كما قرّره أصحابها.</p>
+    <details class="foot-more"><summary>للوالدين والمعلّمين: المصادر والخصوصية</summary>
+    <p>كل فائدةٍ هنا منسوبةٌ إلى صاحبها وكتابه، وفي «المصدر وحاشية للكبار» تفصيلٌ وخلافٌ لم نُثقل به الصغار. القواعد البيانية المذكورة استقراءٌ أغلبيّ كما قرّره أصحابها.</p>
     <p>نصوص الآيات على رواية حفص عن عاصم بالرسم الإملائي، ورابط «استمع للتلاوة» يفتح موقع quran.com. كلّ ما يصنعه الأطفال يبقى على هذا الجهاز، ولا يخرج منه إلا بموافقة وليّ الأمر.</p>
+    </details>
   </footer>
 </div>
 <noscript><p style="padding:24px;font-family:sans-serif" dir="rtl">يحتاج هذا التطبيق إلى تفعيل JavaScript في المتصفح.</p></noscript>
@@ -2518,7 +2523,7 @@ var MODAL=null;
 function closeModal(){ if(!MODAL) return; var m=MODAL; MODAL=null; m.el.remove(); m.res(false); }
 function ask(o){
   return new Promise(function(res){
-    closeModal();
+    closeModal(); var tt=document.getElementById('toast'); if(tt) tt.classList.remove('on');
     var el=document.createElement('div'); el.className='modal'; el.setAttribute('role','dialog'); el.setAttribute('aria-modal','true');
     el.innerHTML=G('<div class="modal-card" style="--ax:var(--'+(o.c||'lapis')+')"><h2 class="h2" id="mTitle">'+o.title+'</h2>'+(o.html||'')+
       '<p class="form-err" id="mErr" role="alert"></p><div class="actions">'+(o.ok?'<button class="btn'+(o.danger?' danger':'')+'" type="button" data-m="1">'+o.ok+'</button>':'')+
@@ -2581,7 +2586,7 @@ function pinGate(){
   go('<div class="ax-page narrow" style="--ax:var(--plum)"><button class="back" type="button" data-act="backKid">'+BACK+' رجوع</button>'+
     '<header class="page-head center-head"><span class="ch-ico big">'+ICON.lock+'</span><h1 class="h1">ركن وليّ الأمر</h1>'+
     '<p class="lead">هذه المنطقة للوالدين. أدخلوا رمز وليّ الأمر للمتابعة.</p></header>'+
-    '<form class="form" id="pinForm" autocomplete="off"><label for="pinIn">الرمز</label>'+
+    '<form class="form" id="pinForm" autocomplete="off" novalidate><label for="pinIn">الرمز</label>'+
     '<input id="pinIn" class="pin-in" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" required>'+
     '<p class="form-err" id="pinErr" role="alert"></p><div class="actions"><button class="btn" type="submit">دخول</button></div></form>'+
     '<button class="link small" type="button" data-act="pinForgot">نسيتم الرمز؟</button></div>');
@@ -2590,6 +2595,7 @@ function pinGate(){
 async function pinSubmit(){
   var inp=document.getElementById('pinIn'), err=document.getElementById('pinErr'); if(!inp) return;
   if(pinLockLeft()){inp.value='';err.textContent=pinLockMsg();return;}
+  if(!inp.value.trim()){err.textContent='اكتبوا الرمز.';try{inp.focus();}catch(e){}return;}
   var h=await hashPin(inp.value.trim(),FAM.salt||'');
   if(h===FAM.pin){pinOk();resetCancelByPin();var n=AFTER_PIN;AFTER_PIN=null;return n?n():parentHome();}
   pinFail(); inp.value='';
@@ -2687,7 +2693,7 @@ function pinForgot(){
   go('<div class="ax-page narrow" style="--ax:var(--rose)"><button class="back" type="button" data-act="parent">'+BACK+' رجوع</button>'+
     '<header class="page-head center-head"><span class="ch-ico big">'+ICON.lock+'</span><h1 class="h1">نسيتم الرمز؟</h1>'+
     (FAM.rec?'<p class="lead">أدخلوا <strong>رمز الاسترداد</strong> الذي ظهر لكم عند إنشاء الرمز، وأرسلتموه إلى بريدكم أو كتبتموه.</p></header>'+
-      '<form class="form" id="recForm" autocomplete="off"><label for="rcIn">رمز الاسترداد</label><input id="rcIn" dir="ltr" lang="en" autocomplete="off" autocapitalize="characters" spellcheck="false" required>'+
+      '<form class="form" id="recForm" autocomplete="off" novalidate><label for="rcIn">رمز الاسترداد</label><input id="rcIn" dir="ltr" lang="en" autocomplete="off" autocapitalize="characters" spellcheck="false" required>'+
       '<p class="form-err" id="rcErr" role="alert"></p><div class="actions"><button class="btn" type="submit">تحقّقوا</button></div></form>'
      :'<p class="lead">لم يُنشأ لهذا الجهاز رمز استرداد بعد.</p></header>')+
     '<section><h2 class="h2">'+(FAM.rec?'فقدتم رمز الاسترداد أيضًا؟':'إعادة الضبط بالانتظار')+'</h2>'+
@@ -2698,6 +2704,7 @@ function pinForgot(){
 async function rcSubmit(){
   var inp=document.getElementById('rcIn'), err=document.getElementById('rcErr'); if(!inp||!FAM.rec) return;
   if(pinLockLeft()){err.textContent=pinLockMsg();return;}
+  if(!rcNorm(inp.value)){err.textContent='اكتبوا رمز الاسترداد.';return;}
   var ok=(await hashPin(rcNorm(inp.value),FAM.rec.salt))===FAM.rec.h;
   if(!ok){ pinFail(); err.textContent=pinLockLeft()?pinLockMsg():'رمز الاسترداد غير صحيح.'; return; }
   try{localStorage.removeItem(PIN_LOCK_KEY);}catch(e){} FAM.pin=null; FAM.resetReq=null; (FAM.pinLog=FAM.pinLog||[]).push({t:Date.now(),k:'code'}); saveFam();
@@ -2768,7 +2775,7 @@ function setupPin(afterReset){
   go('<div class="ax-page narrow" style="--ax:var(--plum)">'+
     '<header class="page-head center-head"><span class="ch-ico big">'+ICON.lock+'</span><h1 class="h1">'+(afterReset?'رمزٌ جديد':'رمز وليّ الأمر')+'</h1>'+
     '<p class="lead">من أربعة أرقامٍ إلى ستة. اختاروا رمزًا لا يعرفه الأطفال، ولا يُحفظ إلا على هذا الجهاز.</p></header>'+
-    '<form class="form" id="setPinForm" autocomplete="off"><label for="p1">الرمز</label><input id="p1" class="pin-in" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" required>'+
+    '<form class="form" id="setPinForm" autocomplete="off" novalidate><label for="p1">الرمز</label><input id="p1" class="pin-in" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" required>'+
     '<label for="p2">أعيدوا كتابة الرمز</label><input id="p2" class="pin-in" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" required>'+
     '<p class="form-err" id="setPinErr" role="alert"></p><div class="actions"><button class="btn" type="submit">احفظوا الرمز</button></div></form></div>');
 }
@@ -2813,7 +2820,7 @@ function renderKidForm(){
   go('<div class="ax-page narrow" style="--ax:var(--lapis)">'+(first?'':'<button class="back" type="button" data-act="pKids">'+BACK+' الأطفال</button>')+
     '<header class="page-head"><span class="eyebrow">ركن وليّ الأمر</span><h1 class="h1">'+(k.id?'ملفّ '+esc(k.name):(first?'ملفّ الطفل الأول':'طفلٌ جديد'))+'</h1>'+
     '<p class="lead">يخاطب التطبيقُ الطفلَ باسمه، وبصيغة المذكّر أو المؤنّث في كل نصوصه وتعليقاته.</p></header>'+
-    '<form class="form" id="kidForm" autocomplete="off">'+
+    '<form class="form" id="kidForm" autocomplete="off" novalidate>'+
       '<div class="kf-prev">'+avatarHTML(prev,'l')+'</div>'+
       '<label for="kfName">الاسم</label><input id="kfName" maxlength="24" required value="'+escA(k.name)+'" placeholder="الاسم الذي يُنادى به">'+
       '<span class="lbl" id="kfGL">ولدٌ أم بنت؟</span><div class="seg big" role="radiogroup" aria-labelledby="kfGL">'+
@@ -2824,11 +2831,13 @@ function renderKidForm(){
       '<span class="lbl">الصورة الرمزية</span><div class="av-pick">'+
         '<button type="button" class="avp'+(k.av==='letter'?' on':'')+'" data-act="kfAv" data-v="letter" aria-label="الحرف الأول من الاسم">'+avatarHTML({name:k.name||'؟',c:k.c,av:'letter'},'s')+'</button>'+
         AVE.map(function(e){return '<button type="button" class="avp'+(k.av===e?' on':'')+'" data-act="kfAv" data-v="'+e+'">'+avatarHTML({c:k.c,av:e},'s')+'</button>';}).join('')+'</div>'+
-      '<span class="lbl">اللون</span><div class="sw-pick">'+AVC.map(function(c){return '<button type="button" class="sw'+(k.c===c?' on':'')+'" style="--avc:var(--'+c+')" data-act="kfC" data-v="'+c+'" aria-label="'+c+'"></button>';}).join('')+'</div>'+
+      '<span class="lbl">اللون</span><div class="sw-pick">'+AVC.map(function(c){return '<button type="button" class="sw'+(k.c===c?' on':'')+'" style="--avc:var(--'+c+')" data-act="kfC" data-v="'+c+'" aria-label="'+({lapis:'أزرق',teal:'فيروزي',rose:'وردي',gold:'ذهبي',plum:'بنفسجي',olive:'زيتوني'}[c]||c)+'" aria-pressed="'+(k.c===c)+'"></button>';}).join('')+'</div>'+
       '<details class="adult"'+(k.photo||k.newPhoto?' open':'')+'><summary>صورةٌ شخصية (اختيارية)</summary>'+
         '<p>تظهر على هذا الجهاز وحده، ولا تدخل أبدًا في أي ملفٍ يُرسَل: المجلّات والإهداءات وملفات المعلّم تستعمل الحرف الأول أو الصورة الرمزية.</p>'+
         '<div class="actions"><label class="btn ghost file-btn">'+ICON.camera+' اختاروا صورة<input type="file" accept="image/*" data-file="kidPhoto" hidden></label>'+
         ((k.photo&&!k.dropPhoto)||k.newPhoto?'<button type="button" class="btn ghost" data-act="kfNoPhoto">احذفوا الصورة</button>':'')+'</div></details>'+
+      /* the first child: a second one can be added right away, before the phone is handed over */
+      (!k.id&&!FAM.kids.length?'<label class="tog"><input type="checkbox" id="kfMore"><span>في البيت طفلٌ آخر: أضيفوه بعد هذا</span></label>':'')+
       '<p class="form-err" id="kfErr" role="alert"></p>'+
       '<div class="actions"><button class="btn" type="submit">'+(k.id?'احفظوا':'أضيفوا الطفل')+'</button></div></form></div>');
 }
@@ -2849,7 +2858,9 @@ async function kidFormSubmit(){
   if(KF.newPhoto){await blobPut('photo-'+k.id,KF.newPhoto); k.photo=true; await mediaURL('photo-'+k.id);}
   else if(KF.dropPhoto){await blobDel('photo-'+k.id); k.photo=false;}
   if(URLS['photo-tmp']){try{URL.revokeObjectURL(URLS['photo-tmp']);}catch(e){} delete URLS['photo-tmp'];}
+  var more=!!(document.getElementById('kfMore')||{}).checked;
   saveFam(); var first=FAM.kids.length===1&&isNew; KF=null;
+  if(first&&more){ selectKid(k.id); toast('حُفظ ملفّ '+k.name+'. والآن الطفل الثاني.'); return kidForm(null); }
   if(first){PARENT_UNTIL=0;selectKid(k.id);if(!IN_KUNUZ) return toOasis();toast(Gx('⟨أهلًا بك|أهلًا بكِ⟩ يا ',k.g==='f')+k.name+'!');return home();}
   toast('حُفظ ملفّ '+k.name+'.'); pKids();
 }
@@ -3466,7 +3477,7 @@ async function consent(o){
   var k=o.kid, f=gOf(k);
   var r=await ask({title:'قبل أن يخرج هذا من الجهاز',c:'rose',ok:'أوافق، أصدِروا الملف',
     html:'<div class="consent">'+
-      '<p>سيُصنع '+(o.link?'رابطٌ':'ملفٌّ واحد')+' '+(o.to?'لـ'+esc(o.to)+' ':'')+'يحتوي على:</p><ul class="checks small">'+o.what.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>'+
+      '<p>سيُصنع '+(o.link?'رابطٌ':'ملفٌّ واحد')+' '+(o.to?(/^ال/.test(o.to)?'لل'+esc(o.to.slice(2)):'لـ'+esc(o.to))+' ':'')+'يحتوي على:</p><ul class="checks small">'+o.what.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>'+
       '<label for="cName" class="lbl">الاسم الذي يظهر في الملف</label><input id="cName" maxlength="30" value="'+escA(o.name!=null?o.name:(k?k.name:''))+'">'+
       '<label class="tog"><input type="checkbox" id="cAnon"><span>بلا اسم (يظهر: '+Gx('⟨صديقٌ صغير|صديقةٌ صغيرة⟩',f)+')</span></label>'+
       '<div class="warn-box"><strong>تنبيه:</strong> بعد الإرسال يخرج '+(o.link?'الرابط':'الملف')+' من أيديكم: يستطيع من يستلمه أن يحفظه أو يعيد إرساله، ولا يستطيع التطبيق استرجاعه. الصورة الشخصية للطفل لا تدخل الملف أبدًا.</div>'+
@@ -3555,7 +3566,7 @@ function pCode(){
   var sent=WORKS.filter(function(w){return w.teacher&&w.teacher.st==='sent';});
   go('<div class="ax-page narrow" style="--ax:var(--lapis)"><button class="back" type="button" data-act="parent">'+BACK+' ركن وليّ الأمر</button>'+
     '<header class="page-head"><h1 class="h1">ردّ المعلّم</h1><p class="lead">حين يراجع المعلّم الملف، يضغط «أنشئ رمز الردّ» ويرسله إليكم. ألصقوا الرسالة كاملةً هنا.</p></header>'+
-    '<form class="form" id="codeForm"><label for="codeIn">رسالة المعلّم أو الرمز</label><textarea id="codeIn" rows="4" dir="ltr" placeholder="KB1:…"></textarea>'+
+    '<form class="form" id="codeForm" novalidate><label for="codeIn">رسالة المعلّم أو الرمز</label><textarea id="codeIn" rows="4" dir="ltr" placeholder="KB1:…"></textarea>'+
     '<p class="form-err" id="codeErr" role="alert"></p><div class="actions"><button class="btn" type="submit">اقرؤوا الردّ</button></div></form>'+
     (sent.length?'<section><h2 class="h2">أو أدخلوا ردّه بأنفسكم</h2><p class="muted small">إن لم تعمل أزرار الملف عند المعلّم (يحدث هذا في بعض معاينات الهاتف)، يكفي أن يكتب لكم رأيه في رسالة.</p><ul class="wlist">'+sent.map(function(w){var k=kidById(w.kid);return '<li><button class="wrow" type="button" data-act="manualReply" data-id="'+w.id+'"><span class="ch-ico">'+ICON[typeOf(w).ic]+'</span><span class="wr-main"><span class="wr-t">'+esc(titleOf(w))+'</span><span class="wr-s">'+(k?esc(k.name)+' · ':'')+'أُرسل '+fmtDate(w.teacher.sentAt)+'</span></span></button></li>';}).join('')+'</ul></section>':'')+
   '</div>');
@@ -3898,7 +3909,7 @@ function magNew(){
   L=null;
   go('<div class="ax-page narrow" style="--ax:var(--gold)"><button class="back" type="button" data-act="mags">'+BACK+' مجلّاتنا</button>'+
     '<header class="page-head"><h1 class="h1">مجلةٌ جديدة</h1><p class="lead">⟨ستكون|ستكونين⟩ ⟨رئيس|رئيسة⟩ تحريرها: ⟨تختار|تختارين⟩ الأعمال ⟨وترتّبها|وترتّبينها⟩، ويشارك فيها إخوتك.</p></header>'+
-    '<form class="form" id="magForm"><span class="lbl">اسم المجلة</span><div class="mag-names">'+MAGN.map(function(x,i){return '<label class="mn" style="--ax:var(--'+x[2]+')"><input type="radio" name="mn" value="'+x[0]+'"'+(i===0?' checked':'')+'><span class="mn-n">'+x[0]+'</span><span class="mn-d">'+x[1]+'</span></label>';}).join('')+
+    '<form class="form" id="magForm" novalidate><span class="lbl">اسم المجلة</span><div class="mag-names">'+MAGN.map(function(x,i){return '<label class="mn" style="--ax:var(--'+x[2]+')"><input type="radio" name="mn" value="'+x[0]+'"'+(i===0?' checked':'')+'><span class="mn-n">'+x[0]+'</span><span class="mn-d">'+x[1]+'</span></label>';}).join('')+
       '<label class="mn" style="--ax:var(--plum)"><input type="radio" name="mn" value="*"><span class="mn-n">اسمٌ من اختياري</span><input id="mnCustom" maxlength="20" placeholder="اسم المجلة"></label></div>'+
       '<label for="mTitle2" class="lbl">عنوان هذا العدد</label><input id="mTitle2" maxlength="40" placeholder="مثلًا: عدد الشتاء، أو: أسرار الحروف">'+
       '<p class="form-err" id="magErr" role="alert"></p><div class="actions"><button class="btn" type="submit">⟨أنشئ|أنشئي⟩ المجلة</button></div></form></div>');
@@ -5832,6 +5843,8 @@ window.appBack=function(){
   if(document.querySelector('.modal')){ var c=document.querySelector('.modal [data-m="0"]'); if(c) c.click(); else closeModal(); return true; }
   if(PR){ presentClose(); return true; }
   var b=document.querySelector('#view .back'); if(b){ b.click(); return true; }
+  /* on this section's home, back goes to the oasis (the front door), not out of the app */
+  if(!GUEST&&FAM.pin){ PARENT_UNTIL=0; toOasis(); return true; }
   return false;
 };
 

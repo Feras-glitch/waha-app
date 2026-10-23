@@ -282,11 +282,12 @@ img.drawn{max-width:100%;border-radius:12px;border:1px solid var(--line)}
   box-shadow:0 20px 50px rgba(0,0,0,.25);animation:rise .2s ease-out}
 .modal-card p{margin:0}
 @keyframes rise{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
-.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translate(-50%,30px);opacity:0;pointer-events:none;z-index:60;
+/* at the top: a message never covers the buttons a child or a parent is about to press (they sit at the bottom) */
+.toast{position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translate(-50%,-30px);opacity:0;pointer-events:none;z-index:60;
   max-width:min(92vw,520px);padding:10px 18px;border-radius:12px;background:var(--ink);color:var(--paper);font-family:var(--font-body);font-size:1rem;line-height:1.7;
   box-shadow:0 10px 30px rgba(0,0,0,.25);transition:transform .2s,opacity .2s;text-align:center}
 .toast.on{transform:translate(-50%,0);opacity:1}
-.foot-parent{all:unset;cursor:pointer;align-self:flex-start;display:inline-flex;align-items:center;gap:8px;font-family:var(--font-display);color:var(--plum);font-size:1rem}
+.foot-parent{all:unset;cursor:pointer;align-self:flex-start;display:inline-flex;align-items:center;gap:8px;min-height:44px;font-family:var(--font-display);color:var(--plum);font-size:1rem}
 .foot-parent svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .foot-parent:focus-visible{outline:2px solid var(--plum);outline-offset:2px}
 

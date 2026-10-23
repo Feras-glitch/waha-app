@@ -122,7 +122,7 @@ async function consent(o){
   var k=o.kid, f=gOf(k);
   var r=await ask({title:'قبل أن يخرج هذا من الجهاز',c:'rose',ok:'أوافق، أصدِروا الملف',
     html:'<div class="consent">'+
-      '<p>سيُصنع '+(o.link?'رابطٌ':'ملفٌّ واحد')+' '+(o.to?'لـ'+esc(o.to)+' ':'')+'يحتوي على:</p><ul class="checks small">'+o.what.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>'+
+      '<p>سيُصنع '+(o.link?'رابطٌ':'ملفٌّ واحد')+' '+(o.to?(/^ال/.test(o.to)?'لل'+esc(o.to.slice(2)):'لـ'+esc(o.to))+' ':'')+'يحتوي على:</p><ul class="checks small">'+o.what.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>'+
       '<label for="cName" class="lbl">الاسم الذي يظهر في الملف</label><input id="cName" maxlength="30" value="'+escA(o.name!=null?o.name:(k?k.name:''))+'">'+
       '<label class="tog"><input type="checkbox" id="cAnon"><span>بلا اسم (يظهر: '+Gx('⟨صديقٌ صغير|صديقةٌ صغيرة⟩',f)+')</span></label>'+
       '<div class="warn-box"><strong>تنبيه:</strong> بعد الإرسال يخرج '+(o.link?'الرابط':'الملف')+' من أيديكم: يستطيع من يستلمه أن يحفظه أو يعيد إرساله، ولا يستطيع التطبيق استرجاعه. الصورة الشخصية للطفل لا تدخل الملف أبدًا.</div>'+
@@ -211,7 +211,7 @@ function pCode(){
   var sent=WORKS.filter(function(w){return w.teacher&&w.teacher.st==='sent';});
   go('<div class="ax-page narrow" style="--ax:var(--lapis)"><button class="back" type="button" data-act="parent">'+BACK+' ركن وليّ الأمر</button>'+
     '<header class="page-head"><h1 class="h1">ردّ المعلّم</h1><p class="lead">حين يراجع المعلّم الملف، يضغط «أنشئ رمز الردّ» ويرسله إليكم. ألصقوا الرسالة كاملةً هنا.</p></header>'+
-    '<form class="form" id="codeForm"><label for="codeIn">رسالة المعلّم أو الرمز</label><textarea id="codeIn" rows="4" dir="ltr" placeholder="KB1:…"></textarea>'+
+    '<form class="form" id="codeForm" novalidate><label for="codeIn">رسالة المعلّم أو الرمز</label><textarea id="codeIn" rows="4" dir="ltr" placeholder="KB1:…"></textarea>'+
     '<p class="form-err" id="codeErr" role="alert"></p><div class="actions"><button class="btn" type="submit">اقرؤوا الردّ</button></div></form>'+
     (sent.length?'<section><h2 class="h2">أو أدخلوا ردّه بأنفسكم</h2><p class="muted small">إن لم تعمل أزرار الملف عند المعلّم (يحدث هذا في بعض معاينات الهاتف)، يكفي أن يكتب لكم رأيه في رسالة.</p><ul class="wlist">'+sent.map(function(w){var k=kidById(w.kid);return '<li><button class="wrow" type="button" data-act="manualReply" data-id="'+w.id+'"><span class="ch-ico">'+ICON[typeOf(w).ic]+'</span><span class="wr-main"><span class="wr-t">'+esc(titleOf(w))+'</span><span class="wr-s">'+(k?esc(k.name)+' · ':'')+'أُرسل '+fmtDate(w.teacher.sentAt)+'</span></span></button></li>';}).join('')+'</ul></section>':'')+
   '</div>');

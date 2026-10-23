@@ -348,6 +348,8 @@ details.adult p{margin:.5rem 0 0;font-size:.95rem;color:var(--ink-2);max-width:6
 /* ---------- footer ---------- */
 .foot{padding-block:22px 30px;border-top:1px solid var(--line);color:var(--ink-2);font-size:.92rem;display:flex;flex-direction:column;gap:10px}
 .foot p{margin:0;max-width:72ch}
+.foot-more summary{cursor:pointer;min-height:44px;display:flex;align-items:center;color:var(--ink);font-family:var(--font-display)}
+.foot-more p{margin:0 0 8px}
 .foot strong{color:var(--ink);font-family:var(--font-display);font-weight:500}
 .reset{all:unset;cursor:pointer;align-self:flex-start;font-size:.88rem;color:var(--rose);text-decoration:underline;text-underline-offset:4px}
 .reset:focus-visible{outline:2px solid var(--rose);outline-offset:2px}

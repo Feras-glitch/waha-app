@@ -156,6 +156,36 @@ def check_gender(D):
         raise SystemExit('waha data.json, masculine address outside ⟨m|f⟩:\n  ' + '\n  '.join(bad))
 
 
+def check_verses(D):
+    """A verse shown anywhere in the oasis (palm cards, riddles, conjugations…) must match the Quran pages the app carries
+    (Uthmani text, Tanzil), whole or as an excerpt; a riddle's blank «……» hides a part of it. Verse 1 may carry the basmala."""
+    A = {}
+    for pg in D['quran']['pages']:
+        for x in pg['ayat']:
+            A[(x[0], x[1])] = x[2]
+    bad, n = [], [0]
+    def walk(o, path):
+        if isinstance(o, dict):
+            s_, a_, t = o.get('s'), o.get('a'), o.get('text')
+            if isinstance(s_, int) and isinstance(a_, int) and isinstance(t, str) and (s_, a_) in A:
+                n[0] += 1; full = A[(s_, a_)]
+                parts = [x.strip() for x in t.split('……')]
+                w = parts[0].split(' ')
+                if a_ == 1 and len(w) > 4 and re.sub(r'[\u064B-\u065F\u0670\u06D6-\u06ED]', '', ' '.join(w[:4])).replace('ٱ', 'ا') == 'بسم الله الرحمن الرحيم':
+                    parts[0] = ' '.join(w[4:])
+                if not all(x in full for x in parts if x):
+                    bad.append('%s: %s %s:%s «%s»' % (path, o.get('name', ''), s_, a_, t[:50]))
+            for k, v in o.items():
+                walk(v, path + '/' + k)
+        elif isinstance(o, list):
+            for i, v in enumerate(o):
+                walk(v, '%s/%d' % (path, i))
+    walk({k: v for k, v in D.items() if k != 'quran'}, '')
+    if bad:
+        raise SystemExit('waha data.json, verses that do not match the mushaf pages:\n  ' + '\n  '.join(bad[:20]))
+    return n[0]
+
+
 def build(verbose=True, icon='', csp=''):
     page, data, app = rd('parts', 'waha', 'page.html'), rd('parts', 'waha', 'data.json'), rd('parts', 'waha', 'app.js')
     import json as _j
@@ -163,6 +193,7 @@ def build(verbose=True, icon='', csp=''):
     check_unknown_words(D)
     check_grading(app)
     check_gender(D)
+    check_verses(D)
     D['kunuz'] = kunuz_for_trip()
     data = _j.dumps(D, ensure_ascii=False, separators=(',', ':'))
     css, bridge, post = rd('parts', 'waha.css'), rd('parts', 'waha_bridge.js'), rd('parts', 'waha_post.js')

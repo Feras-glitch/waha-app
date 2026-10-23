@@ -54,7 +54,7 @@ function magNew(){
   L=null;
   go('<div class="ax-page narrow" style="--ax:var(--gold)"><button class="back" type="button" data-act="mags">'+BACK+' مجلّاتنا</button>'+
     '<header class="page-head"><h1 class="h1">مجلةٌ جديدة</h1><p class="lead">⟨ستكون|ستكونين⟩ ⟨رئيس|رئيسة⟩ تحريرها: ⟨تختار|تختارين⟩ الأعمال ⟨وترتّبها|وترتّبينها⟩، ويشارك فيها إخوتك.</p></header>'+
-    '<form class="form" id="magForm"><span class="lbl">اسم المجلة</span><div class="mag-names">'+MAGN.map(function(x,i){return '<label class="mn" style="--ax:var(--'+x[2]+')"><input type="radio" name="mn" value="'+x[0]+'"'+(i===0?' checked':'')+'><span class="mn-n">'+x[0]+'</span><span class="mn-d">'+x[1]+'</span></label>';}).join('')+
+    '<form class="form" id="magForm" novalidate><span class="lbl">اسم المجلة</span><div class="mag-names">'+MAGN.map(function(x,i){return '<label class="mn" style="--ax:var(--'+x[2]+')"><input type="radio" name="mn" value="'+x[0]+'"'+(i===0?' checked':'')+'><span class="mn-n">'+x[0]+'</span><span class="mn-d">'+x[1]+'</span></label>';}).join('')+
       '<label class="mn" style="--ax:var(--plum)"><input type="radio" name="mn" value="*"><span class="mn-n">اسمٌ من اختياري</span><input id="mnCustom" maxlength="20" placeholder="اسم المجلة"></label></div>'+
       '<label for="mTitle2" class="lbl">عنوان هذا العدد</label><input id="mTitle2" maxlength="40" placeholder="مثلًا: عدد الشتاء، أو: أسرار الحروف">'+
       '<p class="form-err" id="magErr" role="alert"></p><div class="actions"><button class="btn" type="submit">⟨أنشئ|أنشئي⟩ المجلة</button></div></form></div>');
