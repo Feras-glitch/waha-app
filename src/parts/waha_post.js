@@ -107,7 +107,8 @@
     if (!r.ok && lockLeft()) setTimeout(function () { var fb = $('pinFb'); if (fb) fb.textContent = lockMsg(); }, 0);
     return r.ok;
   };
-  function sessionOpen(at) { PARENT_UNTIL = (at || Date.now()) + SESSION_MS; LAST_FOR = 'used'; }
+  /* a parent session asks the browser to keep the family's data (ENG-05): a PIN typed is a gesture of the parent */
+  function sessionOpen(at) { PARENT_UNTIL = (at || Date.now()) + SESSION_MS; LAST_FOR = 'used'; try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () {}); } catch (e) {} }
   /* a pending «forgot PIN» request (made in the parent corner) is cancelled by anyone who knows the current PIN, and shown to everyone meanwhile */
   function resetCancelByPin() {
     var F = famGet(); if (!F || !F.resetReq) return;
@@ -166,6 +167,16 @@
   var HID_AT = 0;
   document.addEventListener('visibilitychange', function () { if (document.hidden) HID_AT = Date.now(); else if (HID_AT && Date.now() - HID_AT > 60000) { HID_AT = 0; endSession(); } });
   window.addEventListener('pagehide', function () { PARENT_UNTIL = 0; });
+  /* a board left on screen closes with its session (15 minutes from the PIN): checked every few seconds, and before any tap on it
+     (a tap inside a sheet, such as the PIN sheet itself, still works) */
+  function onBoard() { return typeof cur !== 'undefined' && cur && cur.o === 'dad'; }
+  setInterval(function () { if (PARENT_UNTIL && Date.now() >= PARENT_UNTIL && onBoard()) endSession(); }, 5000);
+  document.addEventListener('click', function (e) {
+    if (!onBoard() || Date.now() < PARENT_UNTIL) return;
+    if (LAST_FOR === 'gate' && Date.now() - LAST_PIN < 5000) return;
+    var t = e.target; if (t && t.closest && t.closest('#sheet,[role="dialog"],dialog')) return;
+    e.preventDefault(); e.stopPropagation(); endSession();
+  }, true);
   window.addEventListener('pageshow', function (e) { if (e.persisted) endSession(); });
 
   /* a restore made in another tab: reload, so this page never writes the old progress back */
@@ -204,7 +215,7 @@
     };
     return '<details class="wkplan" style="margin-top:10px"><summary style="cursor:pointer;font-weight:700">📅 خطة الأسبوع</summary>' +
       '<p class="note" style="margin:6px 0">اقتراحٌ لا قيد. يتمّ الأسبوع بأربعة أيام من السبت إلى الجمعة، ويُحسب اليوم بأيّ قسمٍ لعب فيه الطفل.</p>' +
-      ks.map(function (k, i) { var n = 0; try { n = weekPlayed(i); } catch (e) {} return '<p style="margin:4px 0"><b>' + esc(k.name) + '</b> (' + esc(typeof ageWords === 'function' ? ageWords(k.age) : AR(k.age)) + '): ' + plan(k.age) + ' <span class="ref">☀️ ' + AR(n) + ' من ٤</span></p>'; }).join('') + '</details>';
+      ks.map(function (k, i) { var n = 0; try { n = weekPlayed(i); } catch (e) {} return '<p style="margin:4px 0"><b>' + esc(k.name) + '</b> (' + esc(typeof ageWords === 'function' ? ageWords(k.age) : AR(k.age)) + '): ' + plan(k.age) + ' <span class="ref">☀️ ' + (n >= 4 ? 'تمّ الأسبوع (' + AR(n) + ' أيام)' : AR(n) + ' من ٤') + '</span></p>'; }).join('') + '</details>';
   }
   function parentHub() {
     var s = $('sheet');
@@ -239,16 +250,16 @@
   }
   /* one sheet before anything leaves: what leaves, that it is then out of the parents' hands, and the PIN typed here for this
      one file (a PIN typed a moment ago for something else does not count, and this one opens nothing else) */
-  function consentSheet(name) {
+  function consentSheet(name, who) {
     return new Promise(function (res) {
-      var s = $('sheet'), k = (typeof K === 'function' && K()) || {}, f = k.gender === 'f', n = esc(k.name || 'الطفل'), r = lastReset(), hold = exportHold();
+      var s = $('sheet'), k = (who && (who.name || who.note)) ? who : ((typeof K === 'function' && K()) || {}), f = k.gender === 'f', n = esc(k.name || 'الطفل'), r = lastReset(), hold = exportHold();
       s.innerHTML = '<div class="top"><h2 style="font-family:var(--f-ui);font-size:1.3rem">تنبيهٌ قبل إخراج ملف</h2><button class="x" aria-label="إغلاق">✕</button></div>' +
-        '<p style="margin:0">سيخرج من الجهاز: <b>' + esc(name) + '</b></p>' +
-        '<p class="note">' + (/^idhaa-/.test(String(name)) ? 'فيه أسماء الإخوة الذين شاركوا في الإذاعة وأصواتهم: ' + esc((typeof kids !== 'undefined' ? kids : []).map(function (x) { return x.name; }).join('، ')) : 'قد يحمل اسم ' + n + (f ? ' وصوتها وكتابتها' : ' وصوته وكتابته')) + '. وبعد إرساله إلى المعلم أو غيره لا يبقى في يدكم: من يصله يستطيع أن يحفظه أو يعيد إرساله.</p>' +
+        '<p style="margin:0">سيخرج من الجهاز: <b><bdi dir="ltr">' + esc(name) + '</bdi></b></p>' +
+        '<p class="note">' + (k.note ? esc(k.note) : /^idhaa-/.test(String(name)) ? 'فيه أسماء الإخوة الذين شاركوا في الإذاعة وأصواتهم: ' + esc((typeof kids !== 'undefined' ? kids : []).map(function (x) { return x.name; }).join('، ')) : 'قد يحمل اسم ' + n + (f ? ' وصوتها وكتابتها' : ' وصوته وكتابته') + (k.extra ? '، ' + esc(k.extra) : '')) + '. وبعد إرساله إلى المعلم أو غيره لا يبقى في يدكم: من يصله يستطيع أن يحفظه أو يعيد إرساله.</p>' +
         (r && Date.now() - r < 30 * 864e5 ? '<p class="note" style="color:var(--bad)">⚠ تغيّر رمز وليّ الأمر يوم ' + esc(fmtDay(r)) + '. إن لم تكونوا أنتم من غيّره فلا توافقوا، وراجعوا ركن وليّ الأمر.</p>' : '') +
         (hold ? '<p class="note" style="color:var(--bad)">⚠ أُعيد ضبط الرمز بالانتظار دون رمز الاسترداد، فالإخراج موقوفٌ حتى ' + esc(fmtDay(hold)) + '. لرفع الإيقاف الآن اكتبوا <b>رمز الاسترداد القديم</b> (الذي كان قبل إعادة الضبط).</p>' +
           '<label class="note" for="kzRc" style="display:block;margin:6px 0 2px">رمز الاسترداد القديم</label><input id="kzRc" dir="ltr" lang="en" autocomplete="off" autocapitalize="characters" spellcheck="false" style="width:100%">'
-          : '<label class="note" for="kzPin" style="display:block;margin:6px 0 2px">رمز وليّ الأمر لهذا الملف</label><input id="kzPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" style="width:100%">') +
+          : '<label class="note" for="kzPin" style="display:block;margin:6px 0 2px">رمز وليّ الأمر لهذا الملف</label><input id="kzPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" class="f" style="width:100%;min-height:48px;font-size:1.25rem;letter-spacing:.3em;text-align:center">') +
         '<label class="row" style="gap:8px;align-items:center;min-height:44px"><input type="checkbox" id="kzOk" style="width:22px;height:22px"> أوافق على إخراج هذا الملف</label>' +
         '<p class="fb" id="kzFb" role="alert"></p>' +
         '<div class="btns" style="justify-content:flex-start"><button class="btn" type="button" id="kzGo" disabled>أخرجوه</button><button class="btn ghost" type="button" id="kzNo">إلغاء</button></div>';
@@ -272,6 +283,35 @@
       var first = s.querySelector('#kzPin') || s.querySelector('#kzRc'); if (first) try { first.focus(); } catch (e) {}
     });
   }
+  /* a file from outside the house (a gift from another family, a teacher's reply) comes in only through the parents: they see
+     what it carries, type the PIN on this sheet for this one file, and the import is logged next to the exports */
+  window.importSheet = function (title, lines) {
+    return new Promise(function (res) {
+      var s = $('sheet'), L = (lines || []).slice(0, 12);
+      s.innerHTML = '<div class="top"><h2 style="font-family:var(--f-ui);font-size:1.3rem">' + esc(title) + '</h2><button class="x" aria-label="إغلاق">✕</button></div>' +
+        '<p class="note" style="margin:0">ما في الملف:</p><ul style="margin:4px 0 8px;padding-inline-start:22px">' + L.map(function (l) { return '<li>' + esc(l) + '</li>'; }).join('') + ((lines || []).length > 12 ? '<li>…</li>' : '') + '</ul>' +
+        '<p class="note">لا يدخل الجهاز إلا ما تقبلونه هنا، ويُسجَّل مع ما خرج منه.</p>' +
+        '<label class="note" for="imPin" style="display:block;margin:6px 0 2px">رمز وليّ الأمر لقبول هذا الملف</label><input id="imPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" class="f" style="width:100%;min-height:48px;font-size:1.25rem;letter-spacing:.3em;text-align:center">' +
+        '<p class="fb" id="imFb" role="alert"></p>' +
+        '<div class="btns" style="justify-content:flex-start"><button class="btn" type="button" id="imGo">اقبلوه</button><button class="btn ghost" type="button" id="imNo">ارفضوه</button></div>';
+      var settled = false, mo = null, busy = false;
+      var done = function (v) { if (settled) return; settled = true; if (mo) mo.disconnect(); closeSheet(); res(v); };
+      showSheet();
+      mo = new MutationObserver(function () { if (s.hidden) done(false); }); mo.observe(s, { attributes: true, attributeFilter: ['hidden'] });
+      s.querySelector('.x').addEventListener('click', function () { done(false); });
+      s.querySelector('#imNo').addEventListener('click', function () { done(false); });
+      var fb = s.querySelector('#imFb'), pin = s.querySelector('#imPin');
+      s.querySelector('#imGo').addEventListener('click', async function () {
+        if (busy) return; busy = true;
+        try {
+          var v = await pinVerify(pin.value, 'import');
+          if (!v.ok) { fb.textContent = v.msg; fb.className = 'fb bad'; pin.value = ''; try { pin.focus(); } catch (e) {} return; }
+          logExport('⬅ ' + title); done(true);
+        } finally { busy = false; }
+      });
+      try { pin.focus(); } catch (e) {}
+    });
+  };
   function logExport(name) {
     var F = famGet(); if (!F) return;
     var row = { d: Date.now(), name: String(name), kid: (window.KZ_IDS || [])[kid] || null }, r = lastReset();
@@ -295,11 +335,14 @@
   }
   if (typeof saveFile === 'function') {
     var _save = saveFile;
-    saveFile = async function (name, text, fb) {
-      var ok = await consentSheet(name);
+    /* who: the child the file is about, when it is not the one chosen on the board (a report of another child), or a note that
+       says what the file carries (a teacher's file of other families' recordings) */
+    saveFile = async function (name, text, fb, who) {
+      var ok = await consentSheet(name, who);
       if (!ok) { if (fb) { fb.textContent = 'لم يخرج شيء.'; fb.className = 'fb'; } return; }
       logExport(name);
-      return _save(name, typeof text === 'string' ? digitsFor(name, R(text)) : text, fb || document.createElement('p'));
+      /* the gate opens for this one call (app.js refuses a save that did not come through here) */
+      SAVE_GATE = true; try { return _save(name, typeof text === 'string' ? digitsFor(name, R(text)) : text, fb || document.createElement('p')); } finally { SAVE_GATE = false; }
     };
   }
 

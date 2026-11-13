@@ -273,7 +273,8 @@ async function recStart(){
   }
   if(CUR!==w){REC.stream.getTracks().forEach(function(t){t.stop();});REC.stream=null;return;}
   var mime=pickMime();
-  try{REC.mr=new MediaRecorder(REC.stream,mime?{mimeType:mime}:undefined);}catch(e){REC.mr=new MediaRecorder(REC.stream);}
+  /* speech at 32 kbps (the default is about 128): a fifth of the size in the device, the backup and the files sent */
+  try{REC.mr=new MediaRecorder(REC.stream,Object.assign(mime?{mimeType:mime}:{},{audioBitsPerSecond:32000}));}catch(e){try{REC.mr=new MediaRecorder(REC.stream,mime?{mimeType:mime}:undefined);}catch(e2){REC.mr=new MediaRecorder(REC.stream);}}
   REC.chunks=[]; REC.wid=w.id; REC.discard=false; REC.max=MAXREC[w.type]||240;
   REC.mr.ondataavailable=function(e){if(e.data&&e.data.size) REC.chunks.push(e.data);};
   REC.mr.onstop=recDone;

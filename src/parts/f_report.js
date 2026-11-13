@@ -103,9 +103,9 @@ function reportHTML(k,mk,name){
 function pReport(kidId,mk){
   var k=kidById(kidId); if(!k) return pKids(); L=null; certSync(k.id);
   mk=mk||monthKey(Date.now());
-  go('<div class="ax-page wide-page" style="--ax:var(--plum)"><div class="ph-top no-print"><button class="back" type="button" data-act="pProg" data-id="'+k.id+'">'+BACK+' تقدّم '+esc(k.name)+'</button>'+
-    '<span class="ph-acts"><button class="btn ghost small-btn" type="button" data-act="print">اطبعوه</button><button class="btn ghost small-btn" type="button" data-act="exReport" data-id="'+k.id+'" data-v="'+mk+'">'+ICON.share+' أرسلوه إلى المعلّم</button></span></div>'+
-    '<div class="seg wrap-seg no-print">'+lastMonths(6).map(function(m){return '<button type="button" class="'+(m===mk?'on':'')+'" data-act="pReport" data-id="'+k.id+'" data-v="'+m+'">'+monthName(m,1)+'</button>';}).join('')+'</div>'+
+  go('<div class="ax-page wide-page" style="--ax:var(--plum)"><div class="ph-top no-print"><button class="back" type="button" data-act="pProg" data-id="'+escA(k.id)+'">'+BACK+' تقدّم '+esc(k.name)+'</button>'+
+    '<span class="ph-acts"><button class="btn ghost small-btn" type="button" data-act="print">اطبعوه</button><button class="btn ghost small-btn" type="button" data-act="exReport" data-id="'+escA(k.id)+'" data-v="'+mk+'">'+ICON.share+' أرسلوه إلى المعلّم</button></span></div>'+
+    '<div class="seg wrap-seg no-print">'+lastMonths(6).map(function(m){return '<button type="button" class="'+(m===mk?'on':'')+'" data-act="pReport" data-id="'+escA(k.id)+'" data-v="'+m+'">'+monthName(m,1)+'</button>';}).join('')+'</div>'+
     '<div class="xp">'+reportHTML(k,mk,k.name)+'</div></div>');
 }
 async function exReport(kidId,mk){

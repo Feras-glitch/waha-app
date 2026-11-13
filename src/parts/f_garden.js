@@ -278,7 +278,7 @@ function rewardGarden(){
   if(!L||!KID||!KD) return '';
   var seen=Array.isArray(KD.gseen)?KD.gseen:[];
   if(seen.indexOf('f:'+L.id)>=0) return '';
-  return '<button class="banner green" type="button" data-act="garden"><span class="bn-e" aria-hidden="true">🌷</span><div class="bn-t"><strong>نبتت في حديقتك وردةٌ جديدة</strong><span>⟨اضغط|اضغطي⟩ لتراها'+(miss===0?'، ووسطها ذهبيّ لأنك ⟨أجبتَ|أجبتِ⟩ بلا خطأ':'')+'.</span></div></button>';
+  return '<button class="banner green" type="button" data-act="garden"><span class="bn-e" aria-hidden="true">🌷</span><div class="bn-t"><strong>نبتت في حديقتك وردةٌ جديدة</strong><span>⟨اضغط لتراها|اضغطي لتريها⟩'+(miss===0?'، ووسطها ذهبيّ لأنك ⟨أجبتَ|أجبتِ⟩ بلا خطأ':'')+'.</span></div></button>';
 }
 function gardenSummary(s,its){
   var f=its.filter(function(i){return i.indexOf('f:')===0;}).length, t=its.filter(function(i){return i.indexOf('t:')===0;}).length;

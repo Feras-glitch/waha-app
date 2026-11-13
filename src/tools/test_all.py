@@ -4,7 +4,7 @@
 import os, re, subprocess, sys, tempfile, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SUITES = ['e2e', 'e2e2', 'e2e3', 'e2e4', 'e2e5', 'e2e6', 'e2e7', 'e2e8', 'e2e9', 'e2e10', 'e2e11', 'e2e12', 'e2e13', 'e2e14', 'e2e15', 'e2e16', 'e2e17']
+SUITES = ['e2e', 'e2e2', 'e2e3', 'e2e4', 'e2e5', 'e2e6', 'e2e7', 'e2e8', 'e2e9', 'e2e10', 'e2e11', 'e2e12', 'e2e13', 'e2e14', 'e2e15', 'e2e16', 'e2e17', 'e2e18']
 
 
 def main(names):
@@ -12,7 +12,11 @@ def main(names):
     bad, total = [], 0
     for n in names or SUITES:
         t = time.time()
-        r = subprocess.run([sys.executable, os.path.join(HERE, n + '.py'), os.path.join(shots, n)], capture_output=True, text=True)
+        # a suite that hangs (a sheet waiting for a tap that never comes) fails after fifteen minutes instead of holding CI forever
+        try:
+            r = subprocess.run([sys.executable, os.path.join(HERE, n + '.py'), os.path.join(shots, n)], capture_output=True, text=True, timeout=900)
+        except subprocess.TimeoutExpired as e:
+            r = subprocess.CompletedProcess(e.cmd, 124, (e.stdout or b'').decode('utf-8', 'replace') if isinstance(e.stdout, bytes) else (e.stdout or ''), 'timed out after 900 s')
         out = r.stdout
         passed = len(re.findall(r'^PASS ', out, re.M))
         fails = re.findall(r'^FAIL (.*)$', out, re.M)

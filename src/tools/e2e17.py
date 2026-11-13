@@ -67,7 +67,7 @@ async def main():
         # ---- «أخبرني» as a conversation: the parents answer, and the answer opens the child's next visit with a turn to answer back
         await p.evaluate("""async () => { await recPut({id: 'tell1', kid, kidName: 'مريم', kind: 'أخبرني', ref: today(), text: 'ماذا أكلتِ اليوم؟', date: today(), type: 'audio/webm', blob: new Blob([new Uint8Array(2000)], {type: 'audio/webm'}), status: 'pending', notes: [], source: 'local'}); }""")
         await p.locator('#ddTabs button', has_text='سطر اليوم').click(); await p.wait_for_timeout(700)
-        ok(await p.locator('#ddBody button', has_text='ردّوا عليه بصوتكم').count() == 1, "the parents can answer the child's «أخبرني» in their voice")
+        ok(await p.locator('#ddBody button', has_text='ردّوا عليها بصوتكم').count() == 1, "the parents can answer the child's «أخبرني» in their voice (her row speaks of her)")
         await p.evaluate("""async () => { await recPut({id: 'rep1', kid: -1, to: kid, kind: 'من أبي', ref: today(), replyTo: 'tell1', text: 'ردًّا على: ماذا أكلتِ اليوم؟', date: today(), type: 'audio/webm', blob: new Blob([new Uint8Array(2000)], {type: 'audio/webm'}), status: 'approved', notes: [], source: 'local', heard: false}); }""")
         await p.evaluate("go('home')"); await p.wait_for_timeout(900)
         ok('أهلكِ يردّون على ما قلتِه' in await p.inner_text('#kidHome'), 'the answer waits for her at home')

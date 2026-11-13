@@ -101,7 +101,8 @@ async function narRec(){
   try{REC.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});}
   catch(e){return toast('لم يُسمح باستعمال المايكروفون. اسمحوا به من إعدادات المتصفح.');}
   var k=NV.id+':'+NV.g, mime=pickMime();
-  try{REC.mr=new MediaRecorder(REC.stream,mime?{mimeType:mime}:undefined);}catch(e){REC.mr=new MediaRecorder(REC.stream);}
+  /* speech at 32 kbps (the default is about 128): a fifth of the size in the device, the backup and the files sent */
+  try{REC.mr=new MediaRecorder(REC.stream,Object.assign(mime?{mimeType:mime}:{},{audioBitsPerSecond:32000}));}catch(e){try{REC.mr=new MediaRecorder(REC.stream,mime?{mimeType:mime}:undefined);}catch(e2){REC.mr=new MediaRecorder(REC.stream);}}
   REC.chunks=[]; REC.wid=null; REC.narId=k; REC.discard=false; REC.max=600;
   REC.sink={save:function(blob,dur){return saveNarration(k,blob,dur);},after:narRender};
   REC.mr.ondataavailable=function(e){if(e.data&&e.data.size) REC.chunks.push(e.data);};

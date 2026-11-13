@@ -271,7 +271,7 @@ async def main():
             await p.goto('about:blank'); await p.goto(KZ + '#kunuz'); await p.wait_for_selector('.hello')
             await p.click('.chamber[data-ax="furuq"]'); await p.wait_for_selector('.lesson-card'); await p.locator('.lesson-card').first.click()
             await p.wait_for_selector('.verse')
-            ok(await p.locator('.vplay').count() == 0 and await p.locator('.verse a[href*="quran.com"]').count() >= 1, 'a browser copy without the pack keeps the quran.com link')
+            ok(await p.locator('.vplay').count() == 0 and await p.locator('.verse a[href]').count() == 0, 'a browser copy without the pack plays nothing, and a child\'s page has no live link to the web (2.11)')
             await b.close()
     finally:
         shutil.rmtree(AUDIO, ignore_errors=True)

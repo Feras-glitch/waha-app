@@ -167,7 +167,9 @@ jobs:
           retention-days: 2
 
   # نسخة الويب على GitHub Pages: تُدفع إلى فرع gh-pages فتُفتح من https://feras-glitch.github.io/waha-app/
+  # نسخة الويب مؤجّلة بقرار الأسرة (2.11): أندرويد وسطح المكتب فقط. لا تُنشر صفحات GitHub حتى يُقرَّر غير ذلك
   pages:
+    if: false
     needs: [test, e2e]
     runs-on: ubuntu-24.04
     steps:

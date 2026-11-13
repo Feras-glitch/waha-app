@@ -10,9 +10,9 @@ function parentHome(){
     '<button class="btn ghost small-btn" type="button" data-act="lock">'+ICON.lock+' أغلقوا الركن</button></div>'+
     '<header class="page-head"><span class="eyebrow">للوالدين</span><h1 class="h1">ركن وليّ الأمر</h1>'+
     '<p class="lead">من هنا تعتمدون أعمال الأطفال أو تعيدونها بملاحظة، وتُصدرون ما توافقون على مشاركته، وتديرون الملفات.</p></header>'+
-    (FAM.pinResets.length?'<p class="tip">'+ICON.shield.replace('<svg','<svg class="ic-s"')+' أُعيد ضبط الرمز آخر مرة في '+fmtDate(FAM.pinResets[FAM.pinResets.length-1])+'، وأُلغيت الموافقات السابقة عندها.</p>':'')+
+    (FAM.pinResets.length?'<p class="tip">'+ICON.shield.replace('<svg','<svg class="ic-s"')+' '+pinLastWords()+'</p>':'')+
     (!FAM.rec?'<button class="banner rose" type="button" data-act="rcNew">'+ICON.lock+'<div class="bn-t"><strong>لا يوجد رمز استرداد بعد</strong><span>أنشئوه وأرسلوه إلى بريدكم؛ فبه وحده يُعاد ضبط الرمز إن نُسي.</span></div></button>':'')+
-    (backupDue()?'<button class="banner gold" type="button" data-act="pBackup">'+ICON.shield+'<div class="bn-t"><strong>'+(FAM.lastBackup?'مضى أكثر من شهرٍ على آخر نسخةٍ احتياطية':'لم تحفظوا نسخةً احتياطية بعد')+'</strong><span>أصوات الأطفال وأعمالهم على هذا الجهاز وحده. احفظوا نسخةً مشفّرة في مكانٍ آمن.</span></div></button>':'')+
+    (backupDue()?'<button class="banner gold" type="button" data-act="pBackup">'+ICON.shield+'<div class="bn-t"><strong>'+(FAM.lastBackup?'مضى أكثر من شهرٍ على آخر نسخةٍ احتياطية':'لم تحفظوا نسخةً احتياطية بعد')+'</strong><span>أصوات الأطفال وأعمالهم على هذا الجهاز وحده. احفظوا نسخةً مشفّرة في مكانٍ آمن.'+(PERSISTED===false?' والمتصفح لم يَعِد بإبقاء البيانات، فقد يمسحها إن لم يُفتح التطبيق مدة.':'')+'</span></div></button>':(PERSISTED===false?'<p class="tip">'+ICON.shield.replace('<svg','<svg class="ic-s"')+' المتصفح لم يَعِد بإبقاء بيانات الأسرة على هذا الجهاز، فقد يمسحها إن لم يُفتح التطبيق مدة. ثبّتوا التطبيق، واحفظوا نسخةً احتياطية بين حينٍ وآخر.</p>':''))+
     /* the parents' one way in: the three boards side by side (2.8) */
     '<section class="hub-row" aria-label="لوحات العائلة"><span class="eyebrow">لوحات العائلة، برمزٍ واحد</span><div class="hub-btns">'+
       '<button class="hub-b on" type="button" disabled><b>💎 ركن وليّ الأمر</b><span>أنتم هنا: الأعمال، والأطفال، والرمز، والنسخ</span></button>'+
@@ -119,6 +119,13 @@ function pApproved(){
     (list.length?'<ul class="wlist">'+list.map(pRow).join('')+'</ul>':'<p class="muted">لا أعمال معتمدة بعد.</p>')+'</div>');
 }
 
+/* the last change of the PIN, as the corner shows it: only a reset after the wait revoked the approvals given before it */
+function pinLastWords(){
+  var L=(FAM.pinLog||[]).filter(function(x){return x&&(x.k==='code'||x.k==='change'||x.k==='reset-wait');}).slice(-1)[0], t=FAM.pinResets[FAM.pinResets.length-1];
+  if(L&&L.k==='code') return 'أُعيد ضبط الرمز برمز الاسترداد في '+fmtDate(L.t)+'، وصُنع معه رمز استردادٍ جديد.';
+  if(L&&L.k==='change') return 'غُيّر الرمز آخر مرة في '+fmtDate(L.t)+'.';
+  return 'أُعيد ضبط الرمز آخر مرة في '+fmtDate(L?L.t:t)+'، وأُلغيت الموافقات السابقة عندها.';
+}
 /* ---------- consent before anything leaves the device ---------- */
 /* what: list of plain labels; returns {name} or false */
 async function consent(o){
@@ -279,7 +286,7 @@ function pWeekly(){
         (r?'<p class="rub-line">'+rubStars(r)+'</p>':'<p class="muted small">بلا تقييم بعد</p>')+'<audio controls preload="none" data-src="'+w.audio+'"></audio></div>'+
         '<button class="btn'+(on?'':' ghost')+'" type="button" data-act="setWeekly" data-id="'+w.id+'">'+(on?ICON.check+' المختارة':'اختاروها')+'</button></li>';}).join('')+'</ul>':
       '<div id="wkNone"><p class="muted">'+Gx(nm+' ليس ⟨له|لها⟩ قراءةٌ معتمدة بعد. ⟨اعتمدوا له|اعتمدوا لها⟩ تسجيلًا في الواحة أو الحسنية أو «قراءتي» في الاستوديو، فيظهر هنا.',g)+'</p>'+
-      (!cur&&nx?'<div class="actions"><button class="btn ghost" type="button" data-act="passWeekly" data-id="'+k.id+'">'+Gx('⟨أجّلوا دوره|أجّلوا دورها⟩ إلى الأسبوع القادم، والدور الآن لـ',g)+esc(nx.name)+'</button></div>':'')+'</div>')+
+      (!cur&&nx?'<div class="actions"><button class="btn ghost" type="button" data-act="passWeekly" data-id="'+escA(k.id)+'">'+Gx('⟨أجّلوا دوره|أجّلوا دورها⟩ إلى الأسبوع القادم، والدور الآن لـ',g)+esc(nx.name)+'</button></div>':'')+'</div>')+
     '<div id="wkFrom"></div>'+
     '<p class="muted small">من لم يُكرَّم بعدُ يأتي دوره أولًا، ومن أجّلتم دوره يبقى في أوّل الدور للأسبوع الذي يليه.</p></div>');
   weeklyFromFill(k,since);
@@ -307,7 +314,7 @@ function pKids(){
     '<header class="page-head"><h1 class="h1">الأطفال</h1></header>'+
     '<ul class="kids">'+FAM.kids.map(function(k){var d=kidLoad(k.id),n=LESSONS.filter(function(l){return d.prog[l.id];}).length,wn=WORKS.filter(function(w){return w.kid===k.id;}).length;
       return '<li class="kid-row">'+avatarHTML(k,'m')+'<div class="kr-m"><p class="kr-n">'+esc(k.name)+' <span class="muted small">· '+(k.g==='f'?'بنت':'ولد')+'</span></p><p class="muted small">'+n2a(n)+' جوهرة · '+n2a(wn)+' عمل</p></div>'+
-        '<div class="kr-a"><button class="btn ghost small-btn" type="button" data-act="pProg" data-id="'+k.id+'">التقدّم</button><button class="btn ghost small-btn" type="button" data-act="kidEdit" data-id="'+k.id+'">تعديل</button></div></li>';}).join('')+'</ul>'+
+        '<div class="kr-a"><button class="btn ghost small-btn" type="button" data-act="pProg" data-id="'+escA(k.id)+'">التقدّم</button><button class="btn ghost small-btn" type="button" data-act="kidEdit" data-id="'+escA(k.id)+'">تعديل</button></div></li>';}).join('')+'</ul>'+
     '<div class="actions"><button class="btn" type="button" data-act="kidAdd">'+ICON.plus+' أضيفوا طفلًا</button></div></div>');
 }
 function pProg(id){progressFor(id,true);}
@@ -369,7 +376,7 @@ function progressFor(kidId,asParent){
     '<section><h2 class="h2">دروسٌ تحتاج مراجعة</h2>'+(weak.length?'<p class="li-lessons">'+(asParent?weak.map(function(l){return '<span class="tag static" style="--ax:var(--'+axById[lessonById[l].ax].c+')">'+lessonById[l].title+'</span>';}).join(''):weak.map(tagFor).join(''))+'</p>':'<p class="muted">لا شيء بعد.</p>')+'</section>'+
     '<section><h2 class="h2">آخر الاختبارات</h2>'+(tests.length?'<ul class="rev">'+tests.map(function(x){var lv=level(x.p);
       return '<li><span class="state '+lv[0]+'">'+n2a(x.p)+'٪</span><span>'+MODE[x.m]+(x.ax?': '+axById[x.ax].name:'')+' · '+qWord(x.n)+' · '+n2a(x.d)+'</span></li>';}).join('')+'</ul>':'<p class="muted">لم يُجرَ اختبارٌ بعد.</p>')+'</section>'+
-    (asParent?'<div class="actions"><button class="btn" type="button" data-act="pReport" data-id="'+k.id+'">التقرير الشهري</button></div><div class="actions"><button class="btn ghost danger-ghost" type="button" data-act="kidReset" data-id="'+k.id+'">امسحوا الجواهر والنتائج</button><button class="btn ghost danger-ghost" type="button" data-act="kidDel" data-id="'+k.id+'">'+ICON.trash+' احذفوا الملف</button></div>':
+    (asParent?'<div class="actions"><button class="btn" type="button" data-act="pReport" data-id="'+escA(k.id)+'">التقرير الشهري</button></div><div class="actions"><button class="btn ghost danger-ghost" type="button" data-act="kidReset" data-id="'+escA(k.id)+'">امسحوا الجواهر والنتائج</button><button class="btn ghost danger-ghost" type="button" data-act="kidDel" data-id="'+escA(k.id)+'">'+ICON.trash+' احذفوا الملف</button></div>':
       '<div class="actions"><button class="btn" type="button" data-go="full">الاختبار الشامل</button><button class="btn ghost" type="button" data-act="diag">الاختبار الدوري</button><button class="btn ghost" type="button" data-go="review">المراجعة الذكية</button></div>'+
       '<p class="muted small">«الاختبار الدوري» '+n2a(diagItems().length)+' سؤالًا ثابتة لا تتغيّر، ⟨تعيده|تعيدينه⟩ كلّ ثلاثة أشهر فيُقاس تقدّمك بالمقارنة.'+(S.diag&&S.diag.length?' آخر مرة: '+fmtDate(dateOf(S.diag[S.diag.length-1].d))+' ('+n2a(S.diag[S.diag.length-1].p)+'٪).':'')+'</p>')+'</div>';
   go(asParent?Gx(html,f):html);
@@ -452,10 +459,22 @@ async function decryptStr(o,pass){
   return new TextDecoder().decode(pt);
 }
 function canEncrypt(){return !!(window.crypto&&crypto.subtle&&window.TextEncoder);}
+/* what a backup carries, before it is made: the recordings and pictures of the three sections (ENG-01). The file is made in one
+   piece in the browser's memory: past about 100 MB a phone or a tablet may not manage it, and the page stops with no file */
+async function backupSize(){
+  var n=0, add=function(v,d){ if(!v||d>4) return; if(typeof Blob!=='undefined'&&v instanceof Blob){n+=v.size;return;} if(typeof v==='string'){n+=v.length;return;} if(Array.isArray(v)){v.forEach(function(x){add(x,d+1);});return;} if(typeof v==='object') Object.keys(v).forEach(function(k){add(v[k],d+1);}); };
+  var all=function(d,st){return new Promise(function(res){try{var q=d.transaction(st).objectStore(st).getAll();q.onsuccess=function(){res(q.result||[]);};q.onerror=function(){res([]);};}catch(e){res([]);}});};
+  try{ var keys=await blobKeys(); for(var i=0;i<keys.length;i++){ var b=await blobGet(keys[i]); if(b) n+=b.size; } }catch(e){}
+  try{ var d=await oasisDB(false); if(d){ var st=['rec','gift','voice'].filter(function(s){return d.objectStoreNames.contains(s);}); for(var j=0;j<st.length;j++) add(await all(d,st[j]),0); d.close(); } }catch(e){}
+  try{ var h=await hsDB(); if(h){ add(await all(h,'recs'),0); h.close(); } }catch(e){}
+  return n;
+}
 async function backupMake(){
+  var size=0; try{ size=await backupSize(); }catch(e){} var big=size>100*1048576;
   /* one sheet: the password of the file, then the parent's PIN for this backup (it carries every child's voice) */
   var opt=await pinAsk({title:'نسخةٌ احتياطية مشفّرة',c:'plum',ok:'احفظوا النسخة',
-    html:'<p>النسخة تحمل بيانات الأطفال وأصواتهم. اختاروا كلمة سرٍّ تحفظونها جيدًا: لا يُفتح الملف إلا بها، ولا يمكن استرجاعها إن نُسيت.</p>'+
+    html:'<p>النسخة تحمل بيانات الأطفال وأصواتهم وصورهم ورسومهم وأعمالهم. اختاروا كلمة سرٍّ تحفظونها جيدًا: لا يُفتح الملف إلا بها، ولا يمكن استرجاعها إن نُسيت.</p>'+
+      (size?'<p class="'+(big?'tip warn':'muted small')+'">في النسخة تسجيلاتٌ وصور نحو '+fmtMB(size)+(big?'، والملف نحو ضعفها. ملفٌّ بهذا الحجم قد يعجز عنه هذا الجهاز فتتوقف الصفحة دون ملف: الأفضل أن تُحفظ من حاسوب.':'.')+'</p>':'')+
       (canEncrypt()?'<label class="lbl" for="bk1">كلمة السر (ستة أحرف أو أكثر)</label><input id="bk1" type="password" autocomplete="new-password">'+
         '<label class="lbl" for="bk2">أعيدوا كتابتها</label><input id="bk2" type="password" autocomplete="new-password">'+
         '<label class="tog"><input type="checkbox" id="bkPlain"><span>بلا تشفير (لا يُنصح: من يجد الملف يرى الأصوات والصور)</span></label>':
@@ -480,7 +499,7 @@ async function backupMake(){
     var hasaniya=null; try{hasaniya=await hasaniyaExport();}catch(e){miss.push('الحسنية');}
     var at=Date.now(), fam=JSON.parse(JSON.stringify(FAM)); fam.lastBackup=at; fam.lastBackupEnc=!!opt.pass;
     data=JSON.stringify({kind:'kb-backup',v:1,at:at,fam:fam,works:WORKS,kids:kids,blobs:blobs,oasis:oasis,hasaniya:hasaniya});
-  }catch(e){ return toast('تعذّر تجهيز النسخة: '+(e&&e.message||'')+'. لم يُحفظ شيء.'); }
+  }catch(e){ return toast('تعذّر تجهيز النسخة'+(big?' (هي كبيرة على ذاكرة هذا الجهاز)':'')+': '+(e&&e.message||'')+'. لم يُحفظ شيء.'); }
   if(opt.pass){ try{ data=await encryptStr(data,opt.pass); }catch(e){ return toast('تعذّر التشفير: '+(e&&e.message||'')); } }
   try{
     var u=URL.createObjectURL(new Blob([data],{type:'application/json'})), a=document.createElement('a');
@@ -500,8 +519,10 @@ function logMerge(a,b,max){
 }
 async function restorePicked(file){
   if(!file) return; var txt; try{txt=await readText(file);}catch(e){return toast('تعذّرت قراءة الملف.');}
-  var o; try{o=JSON.parse(txt);}catch(e){o=null;}
+  /* a file cut short (a download stopped, a full disk) is told apart from a file that is not a backup at all */
+  var o, cut=false; try{o=JSON.parse(txt);}catch(e){o=null; cut=/^\s*\{\s*"kind"\s*:\s*"kb-backup/.test(txt.slice(0,80));}
   txt=null;
+  if(cut) return toast('هذه نسخة احتياطية، لكن ملفّها ناقصٌ أو تالف (ربما انقطع تنزيله). لم يُستعد منه شيء؛ جرّبوا نسخةً أخرى.');
   if(o&&o.kind==='kb-backup-enc'){
     if(!canEncrypt()) return toast('فتح النسخة المشفّرة يحتاج التطبيق من رابطه الآمن (https).');
     var enc=o; o=null;
@@ -510,12 +531,18 @@ async function restorePicked(file){
     if(!got) return;
     try{ o=JSON.parse(await decryptStr(enc,got.p)); }catch(e){ return toast('كلمة السر غير صحيحة، أو الملف تالف.'); }
   }
-  if(!o||o.kind!=='kb-backup'||!o.fam||!Array.isArray(o.works)) return toast('هذا ليس ملفّ نسخةٍ احتياطية من «كنوز البيان».');
+  if(!o||o.kind!=='kb-backup'||!o.fam||!Array.isArray(o.works)) return toast(o&&/^kb-backup/.test(String(o.kind||''))?'هذه نسخة احتياطية، لكن ما فيها ناقص أو تالف. لم يُستعد منه شيء.':'هذا ليس ملفّ نسخةٍ احتياطية من «كنوز البيان».');
   var ok=await ask({title:'استعادة النسخة؟',c:'rose',ok:'استعيدوها',danger:1,html:'<p>نسخةٌ بتاريخ '+fmtDate(o.at)+' فيها '+n2a((o.fam.kids||[]).length)+' أطفال و'+n2a(o.works.length)+' عمل. <strong>ستحلّ محلّ كل ما على هذا الجهاز الآن.</strong></p>'});
   if(!ok) return;
   try{
     /* the backup's files are written first, and only then is what it does not hold removed: a full disk or a broken file
        stops the restore with this device's data still whole */
+    /* a backup is checked before anything is written: ids of the right shape, known colours and sexes. A file changed by hand could
+       otherwise carry script into the pages that show the children */
+    var KS=(o.fam&&Array.isArray(o.fam.kids))?o.fam.kids:null, idOk=function(id){return /^[A-Za-z0-9_-]{1,40}$/.test(String(id||''));};
+    if(!KS||KS.some(function(k){return !k||!idOk(k.id)||typeof k.name!=='string'||k.name.length>60;})||Object.keys(o.kids||{}).some(function(id){return !idOk(id);})||(o.works&&!Array.isArray(o.works))){
+      toast('هذا الملف تالفٌ أو مُعدَّل، فلم يُستعد منه شيء.'); return; }
+    KS.forEach(function(k){ k.c=kidC(k); k.g=k.g==='f'?'f':'m'; if(k.av&&!/^[\w-]{1,20}$/.test(String(k.av))) k.av='letter'; k.by=+k.by||0; });
     var old=await blobKeys(), bk=Object.keys(o.blobs||{});
     for(var j=0;j<bk.length;j++){var b=dataURLToBlob(o.blobs[bk[j]]); if(b) await blobPut(bk[j],b);}
     Object.keys(o.kids||{}).forEach(function(id){ if(!lsSet(kidKey(id),o.kids[id])) throw new Error('مساحة الجهاز'); });
@@ -541,9 +568,9 @@ async function restorePicked(file){
 function gardenCertsBlock(k){
   certSync(k.id);
   var s=kidStats(k.id), its=gardenItems(s), c=s.d.certs||{}, got=CERTS.filter(function(x){return c[x.id];});
-  return '<section class="gpair"><button class="gprev" type="button" data-act="pGarden" data-id="'+k.id+'" style="--ax:var(--olive)"><span class="gprev-svg">'+gardenSVG(s,its,{id:'gp',label:'حديقة '+k.name})+'</span>'+
+  return '<section class="gpair"><button class="gprev" type="button" data-act="pGarden" data-id="'+escA(k.id)+'" style="--ax:var(--olive)"><span class="gprev-svg">'+gardenSVG(s,its,{id:'gp',label:'حديقة '+k.name})+'</span>'+
     '<span class="gprev-t"><span class="door-t">حديقة '+esc(k.name)+'</span><span class="door-d">'+Gx(gardenSummary(s,its),gOf(k))+'</span></span></button>'+
-    '<button class="sdoor" type="button" data-act="pCerts" data-id="'+k.id+'" style="--ax:var(--gold)"><span class="ch-ico">'+ICON.shield+'</span><span class="door-t">الشهادات</span>'+
+    '<button class="sdoor" type="button" data-act="pCerts" data-id="'+escA(k.id)+'" style="--ax:var(--gold)"><span class="ch-ico">'+ICON.shield+'</span><span class="door-t">الشهادات</span>'+
     '<span class="door-d">'+(got.length?n2a(got.length)+' من '+n2a(CERTS.length)+'، آخرها: '+Gx(got[got.length-1].t,gOf(k)):'لم ينل شهادةً بعد.')+'</span></button></section>';
 }
 
