@@ -59,7 +59,7 @@ var ACT={
   pMag:function(t,ds){magParent(ds.id);},
   /* printing can also save the page as a file or send it (Android's print screen), so it is the parent's step, logged like an export */
   print:async function(){
-    if(!(await freshParent('الطباعة قد تحفظ الصفحة ملفًّا أو ترسلها، فتحتاج رمز وليّ الأمر.'))) return;
+    if(!(await freshParent('الطباعة قد تحفظ الصفحة ملفًّا أو ترسلها، وفيها ما على الشاشة'+(KID&&KID.name?' من اسم '+KID.name+(KID.g==='f'?' وأعمالها':' وأعماله'):'')+'، فتحتاج رمز وليّ الأمر.'))) return;
     logOut('طباعة: '+String(document.title||'').slice(0,60),KID?KID.id:null);
     try{window.print();}catch(e){}
   },

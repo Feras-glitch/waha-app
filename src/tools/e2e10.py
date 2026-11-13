@@ -111,7 +111,7 @@ async def main():
 
         # ---- a gift keeps only a picture as the sender's picture
         await p.goto('about:blank'); await p.goto(URL); await p.wait_for_selector('#whoBtn'); await p.wait_for_timeout(400)
-        kept = await p.evaluate(r"""async () => {
+        await p.evaluate(r"""() => { window.__gift = (async () => {
           const png = 'data:image/png;base64,iVBORw0KGgo=';
           const items = [
             {id: 'g-ok', fromName: 'سلمى', fromPhoto: png, kind: 'حديث', ref: 'ر', text: 'ن', type: 'audio/webm', b64: 'AAAA', date: '2026-10-20'},
@@ -122,7 +122,12 @@ async def main():
           await importGiftFile(f, document.createElement('p'));
           const g = await dbAll('gift'); const by = id => g.find(x => x.id === id) || {};
           return {n: g.length, ok: by('g-ok').fromPhoto, web: by('g-web').fromPhoto, svg: by('g-svg').fromPhoto, type: by('g-svg').type};
-        }""")
+        })(); }""")
+        # 2.11: nothing comes in before the parents have seen what the file holds and typed their PIN
+        await p.wait_for_selector('#sheet:not([hidden]) #imPin')
+        ok('سلمى' in await p.inner_text('#sheet'), 'a gift from outside shows what it holds and asks for the PIN before anything comes in')
+        await p.fill('#imPin', '1234'); await p.click('#imGo')
+        kept = await p.evaluate("window.__gift")
         ok(kept['n'] == 3, 'three gifts kept; an item with a malformed id is skipped (%d)' % kept['n'])
         ok(kept['ok'] == 'data:image/png;base64,iVBORw0KGgo=' and kept['web'] is None and kept['svg'] is None,
            'the sender\'s picture is kept only when it is an embedded PNG, JPEG or WebP picture')

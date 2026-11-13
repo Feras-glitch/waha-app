@@ -7,12 +7,18 @@ function doneCount(list){return (list||LESSONS).filter(function(l){return prog[l
 var hasTTS='speechSynthesis' in window, arVoice=null, voicesReady=false;
 function loadVoices(){try{var vs=speechSynthesis.getVoices();if(vs&&vs.length){voicesReady=true;arVoice=vs.filter(function(v){return /^ar/i.test(v.lang);})[0]||null;}}catch(e){}}
 if(hasTTS){loadVoices();try{speechSynthesis.onvoiceschanged=loadVoices;}catch(e){}}
+/* what «اقرأ لي» says: the child's own address (⟨m|f⟩ resolved), and never the Quran. A word or phrase quoted from a verse of
+   any lesson is left out (a short pause instead): the verse itself is heard from الحصري with its ▶ button */
+function qNorm(s){return String(s||'').replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640\[\](){}\s«»﴿﴾.،؟!:]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي');}
+var Q_ALL=null;
+function qAll(){ if(Q_ALL===null) Q_ALL=LESSONS.map(function(l){return (l.verses||[]).map(function(v){return qNorm(v.t);}).join('|');}).join('|'); return Q_ALL; }
+function speakSafe(t){ return String(t).replace(/﴿[^﴾]*﴾/g,' … ').replace(/«([^»]+)»/g,function(m,q){ var n=qNorm(q); return n.length>=2&&qAll().indexOf(n)>=0?' … ':m; }); }
 function stopSpeak(){if(typeof vStop==='function') vStop(); narStop();if(hasTTS){try{speechSynthesis.cancel();}catch(e){}}}
 function speak(btn){
   if(!hasTTS||!L) return;
   try{
     if(speechSynthesis.speaking){speechSynthesis.cancel();btn.classList.remove('on');return;}
-    var txt=L.secret.map(function(x){return typeof x==='string'?x:(x.rule||'');}).filter(Boolean).map(plain).join(' ');
+    var txt=L.secret.map(function(x){return typeof x==='string'?x:(x.rule||'');}).filter(Boolean).map(function(x){return plain(speakSafe(G(x)));}).join(' ');
     var u=new SpeechSynthesisUtterance(txt);
     u.lang='ar-SA'; if(arVoice) u.voice=arVoice; u.rate=.92;
     u.onend=u.onerror=function(){btn.classList.remove('on');};
@@ -44,7 +50,9 @@ function go(html){
    nothing is fetched from a website; a file that leaves the app (magazine, card) links to quran.com instead.
    The Android app opens no website, so there a verse the pack lacks has no listening link at all. */
 /* the Android app and the desktop app open no website (the parents' decision): their links are shown as names only */
-var NO_WEB=!!window.AndroidBridge||location.protocol==='file:';
+/* 2.11: no live link on any page a child can reach, in every build (the web build too): the shelf shows names, and a verse the
+   pack lacks has no listening link. Exported pages, read outside the app, keep theirs. */
+var NO_WEB=true;
 function vAud(v){var A=window.WAHA_AUDIO,r=A&&A.h&&A.h[v.s],b=v.a2||v.a,x; if(!r) return false;
   for(x=v.a;x<=b;x++){ if(!r.some(function(p){return x>=p[0]&&x<=p[1];})) return false; } return true;}
 function verse(v,o){

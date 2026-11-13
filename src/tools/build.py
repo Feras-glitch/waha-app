@@ -99,16 +99,23 @@ shell = rd('parts/shell.html')
 assert shell.count('/*@ICON@*/') == 1
 kunuz = shell.replace('/*@ICON@*/', ICON).replace('/*@CSS@*/', app_css).replace('/*@JS@*/', js)
 kunuz = with_csp(kunuz, '<meta charset="utf-8">')
+if 'src="../js/guard.js"' not in kunuz:
+    raise SystemExit('kunuz/index.html must load ../js/guard.js: it keeps the Quran out of the speech engine and the browser from saving a child\'s voice or picture')
 if 'src="../js/android-shim.js"' not in kunuz:
     raise SystemExit('kunuz/index.html must load ../js/android-shim.js: without it the Android app cannot save or send any file')
+if kunuz.index('src="../js/guard.js"') < kunuz.index('src="../js/android-shim.js"'):
+    raise SystemExit('kunuz/index.html: the family guard must come after the Android bridge, which replaces speechSynthesis')
 write('kunuz/index.html', kunuz)
 
 # ---------- the oasis (front page) ----------
 sys.path.insert(0, P('tools'))
 import waha_build
 waha_build.build(icon=ICON, csp=CSP_META)
-if CSP_META not in open(os.path.join(DIST, 'index.html'), encoding='utf-8').read():
+_oasis = open(os.path.join(DIST, 'index.html'), encoding='utf-8').read()
+if CSP_META not in _oasis:
     raise SystemExit('the oasis page has no CSP')
+if not (0 <= _oasis.find('src="js/android-shim.js"') < _oasis.find('src="js/guard.js"')):
+    raise SystemExit('the oasis page: js/guard.js must come after the Android bridge, which replaces speechSynthesis')
 
 # ---------- hasaniya/ (pinned copy + adapter) ----------
 shutil.copytree(P('parts', 'hasaniya'), os.path.join(DIST, 'hasaniya'))
@@ -119,7 +126,8 @@ write('hasaniya/js/waha-late.js', late)
 hp = os.path.join(DIST, 'hasaniya', 'index.html')
 h = open(hp, encoding='utf-8').read()
 for old, new in (('<link rel="manifest" href="manifest.json">', '<link rel="manifest" href="../manifest.json">'),
-                 ('<script src="js/android-shim.js"></script>', '<script src="js/waha-early.js"></script>\n<script src="js/android-shim.js"></script>'),
+                 # the family guard after the Android bridge: the bridge puts its own speechSynthesis in place of the WebView's
+                 ('<script src="js/android-shim.js"></script>', '<script src="js/waha-early.js"></script>\n<script src="js/android-shim.js"></script>\n<script src="../js/guard.js"></script>'),
                  # the product's own fonts (bundled, offline), so the three sections read alike
                  ('<link rel="manifest" href="../manifest.json">', '<link rel="manifest" href="../manifest.json">\n<link rel="stylesheet" href="../fonts/fonts.css">'),
                  ('<script src="js/app.js"></script>', '<script src="js/app.js"></script>\n<script src="js/waha-late.js"></script>')):
@@ -130,6 +138,10 @@ h = with_csp(h, '<meta charset="UTF-8">')
 open(hp, 'w', encoding='utf-8').write(h)
 # the adapter must wrap the Hasaniya from both ends, and everything it overrides or calls must still exist upstream
 scripts = re.findall(r'<script[^>]*src="([^"]+)"', h)
+if '../js/guard.js' not in scripts:
+    raise SystemExit('hasaniya/index.html must load ../js/guard.js')
+if scripts.index('../js/guard.js') < scripts.index('js/android-shim.js'):
+    raise SystemExit('hasaniya/index.html: ../js/guard.js must come after the Android bridge, which replaces speechSynthesis')
 if scripts[0] != 'js/waha-early.js' or scripts[-1] != 'js/waha-late.js' or 'js/android-shim.js' not in scripts:
     raise SystemExit('hasaniya/index.html: waha-early.js must be the first script and waha-late.js the last (%s … %s)' % (scripts[:2], scripts[-2:]))
 if re.search(r'<script(?![^>]*\bsrc=)[^>]*>\s*\S', h):
@@ -150,6 +162,14 @@ pairs += re.findall(r"\['([^']+)', '([^']+)'\]", names.group(1)) if names else [
 gone = [m for m, f in pairs if m not in hs_all]
 if gone:
     raise SystemExit("hasaniya: these labels are no longer in the Hasaniya, update HS_FEM in hasaniya_late.js: " + ' · '.join(gone))
+
+# ---------- nothing of the Claude artifact runtime in any page or script of the product (ENG-16) ----------
+for base, dirs, files in os.walk(DIST):
+    for f in files:
+        if f.endswith(('.html', '.js')):
+            full = os.path.join(base, f)
+            if re.search(r'window\.claude|claude\.use\(', open(full, encoding='utf-8', errors='replace').read()):
+                raise SystemExit('%s: the Claude artifact runtime is not used in the product (it would send a child\'s words to a model)' % os.path.relpath(full, DIST))
 
 # ---------- one service worker ----------
 assets, digest = ['./'], hashlib.sha256()

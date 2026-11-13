@@ -332,7 +332,7 @@ function rmPick(i){
     var lights=first&&(n===10||n===20||n===30);
     fb.innerHTML=G('<div class="fb-ok"><strong>'+praise()+'</strong> '+fmt(r.q.why)+'</div>'+
       (first?'<p class="rm-count">'+(n===RAMADAN.length?'⟨أتممتَ|أتممتِ⟩ اللمسات الثلاثين كلّها! تقبّل الله منك.':'صار عندك '+n2a(n)+' من '+n2a(RAMADAN.length)+' لمسة.')+'</p>':'')+
-      (lights?'<button class="banner green" type="button" data-act="garden"><span class="bn-e" aria-hidden="true">✨</span><div class="bn-t"><strong>أضاءت في حديقتك سلسلةُ أنوارٍ جديدة</strong><span>⟨اضغط|اضغطي⟩ لتراها.</span></div></button>':'')+
+      (lights?'<button class="banner green" type="button" data-act="garden"><span class="bn-e" aria-hidden="true">✨</span><div class="bn-t"><strong>أضاءت في حديقتك سلسلةُ أنوارٍ جديدة</strong><span>⟨اضغط لتراها|اضغطي لتريها⟩.</span></div></button>':'')+
       certNote(certSync(KID.id))+
       '<div class="actions">'+(nx?'<button class="btn" type="button" data-act="rmOne" data-id="'+nx.id+'">اللمسة التالية: الجزء '+n2a(nx.j)+'</button>':'')+
       '<button class="btn ghost" type="button" data-act="rm">'+BACK+' اللمسات كلّها</button></div>');

@@ -10,8 +10,8 @@ android {
         applicationId "com.waha.app"
         minSdk 26
         targetSdk 34
-        versionCode 18
-        versionName "2.10.1"
+        versionCode 19
+        versionName "2.11"
     }
 
     /* التوقيع: المفتاح يأتي من أسرار GitHub (انظر SIGNING-AR.md في جذر المستودع)،
@@ -40,9 +40,10 @@ android {
             minifyEnabled false
             if (ks) signingConfig signingConfigs.release
         }
-        // نسخة الاختبار على الهاتف الافتراضي: بالمفتاح نفسه، ليُختبر تثبيت تحديث فوق نسخة سابقة
+        // نسخة الاختبار: بالمفتاح التجريبي دائمًا، ولا تُوقَّع بمفتاح النشر أبدًا. نسخةٌ قابلة للتصحيح موقّعة بمفتاح الأسرة
+        // تُثبَّت فوق تطبيقها وتفتح بيانات الأطفال لأدوات المطوّرين (2.11)
         debug {
-            signingConfig ks ? signingConfigs.release : signingConfigs.fixedDebug
+            signingConfig signingConfigs.fixedDebug
         }
     }
 

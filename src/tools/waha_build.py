@@ -23,6 +23,7 @@ HEAD = ('<meta name="viewport" content="width=device-width,initial-scale=1,viewp
         '<link rel="stylesheet" href="fonts/fonts.css">'
         '<script>window.WAHA_APP = 1;</script>'
         '<script src="js/android-shim.js"></script>'
+        '<script src="js/guard.js"></script>'   # the family rules every section keeps: no Quran by the speech engine, no browser save of a child's voice or picture
         '<script src="audio/manifest.js"></script>')   # the recitation pack, when this copy carries one (src/tools/audio_pack.py)
 GFONTS = re.compile(r'<link rel="stylesheet" href="https://fonts\.googleapis\.com/[^"]*">\s*')
 # one service worker for the product; an old Hasaniya-only registration (from version 1.5) is removed
@@ -159,21 +160,36 @@ def check_gender(D):
 
 def check_verses(D):
     """A verse shown anywhere in the oasis (palm cards, riddles, conjugations…) must match the Quran pages the app carries
-    (Uthmani text, Tanzil), whole or as an excerpt; a riddle's blank «……» hides a part of it. Verse 1 may carry the basmala."""
+    (Uthmani text, Tanzil), whole or as an excerpt; a riddle's blank «……» hides a part of it. In Hafs the basmala is ayah 1
+    of al-Fatiha alone: written at the head of another surah's ayah 1 it is shown as part of that ayah, so it is refused.
+    The saktat of Hafs (18:1, 36:52, 69:28, 75:27, 83:14) keep their sign ۜ in the pages: without it a child reads
+    «مَن رَّاق» and «بَرَّان», a change in the recitation."""
     A = {}
     for pg in D['quran']['pages']:
         for x in pg['ayat']:
             A[(x[0], x[1])] = x[2]
     bad, n = [], [0]
+    SAKTA = {(18, 1): 'عوجا', (36, 52): 'مرقدنا', (69, 28): 'ماليه', (75, 27): 'من', (83, 14): 'بل'}
+    bare = lambda x: re.sub(r'[\u064B-\u065F\u0670\u06D6-\u06ED]', '', x).replace('ٱ', 'ا')
+    def sakta(t, w):
+        """None when the text does not reach the sakta's word; else whether every copy of the word is followed by ۜ"""
+        ws = t.split(' '); at = [i for i, x in enumerate(ws) if bare(x) == w]
+        return None if not at else all(i + 1 < len(ws) and ws[i + 1].startswith('\u06DC') for i in at)
+    for k, w in SAKTA.items():
+        if k in A and not sakta(A[k], w):
+            bad.append('quran %s:%s: the sakta sign ۜ after «%s» is missing' % (k[0], k[1], w))
     def walk(o, path):
         if isinstance(o, dict):
             s_, a_, t = o.get('s'), o.get('a'), o.get('text')
+            if isinstance(s_, int) and isinstance(a_, int) and isinstance(t, str):
+                w = t.split('……')[0].strip().split(' ')
+                if s_ != 1 and len(w) >= 4 and bare(' '.join(w[:4])) == 'بسم الله الرحمن الرحيم':
+                    bad.append('%s: %s %s:%s begins with the basmala, which is not part of the ayah' % (path, o.get('name', ''), s_, a_))
+                if (s_, a_) in SAKTA and sakta(t, SAKTA[(s_, a_)]) is False:
+                    bad.append('%s: %s %s:%s the sakta sign ۜ is missing' % (path, o.get('name', ''), s_, a_))
             if isinstance(s_, int) and isinstance(a_, int) and isinstance(t, str) and (s_, a_) in A:
                 n[0] += 1; full = A[(s_, a_)]
                 parts = [x.strip() for x in t.split('……')]
-                w = parts[0].split(' ')
-                if a_ == 1 and len(w) > 4 and re.sub(r'[\u064B-\u065F\u0670\u06D6-\u06ED]', '', ' '.join(w[:4])).replace('ٱ', 'ا') == 'بسم الله الرحمن الرحيم':
-                    parts[0] = ' '.join(w[4:])
                 if not all(x in full for x in parts if x):
                     bad.append('%s: %s %s:%s «%s»' % (path, o.get('name', ''), s_, a_, t[:50]))
             for k, v in o.items():
@@ -185,6 +201,26 @@ def check_verses(D):
     if bad:
         raise SystemExit('waha data.json, verses that do not match the mushaf pages:\n  ' + '\n  '.join(bad[:20]))
     return n[0]
+
+
+# the functions of app.js that waha_post.js wraps: consent before a file leaves, the PIN, the gender of what is said and shown.
+# Each must stay a plain top-level function of app.js and be wrapped in waha_post.js: renamed, or made a const, the wrapper would
+# quietly not apply and the build would still pass (ENG-06). saveFile also fails closed at run time (SAVE_GATE).
+WAHA_NEEDS = ['say', 'ttsSay', 'tripLogSave', 'pinSet', 'pinSave', 'pinCheck', 'pinGate', 'go', 'kidsSheet', 'kidEditSheet', 'onKid', 'saveFile']
+
+
+def check_needs(app, post, bridge):
+    miss = [n for n in WAHA_NEEDS if not re.search(r'^(?:async\s+)?function\s+%s\s*\(' % n, app, re.M)]
+    bare = [n for n in WAHA_NEEDS if not re.search(r'(?<![\w.])%s\s*=\s*(?:async\s+)?function\b' % n, post)]
+    if miss or bare:
+        raise SystemExit('waha: the wrapped functions changed (ENG-06):' + (' not a top-level function in app.js: ' + ', '.join(miss) if miss else '') +
+                         (' not wrapped in waha_post.js: ' + ', '.join(bare) if bare else ''))
+    if not re.search(r'SAVE_GATE = true; try \{ return _save\(', post) or 'if (!SAVE_GATE)' not in app:
+        raise SystemExit('waha: saveFile must open only through the consent sheet (SAVE_GATE)')
+    # nothing of the Claude artifact runtime: it would send a child's words to a model, or open a second way out for files (ENG-16)
+    for name, code in (('app', app), ('post', post), ('bridge', bridge)):
+        if re.search(r'window\.claude|claude\.use\(', code):
+            raise SystemExit('waha %s: the Claude artifact runtime is not used in the product (ENG-16)' % name)
 
 
 def build(verbose=True, icon='', csp=''):
@@ -214,6 +250,7 @@ def build(verbose=True, icon='', csp=''):
                         'passages': [{k: x[k] for k in ('id', 'level', 'title', 'text', 'words', 'questions')} for x in O['passages']]}
     data = _j.dumps(D, ensure_ascii=False, separators=(',', ':'))
     css, bridge, post = rd('parts', 'waha.css'), rd('parts', 'waha_bridge.js'), rd('parts', 'waha_post.js')
+    check_needs(app, post, bridge)
     miss = check_markers('page', page) + check_markers('app', app) + check_markers('data', data)
     if '</script' in data:
         raise SystemExit('data.json must not contain </script')

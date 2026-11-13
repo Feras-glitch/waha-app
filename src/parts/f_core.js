@@ -79,7 +79,8 @@ function readBuf(blob){
   return new Promise(function(res,rej){var fr=new FileReader();fr.onload=function(){res(fr.result);};fr.onerror=rej;fr.readAsArrayBuffer(blob);});
 }
 async function blobPut(k,blob){
-  if(!IDB.db){MEM[k]=blob;return;}
+  /* without the browser's storage nothing is kept: a recording held only in memory would vanish on reload while its work stays listed */
+  if(!IDB.db) throw new Error('no-idb');
   var buf=await readBuf(blob);
   await idbReq('readwrite',function(s){return s.put({t:blob.type||'application/octet-stream',b:buf},k);});
   if(URLS[k]){try{URL.revokeObjectURL(URLS[k]);}catch(e){} delete URLS[k];}
@@ -166,6 +167,8 @@ window.addEventListener('storage',function(e){
 
 /* ---------- avatars ---------- */
 var AVC=['lapis','teal','rose','gold','plum','olive'];
+/* a child's colour goes into a style attribute: only one of these names is ever written there */
+function kidC(k){return k&&AVC.indexOf(k.c)>=0?k.c:'lapis';}
 var AVE=['🦁','🐪','🦅','🐬','🦉','🐎','🦋','🌙','⭐','🌴','🌷','🐢'];
 function firstLetter(n){n=String(n||'').trim();return n?n.charAt(0):'؟';}
 function avatarHTML(k,size){
@@ -238,7 +241,11 @@ function pinOk(){try{localStorage.removeItem(PIN_LOCK_KEY);}catch(e){} LAST_PIN=
 function pinLockMsg(){var s=Math.ceil(pinLockLeft()/1000); return 'محاولاتٌ خاطئةٌ كثيرة. أعيدوا المحاولة بعد '+(s>=60?n2a(Math.ceil(s/60))+' دقيقة':n2a(s)+' ثانية')+'.';}
 function parentOn(){return Date.now()<PARENT_UNTIL;}
 /* the session lasts fifteen minutes from its PIN at most; using the corner does not extend it */
-function parentStart(){PARENT_UNTIL=Date.now()+15*60*1000;}
+/* every parent session asks the browser to keep the family's data (without it Safari may wipe an app not used for a week,
+   PIN, recordings and all); the answer is kept to show the parents (ENG-05) */
+var PERSISTED=null;
+function askPersist(){ try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().then(function(v){PERSISTED=!!v;},function(){}); }catch(e){} }
+function parentStart(){PARENT_UNTIL=Date.now()+15*60*1000; askPersist();}
 function parentTouch(){}
 async function hashPin(pin,salt){
   var txt=salt+':'+pin;
@@ -336,8 +343,7 @@ function rcShow(code,next){
     '<header class="page-head center-head"><span class="ch-ico big">'+ICON.lock+'</span><h1 class="h1">رمز الاسترداد</h1>'+
     '<p class="lead">إن نسيتم رمز وليّ الأمر يومًا فبهذا الرمز وحده تُعيدون ضبطه. يظهر الآن مرةً واحدة، ولا يُحفظ في التطبيق.</p></header>'+
     '<p class="rec-code" dir="ltr" lang="en" id="recCode">'+esc(code)+'</p>'+
-    '<div class="actions center-actions"><button class="btn" type="button" data-act="rcMail">'+ICON.share+' أرسلوه إلى بريدكم</button>'+
-      '<button class="btn ghost" type="button" data-act="rcCopy">انسخوه</button></div>'+
+    '<div class="actions center-actions"><button class="btn" type="button" data-act="rcMail">'+ICON.share+' أرسلوه إلى بريدكم</button></div>'+   /* no «copy»: a code left on the clipboard is offered to the next field a child focuses */
     '<aside class="didyou"><p>أرسلوه إلى بريدكم أو اكتبوه على ورقةٍ في مكانٍ لا يصل إليه الأطفال. ومن دونه تبقى إعادة الضبط ممكنة، لكنها تنتظر ٧٢ ساعة وتظهر للجميع.</p></aside>'+
     '<label class="check-row"><input type="checkbox" id="rcSaved"> حفظتُه خارج هذا الجهاز</label>'+
     '<div class="actions center-actions"><button class="btn" type="button" data-act="rcDone" id="recDone" disabled>تابعوا</button></div></div>');
@@ -411,7 +417,9 @@ async function rcSubmit(){
   if(!rcNorm(inp.value)){err.textContent='اكتبوا رمز الاسترداد.';return;}
   var ok=(await hashPin(rcNorm(inp.value),FAM.rec.salt))===FAM.rec.h;
   if(!ok){ pinFail(); err.textContent=pinLockLeft()?pinLockMsg():'رمز الاسترداد غير صحيح.'; return; }
-  try{localStorage.removeItem(PIN_LOCK_KEY);}catch(e){} FAM.pin=null; FAM.resetReq=null; (FAM.pinLog=FAM.pinLog||[]).push({t:Date.now(),k:'code'}); saveFam();
+  /* a reset with the recovery code is logged and shown in every consent sheet for thirty days, like a change of PIN: if a child found
+     the code, the parents still see that the PIN changed */
+  try{localStorage.removeItem(PIN_LOCK_KEY);}catch(e){} FAM.pin=null; FAM.resetReq=null; (FAM.pinLog=FAM.pinLog||[]).push({t:Date.now(),k:'code'}); FAM.pinResets=FAM.pinResets||[]; FAM.pinResets.push(Date.now()); saveFam();
   setupPin(true);
 }
 async function resetRequest(){
@@ -470,7 +478,7 @@ function setupDone(){
   L=null;
   go('<div class="ax-page narrow" style="--ax:var(--olive)"><header class="page-head center-head"><h1 class="h1">تمّ الإعداد: من يبدأ؟</h1>'+
     '<p class="lead">اختاروا الطفل الذي يلعب الآن، فتُفتح له واحته. وتعودون إلى لوحاتكم من «من يلعب؟ ← 👪 للوالدين».</p></header>'+
-    '<div class="who">'+FAM.kids.map(function(k){return '<button class="who-card" type="button" data-act="setupStart" data-id="'+k.id+'" style="--ax:var(--'+(k.c||'lapis')+')">'+avatarHTML(k,'l')+'<span class="who-n">'+esc(k.name)+'</span></button>';}).join('')+'</div>'+
+    '<div class="who">'+FAM.kids.map(function(k){return '<button class="who-card" type="button" data-act="setupStart" data-id="'+escA(k.id)+'" style="--ax:var(--'+kidC(k)+')">'+avatarHTML(k,'l')+'<span class="who-n">'+esc(k.name)+'</span></button>';}).join('')+'</div>'+
     '<section><h2 class="h2">هل في الجهاز صوتٌ عربي؟</h2><p>الصغار يسمعون الأسئلة والخيارات بالقارئ الآلي. جرّبوه الآن: إن لم تسمعوا جملةً عربية واضحة فثبّتوا صوتًا عربيًّا من إعدادات «تحويل النص إلى كلام» في الجهاز.</p>'+
       '<div class="actions"><button class="btn ghost" type="button" data-act="voiceTest">🔊 جرّبوا الصوت</button></div><p class="muted" id="vtFb" role="status"></p></section>'+
     '<div class="actions"><button class="btn ghost" type="button" data-act="kidAdd">➕ أضيفوا طفلًا آخر</button></div></div>');
@@ -540,7 +548,7 @@ function who(){
     '<header class="page-head center-head"><span class="eyebrow">كنوز البيان</span><h1 class="h1">مَن معنا اليوم؟</h1></header>'+resetBanner()+
     '<div class="who">'+FAM.kids.map(function(k){
       var d=kidLoad(k.id), n=LESSONS.filter(function(l){return d.prog[l.id];}).length;
-      return '<button class="who-card" type="button" data-act="pickKid" data-id="'+k.id+'" style="--ax:var(--'+(k.c||'lapis')+')">'+avatarHTML(k,'l')+
+      return '<button class="who-card" type="button" data-act="pickKid" data-id="'+escA(k.id)+'" style="--ax:var(--'+kidC(k)+')">'+avatarHTML(k,'l')+
         '<span class="who-n">'+esc(k.name)+'</span><span class="who-g">'+gem(n>0)+' '+n2a(n)+' / '+n2a(LESSONS.length)+'</span></button>';
     }).join('')+'</div>'+
     '<div class="actions center-actions"><button class="btn ghost" type="button" data-act="parent">'+ICON.lock+' ركن وليّ الأمر</button></div></div>');
@@ -594,7 +602,7 @@ async function kidFormSubmit(){
   var k=KF.id?kidById(KF.id):null, isNew=!k;
   if(isNew){k={id:uid('k'),created:Date.now()};FAM.kids.push(k);}
   k.name=name.slice(0,24); k.g=KF.g; k.av=KF.av; k.c=KF.c; k.by=+((document.getElementById('kfBy')||{}).value||KF.by||0)||0;
-  if(KF.newPhoto){await blobPut('photo-'+k.id,KF.newPhoto); k.photo=true; await mediaURL('photo-'+k.id);}
+  if(KF.newPhoto){ try{ await blobPut('photo-'+k.id,KF.newPhoto); k.photo=true; await mediaURL('photo-'+k.id); }catch(e){ toast('لم تُحفظ الصورة: هذا المتصفح لا يحفظ الملفات هنا.'); } }
   else if(KF.dropPhoto){await blobDel('photo-'+k.id); k.photo=false;}
   if(URLS['photo-tmp']){try{URL.revokeObjectURL(URLS['photo-tmp']);}catch(e){} delete URLS['photo-tmp'];}
   var more=!!(document.getElementById('kfMore')||{}).checked;

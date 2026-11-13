@@ -6,7 +6,7 @@ const $ = (id) => document.getElementById(id);
 const strip = (s) => String(s).replace(/[ؐ-ًؚ-ٰٟۖ-ۭـ]/g, '').replace(/ٱ/g,'ا');
 const esc = (s) => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const MEM = {}; let STORE_WARNED = false;
-function storageWarn(){ if (STORE_WARNED) return; STORE_WARNED = true; try { const w = document.createElement('div'); w.className = 'fb bad'; w.style.cssText = 'position:fixed;bottom:12px;left:12px;right:12px;z-index:99;background:var(--paper);padding:10px 14px;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.2)'; w.textContent = 'تنبيه: ذاكرة الجهاز ممتلئة ولا يُحفظ التقدّم. ⟨أخبر|أخبري⟩ ولي الأمر (صدّر نسخة احتياطية ثم امسح القديم).'; document.body.appendChild(w); setTimeout(() => w.remove(), 12000); } catch (e) {} }
+function storageWarn(){ if (STORE_WARNED) return; STORE_WARNED = true; try { const w = document.createElement('div'); w.className = 'fb bad'; w.style.cssText = 'position:fixed;bottom:12px;left:12px;right:12px;z-index:99;background:var(--paper);padding:10px 14px;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.2)'; w.textContent = 'تنبيه: ذاكرة الجهاز ممتلئة ولا يُحفظ التقدّم. ⟨أخبر|أخبري⟩ وليّ الأمر ليصدّر نسخةً احتياطية ثم يمسح القديم.'; document.body.appendChild(w); setTimeout(() => w.remove(), 12000); } catch (e) {} }
 /* الأطفال يُعرَفون بمعرّفٍ ثابت يأتي من ملفاتهم في التطبيق. برنامج الواحة يتعامل مع ترتيب الطفل (0، 1، 2…)،
    والحفظ يترجم الترتيب إلى المعرّف ذهابًا وإيابًا («m:0:…» يُحفظ «m:@k123:…»)، فحذف طفلٍ أو تغيّر الترتيب لا يخلط تقدّم أحد. */
 const KIDKEY = /^([A-Za-z]+):(\d+)(:.*)?$/, NOT_KID = new Set(['relayStart', 'relayPlan']), ORPHAN = -9;
@@ -192,27 +192,32 @@ function ukAlts(u, a){
   const pool = [...new Set([...own, ...UK_M])].filter(x => key(x) !== key(a));
   return pool.sort((x, y) => Math.abs(x.length - L) - Math.abs(y.length - L)).slice(0, 4);
 }
-function optsOf(a, alts, n){ const key = x => N1(RES(x), true), seen = new Set([key(a)]), out = [];
+/* the options of a question, without repeats. The pattern games (the weight, the derivation, the conjugation) test the vowels
+   themselves: عَلِمَ and عَلَّمَ are two answers there, so they are told apart by their exact vowelled text */
+const EXACT_G = new Set(['rl', 'drv', 'cnj']);
+function optsOf(a, alts, n, g){ const key = EXACT_G.has(g) ? (x => PUNCT(RES(x).normalize('NFC'))) : (x => N1(RES(x), true)), seen = new Set([key(a)]), out = [];
   for (const x of shuffle([...(alts || [])])){ const k = key(x); if (!k || seen.has(k)) continue; seen.add(k); out.push(x); if (out.length >= n) break; }
   return [a, ...out]; }
 const FREE_KINDS = new Set(['نص حر', 'أخبرني', 'رأيتُها اليوم']);
+/* the aids of a box of options (eight and under): «اسمع الخيارات» above it, the written tip below it */
+function optAidsOff(box){ const p = box.previousElementSibling; if (p && p.classList.contains('optsay')) p.remove(); let n = box.nextElementSibling; while (n && (n.classList.contains('optsay') || n.classList.contains('optip'))){ const nx = n.nextElementSibling; n.remove(); n = nx; } }
 function mcq(box, options, correct, onDone, cls, quiet){
   box.innerHTML = '';
   /* an option may carry ⟨m|f⟩ markers that the page resolves on screen, so the right one is found by its own text, not by what shows */
   /* eight and under: the first touch on an option says it and lights it, a second touch on the same option chooses it */
-  const small = tier() === 'small' && options.length > 1;
+  const small = tier() === 'small' && options.length > 1, noSay = MCQ_QURAN || options.some(o => UTHM.test(String(o))); MCQ_QURAN = false;
   shuffle(options.slice()).forEach(o => { const b = el('button', 'opt' + (cls ? ' ' + cls : '')); b.type = 'button'; b.textContent = o; b.__o = o;
     b.addEventListener('click', () => {
-      if (small && b.dataset.s !== 'arm'){ for (const x of box.children) if (x.dataset.s === 'arm') delete x.dataset.s; b.dataset.s = 'arm'; say(b.textContent); return; }
-      voiceStop(); const ok = o === correct; for (const x of box.children){ x.disabled = true; if (x.__o === correct && !quiet) x.dataset.s = 'ok'; } if (quiet) b.dataset.s = 'pick'; else if (!ok) b.dataset.s = 'bad'; let sb = box.nextElementSibling; while (sb && (sb.classList.contains('optsay') || sb.classList.contains('optip'))){ const nx = sb.nextElementSibling; sb.remove(); sb = nx; } onDone(ok); });
+      if (small && b.dataset.s !== 'arm'){ for (const x of box.children) if (x.dataset.s === 'arm') delete x.dataset.s; b.dataset.s = 'arm'; if (!noSay) say(b.textContent); return; }
+      voiceStop(); const ok = o === correct; for (const x of box.children){ x.disabled = true; if (x.__o === correct && !quiet) x.dataset.s = 'ok'; } if (quiet) b.dataset.s = 'pick'; else if (!ok) b.dataset.s = 'bad'; optAidsOff(box); onDone(ok); });
     box.appendChild(b); });
   /* a child who does not read yet (eight and under) can hear the options before choosing */
-  { let old = box.nextElementSibling; while (old && (old.classList.contains('optsay') || old.classList.contains('optip'))){ const nx = old.nextElementSibling; old.remove(); old = nx; } }
-  if (small){ const sb = el('button', 'tiny optsay', '🔊 ' + T('اسمع الخيارات', 'اسمعي الخيارات')); sb.type = 'button';
+  optAidsOff(box);
+  if (small && !noSay){ const sb = el('button', 'btn ghost optsay', '🔊 ' + T('اسمع الخيارات', 'اسمعي الخيارات')); sb.type = 'button';
     /* each option lights while it is said, so the child knows which button holds which word */
     sb.addEventListener('click', () => { const bs = [...box.children]; say(bs.map(x => x.textContent), {onPart: i => bs.forEach((x, j) => x.classList.toggle('saying', j === i))}); });
-    box.insertAdjacentElement('afterend', sb);
-    const tip = el('p', 'muted optip', T('المس الخيار لتسمعه، ثم المسه مرةً أخرى لتختاره.', 'المسي الخيار لتسمعيه، ثم المسيه مرةً أخرى لتختاريه.')); sb.insertAdjacentElement('afterend', tip); }
+    box.insertAdjacentElement('beforebegin', sb);
+    const tip = el('p', 'muted optip', T('المس الخيار لتسمعه، ثم المسه مرةً أخرى لتختاره.', 'المسي الخيار لتسمعيه، ثم المسيه مرةً أخرى لتختاريه.')); box.insertAdjacentElement('afterend', tip); }
 }
 function feedback(id, st, good, bad, near){ const e = typeof id === 'string' ? $(id) : id; e.textContent = st === 'ok' || st === true ? good : (st === 'near' ? near : bad); e.className = 'fb ' + (st === true || st === 'ok' ? 'ok' : st === 'near' ? 'near' : 'bad'); }
 const ALPHA = 'ابتثجحخدذرزسشصضطظعغفقكلمنهويءةىأإآؤئ';
@@ -236,10 +241,10 @@ function typeBox(box, answer, opts){
 function markSpan(text, span){ return markMany(text, span ? [span] : []); }
 function markMany(text, spans){ const hits = spans.map(sp => [text.indexOf(sp), sp]).filter(h => h[0] >= 0).sort((a, b) => a[0] - b[0]); let out = '', k = 0;
   for (const [i, sp] of hits){ if (i < k) continue; out += esc(text.slice(k, i)) + '<mark>' + esc(sp) + '</mark>'; k = i + sp.length; } return out + esc(text.slice(k)); }
-function verseHtml(v, cls){ return `<p class="q ${cls||'s'}">﴿${markSpan(v.text, v.word)}﴾</p><p class="ref" style="margin:0">${v.name} ${v.s}:${v.a}</p>`; }
+function verseHtml(v, cls){ return `<p class="q ${cls||'s'}">﴿${markSpan(v.text, v.word)}﴾</p><p class="ref" style="margin:0">${v.name}: ${v.a}</p>`; }
 /* مقطع من الآية حول الكلمة (n كلمات قبلها وبعدها) للآيات الطويلة، مع «…» في الطرفين */
 function snip(text, word, n){ const ws = text.split(' '); if (ws.length <= 2 * (n || 8) + 1) return text; const i = ws.indexOf(word); if (i < 0) return text; const a = Math.max(0, i - (n || 8)), b = Math.min(ws.length, i + (n || 8) + 1); return (a ? '… ' : '') + ws.slice(a, b).join(' ') + (b < ws.length ? ' …' : ''); }
-function blankHtml(v, short){ const t = short ? snip(v.text, v.word, 8) : v.text; return `<p class="q s">﴿${esc(t).replace(esc(v.word), '<mark>……</mark>')}﴾</p><p class="ref" style="margin:0">${v.name} ${v.s}:${v.a}</p>`; }
+function blankHtml(v, short){ const t = short ? snip(v.text, v.word, 8) : v.text; return `<p class="q s">﴿${esc(t).replace(esc(v.word), '<mark>……</mark>')}﴾</p><p class="ref" style="margin:0">${v.name}: ${v.a}</p>`; }
 
 /* ---- the growing oasis: 22 stages, each unlocks one thing in the child's scene ---- */
 const STAGES = [
@@ -508,7 +513,7 @@ function drawPalm(){
   D.family.forEach((f, i) => { const c = document.createElementNS('http://www.w3.org/2000/svg','circle'); c.setAttribute('cx', cx-50+ (i%6)*20); c.setAttribute('cy', 70 + Math.floor(i/6)*18 + (i%2)*6); c.setAttribute('r', 7); if(!op.includes(f.lemma)) c.setAttribute('opacity','.35'); ds.appendChild(c); });
 }
 function hl(text, word){ return text.split(' ').map(w => strip(w)===strip(word) ? `<mark>${w}</mark>` : w).join(' '); }
-function ayahHtml(v){ return `<p class="q">﴿${hl(v.text, v.word)}﴾</p><p class="ref">${v.name} ${v.s}:${v.a}</p>`; }
+function ayahHtml(v){ return `<p class="q">﴿${hl(v.text, v.word)}﴾</p><p class="ref">${v.name}: ${v.a}</p>`; }
 function renderPalm(){
   $('seedRoot').textContent = D.root; $('seedText').textContent = D.seed + '.';
   $('seedN').textContent = `نخلة ${D.root}: في محفوظك ${D.total} مرة، في ${D.family.length} كلمات.`;
@@ -534,7 +539,7 @@ function openSheet(f){
   s.innerHTML = `<div class="top"><h2>${f.lemma}</h2><button class="x" aria-label="إغلاق">✕</button></div>
    <div class="row"><span class="chip">${f.pattern}</span><span>${f.role}</span></div>
    <div><p class="lbl" style="margin:0">المعنى <span class="draft">(مسودة)</span></p><p style="margin:0;font-size:1.25rem">${f.meaning}</p></div>
-   <div><p class="lbl" style="margin:0 0 6px">من محفوظك · ${f.count} مرة</p>${f.verses.map(v => ayahHtml(v) + `<div class="btns" style="justify-content:flex-start"><button class="btn ghost sm recb" type="button" data-ref="${v.name} ${v.s}:${v.a}" data-text="${esc(v.text)}">🎙 ⟨سجّل|سجّلي⟩ الآية</button></div>`).join('')}</div>
+   <div><p class="lbl" style="margin:0 0 6px">من محفوظك · ${f.count} مرة</p>${f.verses.map(v => ayahHtml(v) + `<div class="btns" style="justify-content:flex-start"><button class="btn ghost sm recb" type="button" data-ref="${v.name}: ${v.a}" data-text="${esc(v.text)}">🎙 ⟨سجّل|سجّلي⟩ الآية</button></div>`).join('')}</div>
    <div><p class="lbl" style="margin:0">في يومنا <span class="draft">(مسودة)</span></p><p class="sent">${f.sentence}</p></div>
    <div id="triBlock"></div>`;
   showSheet(); s.querySelector('.x').focus(); s.querySelector('.x').addEventListener('click', closeSheet); renderTriBlock(s.querySelector('#triBlock'), D.rootKey, f.lemma);
@@ -613,7 +618,7 @@ const gwMode = modeChips('gwMode', 'gzw', () => gwNext());
 const gwClues = () => gwCur.clues.map(t => ({t})).concat(gwCur.blank ? [{v: gwCur.blank}] : []);
 function gwRender(){
   const L = $('gwClues'); L.innerHTML = '';
-  gwClues().slice(0, gwShown).forEach(c => { const li = el('li', c.v ? 'ay' : null); li.innerHTML = c.v ? `﴿${esc(c.v.text)}﴾ <span class="ref">${c.v.name} ${c.v.s}:${c.v.a}</span>` : esc(c.t); L.appendChild(li); });
+  gwClues().slice(0, gwShown).forEach(c => { const li = el('li', c.v ? 'ay' : null); li.innerHTML = c.v ? `﴿${esc(c.v.text)}﴾ <span class="ref">${c.v.name}: ${c.v.a}</span>` : esc(c.t); L.appendChild(li); });
   $('gwMore').disabled = gwDone || gwShown >= gwClues().length; $('gwCount').textContent = `تلميح ${gwShown} من ${gwClues().length}`;
 }
 function gwDoneFn(st){ gwDone = true; gwAt = gwShown; gwShown = gwClues().length; gwRender();
@@ -671,7 +676,7 @@ INIT.gzFolk = () => { if (!gfCur) gfNext(); };
 /* من الجهتين */
 function renderPalin(){ const L = $('gpList'); if (L.childElementCount) return;
   GZ.palin.forEach(x => { const c = el('div','card'); const letters = x.letters.split(' ');
-    c.innerHTML = `<div class="row" style="justify-content:space-between"><span class="chip">${x.kind}</span>${x.verse ? `<span class="ref">${x.verse.name} ${x.verse.s}:${x.verse.a}</span>` : ''}</div>
+    c.innerHTML = `<div class="row" style="justify-content:space-between"><span class="chip">${x.kind}</span>${x.verse ? `<span class="ref">${x.verse.name}: ${x.verse.a}</span>` : ''}</div>
       <p class="big" style="font-size:2.2rem">${esc(x.text)}</p><div class="letters" data-dir="f">${letters.map(l => `<span>${l}</span>`).join('')}</div>
       <p class="note">${esc(x.explain)}${x.source ? ' · ' + esc(x.source) : ''}</p>`;
     const bt = el('button','btn ghost','⟨اقلبها|اقلبيها⟩'); bt.type='button'; const row = el('div','btns'); row.appendChild(bt); c.appendChild(row);
@@ -863,7 +868,7 @@ $('hcNext').addEventListener('click', hcNext);
 function renderColors(){ if (!hcCur) hcNext(); const T = $('hcTable'); if (T.childElementCount) return;
   T.innerHTML = `<tr><th></th><th>مذكّر</th><th>مؤنّث</th><th>جمع</th><th>صار</th><th>اللون</th></tr>` + HY.colors.map(c => `<tr><td><i style="display:inline-block;width:18px;height:18px;border-radius:50%;background:${c.css};border:1px solid var(--line)"></i></td><td>${c.m}</td><td>${c.f}</td><td>${c.pl}</td><td>${c.verb}</td><td>${c.noun}</td></tr>`).join('');
   const V = $('hcVerses'); V.innerHTML = '<p class="lbl">ألوانٌ في محفوظك</p>'; const byA = {}; HY.colors.filter(c => c.verse).forEach(c => { const k = c.verse.s + ':' + c.verse.a; (byA[k] = byA[k] || {v: c.verse, w: []}).w.push(c.verse.word); });
-  Object.values(byA).forEach(({v, w}) => V.insertAdjacentHTML('beforeend', `<p class="q s">﴿${markMany(v.text, w)}﴾</p><p class="ref" style="margin:0">${v.name} ${v.s}:${v.a}</p>`));
+  Object.values(byA).forEach(({v, w}) => V.insertAdjacentHTML('beforeend', `<p class="q s">﴿${markMany(v.text, w)}﴾</p><p class="ref" style="margin:0">${v.name}: ${v.a}</p>`));
   const N = $('hcNisba'); HY.nisba.forEach(c => N.insertAdjacentHTML('beforeend', `<div class="sw"><i style="background:${c.css}"></i><span style="display:flex;flex-direction:column;min-width:0"><span class="w">${c.m} / ${c.f}</span><span class="c">من «${c.src}»: ${esc(c.srcMeaning)}</span></span></div>`)); }
 INIT.hyColors = renderColors;
 
@@ -956,7 +961,7 @@ $('dcAgain').addEventListener('click', () => { if (!dcCur) return; dcShownAgain 
 INIT.wsDict = () => { if (!dcCur) dcNext(); };
 
 /* صرّف الفعل */
-const cjDisp = f => f.replace(/ـَٔا/g, 'آ').replace(/ٱ/g, 'ا').replace(/ىٰ/g, 'ى').replace(/\u06DF/g, '').replace(/\u0670/g, 'ا');
+const cjDisp = f => f.normalize('NFC').replace(/ـَٔا/g, 'آ').replace(/ـَٔ/g, 'أَ').replace(/ٱ/g, 'ا').replace(/ىٰ/g, 'ى').replace(/\u06DF/g, '').replace(/\u0670/g, 'ا');
 const cjId = x => `${x.root}|${x.lemma}|${x.aspect}|${x.pgn}`;
 let cjCur = null;
 function cjNext(){
@@ -1027,19 +1032,27 @@ const WHO_L = Object.fromEntries(CATQ);
 /* «كنوز البيان» في الرحلة: دروس الخزائن السبع وأسئلتها (تُقرأ عند البناء من parts/data.js) */
 const KZD = DATA.kunuz || {axes: {}, lessons: []};
 const kzPlain = s => String(s == null ? '' : s).replace(/[{}\[\]]/g, '');
+/* a question from «كنوز البيان» may quote its verse, or offer the verse's own words as options: the speech engine never reads them */
+const qNorm = s => String(s == null ? '' : s).replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640\[\](){}\s«»﴿﴾.،؟!:]/g, '').replace(/[أإآٱ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي');
+function kzQuran(L, s){ const n = qNorm(s); return n.length >= 2 && (L.verses || []).some(v => qNorm(v.t).includes(n)); }
+function kzSay(L, s){ return String(s).replace(/﴿[^﴾]*﴾/g, '…').replace(/«([^»]+)»/g, (m, w) => kzQuran(L, w) ? '…' : m); }
+/* the answer of this card is the Quran's own word (a verse to complete, or options taken from the verse) */
+function quranCard(c){ return !!c && (c.g === 'fill' || !!c.quranOpts || UTHM.test(String(c.a || ''))); }
+let MCQ_QURAN = false;   /* set while a card whose options are the verse's words is on screen: they are not said */
 function kzFind(id){ const [lid, qi] = String(id).split('|'); const L = KZD.lessons.find(l => l.id === lid); const q = L && L.quiz[+qi]; return q ? {L, q} : null; }
 const GEN = {
   /* السؤال خارج درسه يحتاج سياقه: عنوان الدرس وآيته (إلا إن كان السؤال إكمالًا للآية نفسها) */
   kz: id => { const x = kzFind(id); if (!x || !x.q.o || x.q.o.length < 2) return null; const v = (x.L.verses || [])[0], blank = /ـــ/.test(x.q.q);
-    return {q: kzPlain(x.q.q), a: kzPlain(x.q.o[0]), alts: x.q.o.slice(1).map(kzPlain), why: kzPlain(x.q.why), label: `كنوز البيان: ${x.L.title}`,
+    const qq = kzPlain(x.q.q), qs = blank ? T('اختر الكلمة الناقصة في الآية.', 'اختاري الكلمة الناقصة في الآية.') : kzSay(x.L, qq);
+    return {q: qq, qs: qs !== qq ? qs : undefined, quranOpts: x.q.o.some(o => kzQuran(x.L, kzPlain(o))), a: kzPlain(x.q.o[0]), alts: x.q.o.slice(1).map(kzPlain), why: kzPlain(x.q.why), whys: x.q.why ? kzSay(x.L, kzPlain(x.q.why)) : undefined, label: `كنوز البيان: ${x.L.title}`,
       html: `<p class="note" style="margin:0 0 4px">💎 ${esc(x.L.title)}</p>` + (v && !blank ? `<p style="font-family:var(--f-q);font-size:1.15rem;line-height:1.9;margin:0">${esc(kzPlain(v.t))} <span class="ref">(${esc(v.n)} ${v.a})</span></p>` : '')}; },
   rl: id => { const [k, q] = id.split('|'); const P = ALL[k]; const r = P && P.roles.find(x => x.q === q); if (!r) return null; return {q:`${P.root}: ${r.q}`, a:r.a, alts:r.opts.filter(o => o !== r.a), type:true, label:`الوزن: ${r.q} (${P.root})`}; },
   drv: id => { const [k, l] = id.split('|'); const P = ALL[k]; const f = P && P.family.find(x => x.lemma === l); if (!f) return null; return {q:`من جذر ${P.root} على وزن ${dvPattern(f)}: ما الكلمة؟`, a:f.lemma, alts:P.family.filter(x => x !== f).map(x => x.lemma), type:true, label:`⟨اشتقّ|اشتقّي⟩: ${f.lemma}`}; },
   fill: id => { const [k, sa, w] = id.split('|'); const P = ALL[k]; let hit = null; P && P.family.forEach(f => f.verses.forEach(v => { if (`${v.s}:${v.a}` === sa && strip(v.word) === w) hit = {f, v}; })); if (!hit) return null;
-    return {q: '⟨أكمل|أكملي⟩ الكلمة الناقصة في الآية', qv: {s: hit.v.s, a: hit.v.a, b: hit.v.a}, html: blankHtml(hit.v, true), a:hit.v.word, alts:P.family.filter(x => x !== hit.f).slice(0, 5).map(x => x.verses[0].word), type:true, label:`الكلمة الناقصة: ${hit.v.word} (${hit.v.name} ${hit.v.s}:${hit.v.a})`}; },
+    return {q: '⟨أكمل|أكملي⟩ الكلمة الناقصة في الآية', qv: {s: hit.v.s, a: hit.v.a, b: hit.v.a}, html: blankHtml(hit.v, true), a:hit.v.word, alts:P.family.filter(x => x !== hit.f).slice(0, 5).map(x => x.verses[0].word), type:true, label:`الكلمة الناقصة: ${hit.v.word} (${hit.v.name}: ${hit.v.a})`}; },
   uk: id => { const [k, l] = id.split('|'); const P = ALL[k]; const u = P && P.unknown.find(x => x.lemma === l); if (!u) return null; const v = u.verse; const a = u.options[u.answer];
     return {q:`ما معنى «${v ? v.word : u.lemma}» في الآية؟`, qs: v ? 'ما معنى الكلمة الملوّنة في الآية؟' : null, qv: v ? {s: v.s, a: v.a, b: v.a} : null,
-      html: v ? `<p class="q s">﴿${esc(snip(v.text, v.word, 8)).replace(esc(v.word), `<mark>${esc(v.word)}</mark>`)}﴾</p><p class="ref" style="margin:0">${v.name} ${v.s}:${v.a} · ${T('كلمة من جذرٍ تعرفه', 'كلمة من جذرٍ تعرفينه')}</p>` : '',
+      html: v ? `<p class="q s">﴿${esc(snip(v.text, v.word, 8)).replace(esc(v.word), `<mark>${esc(v.word)}</mark>`)}﴾</p><p class="ref" style="margin:0">${v.name}: ${v.a} · ${T('كلمة من جذرٍ تعرفه', 'كلمة من جذرٍ تعرفينه')}</p>` : '',
       a, alts: ukAlts(u, a), label:`كلمة من جذرٍ معروف: ${u.lemma}`}; },
   gzw: id => { const x = GZ.quran.find(q => q.id === id); if (!x) return null; return {q:`من أنا؟ ${x.clues.slice(0, 2).join(' ')}`, a:strip(x.answer), alts:x.options.slice(1).map(strip), type:true, label:`من أنا؟ ${x.answer}`}; },
   gzd: id => { const [g, w] = id.split('|'); const G = GZ.dots.find(x => x.id === g); const t = G && G.words.find(x => x.word === w); if (!t) return null; const alts = G.words.filter(x => x !== t).map(x => x.word); let guard = 0; while (alts.length < 3 && guard++ < 40){ const w = pick(GZ.dots).words[0].word; if (w !== t.word && !alts.includes(w)) alts.push(w); } return {q:`رسمها «${G.rasm}»، ومعناها: ${t.meaning}. ما الكلمة؟`, a:t.word, alts, type:true, label:`النقاط: ${t.word}`}; },
@@ -1086,7 +1099,7 @@ function renderTestQ(){
   C.innerHTML = `<div class="row" style="justify-content:space-between"><span class="chip">السؤال ${TS.i + 1} من ${TS.qs.length}</span><span class="note">${GNAME[q.g] || ''}</span></div>${q.html ? q.html : `<p class="ask">${esc(q.q)}</p>`}<div class="opts one" id="tqOpts"></div><div id="tqBox"></div><p class="fb" id="tqFb"></p><div class="btns"><button class="btn" id="tqNext" hidden>التالي</button></div>`;
   const done = st => { const ok = st === 'ok' || st === true; if (ok) TS.score++; TS.log.push({g:q.g, id:q.id, ok}); feedback('tqFb', ok ? true : false, 'أصبت.', `الجواب: ${q.a}`); $('tqNext').hidden = false; $('tqNext').focus(); };
   if (q.type && tier() === 'big') typeBox($('tqBox'), q.a, {id:'tqIn', onDone: st => done(st === 'ok')});
-  else mcq($('tqOpts'), optsOf(q.a, q.alts, 3), q.a, done, q.g === 'sha' ? 'v' : 'm');
+  else mcq($('tqOpts'), optsOf(q.a, q.alts, 3, q.g), q.a, done, q.g === 'sha' ? 'v' : 'm');
   $('tqNext').addEventListener('click', () => { TS.i++; renderTestQ(); window.scrollTo({top:0}); });
 }
 function renderTestEnd(){
@@ -1130,7 +1143,7 @@ function renderOrf(B){
   if (!D){
     B.innerHTML = `<div class="kcard" style="padding:14px"><p class="lbl" style="margin:0">📖 قراءة الربع</p>
       <p style="margin:6px 0">قِطَع القراءة الاثنتا عشرة تنتظر مراجعة الشيخ، ثم تُفعَّل هنا.</p>
-      <p class="note" style="margin:0">طريقتها: كل ثلاثة أشهر ${V('يقرأ', 'تقرأ')} ${nm} قطعةً جديدة دقيقةً واحدة بصوتٍ عالٍ، ثم ${V('يعيد', 'تعيد')} قطعة الربع الماضي دقيقةً أخرى، فترون نموّه على القطعة نفسها، ثم ثلاثة أسئلة شفهية. التسجيل يبقى بينكم وبين ${V('ابنكم', 'ابنتكم')}.</p></div>`;
+      <p class="note" style="margin:0">طريقتها: كل ثلاثة أشهر ${V('يقرأ', 'تقرأ')} ${nm} قطعةً جديدة دقيقةً واحدة بصوتٍ عالٍ، ثم ${V('يعيد', 'تعيد')} قطعة الربع الماضي دقيقةً أخرى، فترون ⟨نموّه|نموّها⟩ على القطعة نفسها، ثم ثلاثة أسئلة شفهية. التسجيل يبقى بينكم وبين ${V('ابنكم', 'ابنتكم')}.</p></div>`;
     return;
   }
   if (ORF && ORF.kid === kid) return ORF.i < ORF.steps.length ? orfReadView(B) : orfQView(B);
@@ -1269,15 +1282,15 @@ function renderDad(){
     const tlHtml = tlog.length ? `<p class="lbl">آخر الرحلات</p>${tlog.slice(0, 7).map(L => `<details class="qi"><summary style="cursor:pointer"><b>${esc(L.date)}</b>${L.extra ? ' (إضافية)' : ''} · ${V('تعلّم', 'تعلّمت')} ${L.learned.length} · ${V('أصاب', 'أصابت')} ${L.ok.length} · ${V('أخطأ', 'أخطأت')} ${L.wrong.length} · ${V('سجّل', 'سجّلت')} ${L.rec.length}</summary>${L.learned.length ? `<p class="note" style="margin:4px 0"><b>${V('تعلّم', 'تعلّمت')}:</b> ${L.learned.map(esc).join(' · ')}</p>` : ''}${L.wrong.length ? `<p class="note" style="margin:4px 0;color:var(--date)"><b>${V('أخطأ', 'أخطأت')}:</b> ${L.wrong.map(esc).join(' · ')}</p>` : ''}${L.ok.length ? `<p class="note" style="margin:4px 0"><b>${V('أصاب', 'أصابت')}:</b> ${L.ok.map(esc).join(' · ')}</p>` : ''}${L.rec.length ? `<p class="note" style="margin:4px 0"><b>${V('سجّل', 'سجّلت')}:</b> ${L.rec.map(esc).join(' · ')}</p>` : ''}</details>`).join('')}` : '';
     B.innerHTML = measureHTML(kid) + tlHtml + `<p class="note">«متقن» = أجاب صحيحًا في يومين مختلفين (لا يُحسب في اليوم الواحد إلا جوابٌ واحد). ويعود كل سؤالٍ صحيحٍ في «مراجعة اليوم» بعد يوم، ثم 3 أيام، ثم 7 ثم 21 ثم 45 يومًا. والخطأ يُنزله درجةً واحدة، ويُعاد في الرحلة نفسها بعد بطاقات، ثم في الغد. اختبار القافلة يسأل عن المتقَن فقط، بلا تلميح.</p>
      ${(() => { const pl = store.get(`placement:${kid}`, null); return `<p class="lbl">تحديد المستوى: ${pl ? `${pl.ok}/${pl.n} في ${esc(pl.date)} — المستوى ${pl.level} (سهل ${pl.byL[0] ? pl.byL[0].join('/') : '—'} · أوسط ${pl.byL[1] ? pl.byL[1].join('/') : '—'} · أصعب ${pl.byL[2] ? pl.byL[2].join('/') : '—'})` : 'لم يُجرَ بعد'} <button class="btn ghost sm" type="button" id="ddPlace">${pl ? 'أعيدوه' : 'أجروه'}</button></p>`; })()}
-     <p class="lbl">المراحل: ${stagesDoneCount()} من ${STAGES.length} · أيام هذا الأسبوع: ${weekPlayed()} من ${WEEK_GOAL}، وأسابيع مكتملة: ${weeksMet()} · مستحق للمراجعة اليوم: ${dueCount()} (راجع ${store.get(`rvDone:${kid}`, 0)}) · الاختبارات: ${hist.filter(h => h.pass).length ? 'نجح في ' + [...new Set(hist.filter(h => h.pass).map(h => h.n))].join('، ') : 'لم ينجح بعد'} (${hist.length} محاولة)</p>
+     <p class="lbl">المراحل: ${stagesDoneCount()} من ${STAGES.length} · أيام هذا الأسبوع: ${weekPlayed()} من ${WEEK_GOAL}، وأسابيع مكتملة: ${weeksMet()} · مستحق للمراجعة اليوم: ${dueCount()} (⟨راجع|راجعت⟩ ${store.get(`rvDone:${kid}`, 0)}) · الاختبارات: ${hist.filter(h => h.pass).length ? 'نجح في ' + [...new Set(hist.filter(h => h.pass).map(h => h.n))].join('، ') : '⟨لم ينجح|لم تنجح⟩ بعد'} (${hist.length} محاولة)</p>
      <div class="tablewrap"><table class="dash"><tr><th>اللعبة</th><th>متقن</th><th>جرّب</th><th>يتعثر</th></tr>${rows || '<tr><td colspan="4">لم يلعب بعد.</td></tr>'}</table></div>
-     <p class="lbl">الأصعب عليه (أخطأ مرتين فأكثر)</p>${hard.length ? `<ul style="margin:0;padding-right:1.2em">${hard.map(x => `<li>${esc(describe(x.g, x.id))} <span class="ref">(${x.m.wrong} أخطاء)</span></li>`).join('')}</ul>` : '<p class="note">لا شيء بعد.</p>'}
+     <p class="lbl">الأصعب ⟨عليه|عليها⟩ (⟨أخطأ|أخطأت⟩ مرتين فأكثر)</p>${hard.length ? `<ul style="margin:0;padding-right:1.2em">${hard.map(x => `<li>${esc(describe(x.g, x.id))} <span class="ref">(${x.m.wrong} أخطاء)</span></li>`).join('')}</ul>` : '<p class="note">لا شيء بعد.</p>'}
      <details><summary class="note" style="cursor:pointer">إعادة ضبط تقدّم ${esc(K().name)} كله</summary><div class="btns" style="justify-content:flex-start"><button class="btn warm sm" type="button" id="ddReset">امسحوا تقدّم هذا الطفل</button></div></details>`;
     B.querySelector('#ddReset').addEventListener('click', e => { const b = e.target; if (!b.dataset.c){ b.dataset.c = '1'; b.textContent = 'متأكدون؟ اضغطوا مرة أخرى'; return; }
       store.keys().forEach(k => { if (new RegExp(`^[A-Za-z]+:${kid}(:|$)`).test(k)) store.del(k); }); ['tri','kq','kqa'].forEach(n => { const a = store.get(n, null); if (Array.isArray(a)) store.set(n, a.filter(x => x.kid !== kid)); });
       resetGames(); renderGrove(); renderPalm(); renderDad(); });
     const pb = B.querySelector('#ddPlace'); if (pb) pb.addEventListener('click', () => { store.set(`placeSkip:${kid}`, false); go('place', 'plCard'); });
-  } else if (ddTab === 'rec'){ B.innerHTML = '<p class="note">استمعوا، واضغطوا الكلمة التي أخطأ فيها، واكتبوا أو سجّلوا ملاحظة، ثم اعتمِدوا أو اطلبوا التصحيح. المعتمد يفتح له «سلّة التمر»، ويدخل «إذاعة الواحة». ولتسمعه العائلة في «إذاعة الباكورة» أو يضعه في مجلّة: «ركن وليّ الأمر» ← «من الواحة والحسنية».</p><div id="ddRec" class="queue"></div>'; renderReview(B.querySelector('#ddRec'), false); }
+  } else if (ddTab === 'rec'){ B.innerHTML = '<p class="note">استمعوا، واضغطوا الكلمة التي ⟨أخطأ|أخطأت⟩ فيها، واكتبوا أو سجّلوا ملاحظة، ثم اعتمِدوا أو اطلبوا التصحيح. المعتمد يفتح ⟨له|لها⟩ «سلّة التمر»، ويدخل «إذاعة الواحة». ولتسمعه العائلة في «إذاعة الباكورة» أو يضعه في مجلّة: «ركن وليّ الأمر» ← «من الواحة والحسنية».</p><div id="ddRec" class="queue"></div>'; renderReview(B.querySelector('#ddRec'), false); }
   else if (ddTab === 'gift'){ renderGiftRequests(B); }
   else if (ddTab === 'amal'){ renderAmalPanel(B); }
   else if (ddTab === 'tri'){ renderTriPanel(B); }
@@ -1290,7 +1303,7 @@ function renderDad(){
      ${Object.keys(DATA.glosses || {}).length ? `<label class="row" style="gap:8px"><input type="checkbox" id="ksGloss" ${glossOn() ? 'checked' : ''}> معنى الكلمة الجديدة بالصينية (مع البينيين) والإنجليزية في بطاقة الدرس</label>` : ''}
      <label class="row" style="gap:8px"><input type="checkbox" id="ksMute" ${store.get('mute', false) ? 'checked' : ''}> اكتموا صوت القارئ الآلي (تبقى تسجيلاتكم)</label>
      <label class="row" style="gap:8px"><input type="checkbox" id="ksAi" ${store.get('aiAllowed', false) ? 'checked' : ''}> اسمح بمساعد الواحة (يرسل نص الطفل وعمره إلى النموذج للتصحيح؛ في صفحة Claude فقط)</label>
-     <p class="lbl">محفوظ ${esc(K().name)}</p><p class="note" style="margin:2px 0 4px">ضعوا علامةً على ما ${K().gender === 'f' ? 'تحفظه' : 'يحفظه'} من المصحف، فتأتي الكلمات والآيات والتصريف في رحلته منه وحده. إن لم تختاروا شيئًا فالمحفوظ كله.</p>
+     <p class="lbl">محفوظ ${esc(K().name)}</p><p class="note" style="margin:2px 0 4px">ضعوا علامةً على ما ${K().gender === 'f' ? 'تحفظه' : 'يحفظه'} من المصحف، فتأتي الكلمات والآيات والتصريف في ⟨رحلته|رحلتها⟩ منه وحده. إن لم تختاروا شيئًا فالمحفوظ كله.</p>
      <div class="chips" id="ksMemo">${(DATA.quran && DATA.quran.units || []).map(u => `<label class="chip2" style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" value="${esc(u.id)}" ${store.get(`memo:${kid}`, null) && store.get(`memo:${kid}`, []).includes(u.id) ? 'checked' : ''}> ${esc(u.name)}</label>`).join('')}</div>
      <p class="note">الرفيق: ${c ? esc(c.name) + ' (' + esc((CMPS[c.kind] || {}).name || '') + ')' : 'لم يُختر بعد'} <button class="btn ghost sm" type="button" id="ksReset">أعيدوا أول لقاء</button></p>
      <p class="lbl">نسخة احتياطية من تقدّم الأطفال كلهم</p><p class="note">تشمل الإتقان والمراحل والرحلات والزينة والإعدادات (لا التسجيلات الصوتية؛ لها تصديرها في تبويب التسجيلات). خذها قبل تغيير الجهاز أو حذف التطبيق.</p>
@@ -1306,7 +1319,7 @@ function renderDad(){
     B.querySelector('#ksRestore').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; try { const o = JSON.parse(await f.text()); if (!o || o.app !== 'waha' || !o.data) throw new Error('bad'); const n = Object.keys(o.data).length; if (!confirm(`استيراد ${n} مفتاحًا من نسخة ${o.date || ''}؟ سيحلّ محل ما على هذا الجهاز.`)) return; Object.keys(o.data).forEach(k => store.set(k, o.data[k])); $('ksFb').textContent = 'استُوردت النسخة. أعيدوا تحميل الصفحة.'; $('ksFb').className = 'fb ok'; setTimeout(() => location.reload(), 1200); } catch (err) { $('ksFb').textContent = 'الملف ليس نسخة احتياطية من الواحة.'; $('ksFb').className = 'fb bad'; } });
     B.querySelector('#ksReset').addEventListener('click', () => { store.del ? store.del(`cmp:${kid}`) : store.set(`cmp:${kid}`, null); store.set(`planted:${kid}`, false); renderDad(); }); }
   else if (ddTab === 'write'){
-    const queue = store.get(`queue:${kid}`, []); B.innerHTML = '<p class="note">رسائله وأخباره، وتقييم مساعد الواحة إن وُجد. راجعوا معه خطأً واحدًا.</p><div class="queue" id="ddQ"></div>'; const Q = B.querySelector('#ddQ'); if (!queue.length) Q.innerHTML = '<p class="note">لم يرسل شيئًا بعد.</p>';
+    const queue = store.get(`queue:${kid}`, []); B.innerHTML = '<p class="note">⟨رسائله وأخباره|رسائلها وأخبارها⟩، وتقييم مساعد الواحة إن وُجد. راجعوا معه خطأً واحدًا.</p><div class="queue" id="ddQ"></div>'; const Q = B.querySelector('#ddQ'); if (!queue.length) Q.innerHTML = '<p class="note">لم يرسل شيئًا بعد.</p>';
     queue.forEach(q => { const d = el('div','qi', `<div class="row" style="justify-content:space-between"><span><span class="chip">${esc(q.kind)}</span> ${esc(q.title || '')} <span class="ref">${esc(q.date)}</span></span>${q.reviewed ? '<span class="badge ok">راجعتُه</span>' : ''}</div><p class="tx">${esc(q.text)}</p>`);
       if (q.ai) d.appendChild(aiCard(q.ai)); if (!q.reviewed){ const b = el('button','btn ghost sm','راجعتُه'); b.type='button'; b.style.alignSelf='flex-start'; b.addEventListener('click', () => { q.reviewed = true; store.set(`queue:${kid}`, queue); renderDad(); }); d.appendChild(b); } Q.appendChild(d); });
   } else if (ddTab === 'kq'){
@@ -1330,12 +1343,12 @@ async function renderTodayLine(B){
       w.appendChild(r); B.appendChild(w); } }
   kids.forEach((k, i) => {
     const log = store.get(`tripLog:${i}`, []).find(L => L.date === td && !L.extra); const doneToday = !!log; const recs = all.filter(r => r.kid === i && r.date === td && ['أخبرني', 'جملة', 'كلمة', 'رأيتُها اليوم'].includes(r.kind)).sort((a, b) => b.id.localeCompare(a.id));
-    const wrong = doneToday ? log.wrong : []; const bag = store.get(`bag:${i}`, []).filter(w => w.day === dayN()).map(w => w.w);
-    const d = el('div','qi'); d.innerHTML = `<div class="row" style="justify-content:space-between;align-items:center"><span>${avatarHtml(k, 28)} <b>${esc(k.name)}</b> ${doneToday ? '<span class="badge ok">رحلة اليوم ✓</span>' : (k.gender === 'f' ? '<span class="badge wait">لم ترحل اليوم</span>' : '<span class="badge wait">لم يرحل اليوم</span>')}</span><span class="ref">☀️ ${weekPlayed(i)} من ${WEEK_GOAL} هذا الأسبوع</span></div>
-      ${doneToday ? `<p class="note" style="margin:4px 0">${k.gender === 'f' ? 'تعرّفت إلى' : 'تعرّف إلى'}: ${bag.length ? bag.map(esc).join('، ') : (log.learned.length ? log.learned.length + ' دروس' : '—')} · ${k.gender === 'f' ? 'أصابت' : 'أصاب'} ${log.ok.length} · ${wrong.length ? `<span style="color:var(--date)">${k.gender === 'f' ? 'أخطأت' : 'أخطأ'} في: ${wrong.map(esc).join(' · ')}</span>` : 'بلا أخطاء'}</p>` : ''}`;
+    const wrong = doneToday ? [...new Set(log.wrong)] : [];   /* a wrong answer asked again later in the trip is one mistake */ const bag = store.get(`bag:${i}`, []).filter(w => w.day === dayN()).map(w => w.w);
+    const d = el('div','qi'); d.innerHTML = `<div class="row" style="justify-content:space-between;align-items:center"><span>${avatarHtml(k, 28)} <b>${esc(k.name)}</b> ${doneToday ? '<span class="badge ok">رحلة اليوم ✓</span>' : (k.gender === 'f' ? '<span class="badge wait">لم ترحل اليوم</span>' : '<span class="badge wait">لم يرحل اليوم</span>')}</span><span class="ref">☀️ ${weekBadge(weekPlayed(i))}</span></div>
+      ${doneToday ? `<p class="note" style="margin:4px 0">${k.gender === 'f' ? 'تعرّفت إلى' : 'تعرّف إلى'}: ${bag.length ? bag.map(esc).join('، ') : (log.learned.length ? nLessons(log.learned.length) : '—')} · ${k.gender === 'f' ? 'أصابت' : 'أصاب'} ${log.ok.length} · ${wrong.length ? `<span style="color:var(--date)">${k.gender === 'f' ? 'أخطأت' : 'أخطأ'} في: ${wrong.map(esc).join(' · ')}</span>` : 'بلا أخطاء'}</p>` : ''}`;
     { const sl = secLine(i, 0, k); if (sl){ const p2 = el('p','note'); p2.style.margin = '2px 0 4px'; p2.textContent = sl; d.appendChild(p2); } }
     recs.slice(0, 3).forEach(r => { const row = el('div','row'); row.style.alignItems = 'center'; row.innerHTML = `<span class="chip">${esc(r.kind)}</span> <span class="note">${esc(r.text).slice(0, 70)}</span>`; const m = mediaEl(r); if (m.classList.contains('aplay')){ m.style.width = '180px'; } row.appendChild(m); d.appendChild(row);
-      if (r.kind === 'أخبرني'){ const rb = el('button','btn ghost sm','↩ ردّوا عليه بصوتكم'); rb.type = 'button'; const rbx = el('div'); row.append(rb); d.appendChild(rbx);
+      if (r.kind === 'أخبرني'){ const rb = el('button','btn ghost sm', `↩ ردّوا ${k.gender === 'f' ? 'عليها' : 'عليه'} بصوتكم`);   /* each row speaks of its own child, whoever is chosen on the board */ rb.type = 'button'; const rbx = el('div'); row.append(rb); d.appendChild(rbx);
         rb.addEventListener('click', () => { if (rbx.childElementCount){ rbx.innerHTML = ''; return; } micWidget(rbx, {label: 'اضغطوا وردّوا بالعربية', max: 60000, onSaved: async blob => { await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid: -1, to: i, kind: 'من أبي', ref: td, replyTo: r.id, text: r.text ? `ردًّا على: ${r.text}` : '', date: td, type: blob.type || 'audio/webm', blob, status: 'approved', notes: [], source: 'local', heard: false}); rb.textContent = '✓ أُرسل الردّ'; rb.disabled = true; }}); }); } });
     const mrow = el('div','row'); mrow.style.cssText = 'align-items:center;flex-wrap:wrap;gap:6px'; const tx = el('input','f'); tx.placeholder = k.gender === 'f' ? 'كلمة لها (تُقرأ بصوت الرفيق)' : 'كلمة له (تُقرأ بصوت الرفيق)'; tx.style.cssText = 'flex:1 1 100%;min-width:100%'; const sendT = el('button','btn ghost sm','أرسلوا الكلمة'); sendT.type = 'button'; const mic = el('button','btn sm','🎙 سجّلوا رسالة بصوتكم'); mic.type = 'button'; const mb = el('div'); const fb = el('p','fb');
     sendT.addEventListener('click', async () => { const t = tx.value.trim(); if (!t) return; await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid: -1, to: i, kind: 'من أبي', ref: td, text: t, date: td, type: '', blob: null, status: 'approved', notes: [], source: 'local', heard: false}); tx.value = ''; fb.textContent = `أُرسلت إلى ${k.name}؛ ${k.gender === 'f' ? 'تسمعها عند فتح واحتها' : 'يسمعها عند فتح واحته'}.`; fb.className = 'fb ok'; });
@@ -1345,9 +1358,10 @@ async function renderTodayLine(B){
 }
 INIT.dad = renderDad;
 
-/* ================= مساعد الواحة: تصحيح الكتابة بسؤال Claude (إن سمح به الأب) ================= */
-let SAMPLE = undefined;
-(async () => { try { SAMPLE = (window.claude && window.claude.use) ? await window.claude.use('sample') : null; } catch (e) { SAMPLE = null; } document.querySelectorAll('.aiBtn').forEach(b => b.hidden = !(SAMPLE && store.get('aiAllowed', false))); })();
+/* ================= مساعد الواحة: off in the product (2.11) ================= */
+/* it asked a model through the Claude artifact runtime, with the child's text, age and languages: no child's words leave the device
+   that way, so it stays off (the build refuses any call to that runtime); its buttons stay hidden */
+const SAMPLE = null;
 function aiCard(r){ const d = el('div','ai'); d.innerHTML = `<span class="h">مساعد الواحة · ${['لم أفهم النص', 'فيه أخطاء عدة', 'فيه خطأ بسيط', 'لا أخطاء'][Math.max(0, Math.min(3, +r.score || 0))]}</span><p style="margin:0">${esc(r.praise || '')}</p>` + (Array.isArray(r.fixes) && r.fixes.length ? `<ul>${r.fixes.map(f => `<li class="fix"><b>${esc(f.wrong || '')}</b> ← <b>${esc(f.right || '')}</b>${f.why ? `: ${esc(f.why)}` : ''}</li>`).join('')}</ul>` : '') + (r.better ? `<details><summary class="note" style="cursor:pointer">صيغة أحسن</summary><p class="tx" style="font-family:var(--f-q);font-size:1.15rem;margin:4px 0 0">${esc(r.better)}</p></details>` : '') + '<span class="note">تقييمٌ آلي، ويراجعه وليّ ⟨أمرك|أمركِ⟩.</span>'; return d; }
 async function aiFeedback(btn, out, kind, text, ctx, title, qkind){
   if (!SAMPLE || !store.get('aiAllowed', false)){ out.innerHTML = '<p class="note">مساعد الواحة غير مفعّل؛ يفعّله ولي الأمر من لوحته.</p>'; return; } if (!text.trim()) return; btn.disabled = true; out.innerHTML = '<p class="note">مساعد الواحة يقرأ…</p>';
@@ -1379,6 +1393,9 @@ function dailyPick(){
 }
 /* الأسبوع من السبت إلى الجمعة: أربعة أيام من «مهمة اليوم» تُتمّه، يختارها الطفل كما يشاء، واليوم الفائت لا يُنقص شيئًا */
 const WEEK_GOAL = 4;
+/* the week's counter as the parents read it: never «٥ من ٤» */
+const weekBadge = n => n >= WEEK_GOAL ? `تمّ الأسبوع (${n} أيام)` : `${n} من ${WEEK_GOAL} هذا الأسبوع`;
+const nLessons = n => n === 1 ? 'درسٌ واحد' : n === 2 ? 'درسان' : n <= 10 ? `${n} دروس` : `${n} درسًا`;
 const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 function weekKey(d){ return ymd(new Date(d.getFullYear(), d.getMonth(), d.getDate() - (d.getDay() + 1) % 7)); }
 function weekPlayed(k = kid){ const d = new Date(); let n = 0; let other = new Set(); try { const S = window.KZ_SECTIONS; if (S && S.playDays) other = new Set(S.playDays(k)); } catch (e) {}
@@ -1548,20 +1565,24 @@ async function renderShelf(){
 }
 INIT.recShelf = () => { renderShelf(); recCountApproved(); };
 /* تصدير واستيراد */
-let DL = undefined;
-(async () => { try { DL = (window.claude && window.claude.use) ? await window.claude.use('downloads') : null; } catch (e) { DL = null; } })();
 async function packRecords(list, type){ const items = []; for (const r of list){ if (!r.blob) continue; const notes = []; for (const n of r.notes || []) notes.push({by:n.by, text:n.text, marks:n.marks || [], date:n.date, audio: n.audio ? {type:n.audio.type, b64: await b64(n.audio)} : null}); items.push({id:r.id, kid:r.kid, kidName:r.kidName, kind:r.kind, ref:r.ref, text:r.text, date:r.date, status:r.status, approvedBy:r.approvedBy || null, type:r.type, b64: await b64(r.blob), notes}); } return JSON.stringify({v:1, app:'واحة اللسان العربي', type, exported: new Date().toISOString(), items}); }
-async function saveFile(name, text, fb){ if (!DL){ /* خارج Claude (التطبيق أو المتصفح): تنزيل عادي، وفي أندرويد تُفتح قائمة المشاركة */
-    try { const ext = (name.split('.').pop() || '').toLowerCase(); const type = {json:'application/json', html:'text/html', md:'text/markdown', txt:'text/plain'}[ext] || 'application/octet-stream';
-      const url = URL.createObjectURL(new Blob([text], {type: type + ';charset=utf-8'})); const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000);
-      fb.textContent = window.AndroidBridge ? '⟨اختر|اختاري⟩ أين ⟨تحفظ|تحفظين⟩ الملف أو إلى من ⟨ترسله|ترسلينه⟩.' : 'نُزّل الملف.'; fb.className = 'fb ok'; } catch (e) { fb.textContent = 'تعذّر حفظ الملف.'; fb.className = 'fb bad'; } return; }
-  try { await DL.save({filename: name, data: text}); fb.textContent = 'حُفظ الملف. ⟨أرسله|أرسليه⟩ إلى المعلم بالبريد أو بالرسائل.'; fb.className = 'fb ok'; } catch (e) { fb.textContent = e && e.code === 'cancelled' ? '' : 'لم يُحفظ الملف.'; fb.className = 'fb bad'; } }
-$('rsExport').addEventListener('click', async () => { const list = (await recAll()).filter(r => r.kid === kid && r.source !== 'import' && r.status !== 'approved' && !PRIVATE_K.has(r.kind) && !String(r.type || '').startsWith('image/')); if (!list.length){ $('rsFb').textContent = 'لا تسجيلات تحتاج مراجعة.'; $('rsFb').className = 'fb bad'; return; } $('rsFb').textContent = 'يُجهَّز الملف…'; await saveFile(`tasjilat-${K().name}-${today()}.json`, await packRecords(list, 'child-recordings'), $('rsFb')); });
+/* a file leaves only through the consent sheet: waha_post wraps saveFile and opens this gate for the one call it allows.
+   Called any other way (the wrapper missing), nothing leaves: it fails closed (2.11) */
+let SAVE_GATE = false;
+async function saveFile(name, text, fb){ if (!SAVE_GATE){ if (fb){ fb.textContent = 'لا يخرج ملفٌّ من الجهاز إلا بموافقة وليّ الأمر.'; fb.className = 'fb bad'; } return; } SAVE_GATE = false;
+  /* a plain download (in the Android app the share sheet opens) */
+  try { const ext = (name.split('.').pop() || '').toLowerCase(); const type = {json:'application/json', html:'text/html', md:'text/markdown', txt:'text/plain'}[ext] || 'application/octet-stream';
+    const url = URL.createObjectURL(new Blob([text], {type: type + ';charset=utf-8'})); const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000);
+    fb.textContent = window.AndroidBridge ? '⟨اختر|اختاري⟩ أين ⟨تحفظ|تحفظين⟩ الملف أو إلى من ⟨ترسله|ترسلينه⟩.' : 'نُزّل الملف.'; fb.className = 'fb ok'; } catch (e) { fb.textContent = 'تعذّر حفظ الملف.'; fb.className = 'fb bad'; } }
+$('rsExport').addEventListener('click', async () => { const list = (await recAll()).filter(r => r.kid === kid && r.source !== 'import' && r.status !== 'approved' && !PRIVATE_K.has(r.kind) && !String(r.type || '').startsWith('image/')); if (!list.length){ $('rsFb').textContent = 'لا تسجيلات تحتاج مراجعة.'; $('rsFb').className = 'fb bad'; return; } $('rsFb').textContent = 'يُجهَّز الملف…'; await saveFile(`tasjilat-${K().name}-${today()}.json`, await packRecords(list, 'child-recordings'), $('rsFb'), Object.assign({}, K(), {extra: 'ومعها ملاحظاتكم الصوتية والمكتوبة عليها إن وُجدت'})); });
 $('rsImport').addEventListener('click', () => $('rsImportFile').click());
 $('rsImportFile').addEventListener('change', e => importFile(e.target.files[0], $('rsFb'), false));
 async function importFile(f, fb, teacher){
   if (!f) return; let pkg; try { pkg = JSON.parse(await f.text()); } catch (e) { fb.textContent = 'الملف ليس ملف تسجيلات.'; fb.className = 'fb bad'; return; }
   if (!pkg || !Array.isArray(pkg.items)){ fb.textContent = 'الملف ليس ملف تسجيلات.'; fb.className = 'fb bad'; return; }
+  const list = pkg.items.filter(it => it && typeof it.id === 'string');
+  if (!list.length){ fb.textContent = 'لم أجد في الملف ما يخص هذا الجهاز.'; fb.className = 'fb bad'; return; }
+  if (!(await importOk(teacher ? 'تسجيلات من عائلة للمراجعة' : 'ردّ المعلم على التسجيلات', [teacher ? `${list.length} تسجيلات للمراجعة` : `ردّ المعلم على ${list.length} تسجيلات`, ...list.slice(0, 8).map(it => `${String(it.kidName || '').slice(0, 40)} ${String(it.ref || it.kind || '').slice(0, 80)}: ${({approved:'معتمد', fix:'يحتاج إعادة', pending:'بانتظار المراجعة'})[it.status] || 'بانتظار المراجعة'}`)]))){ fb.textContent = 'لم يدخل شيء.'; fb.className = 'fb'; return; }
   const all = await recAll(); const byId = Object.fromEntries(all.map(r => [r.id, r])); let n = 0;
   for (const it of pkg.items){
     if (!it || typeof it.id !== 'string') continue;
@@ -1579,14 +1600,14 @@ async function renderReview(box, teacher){
   box.innerHTML = '';
   if (teacher){ const top = el('div','btns'); top.style.justifyContent = 'flex-start'; top.innerHTML = `<button class="btn" type="button" id="tcImport">استورد ملف الطالب</button><button class="btn ghost" type="button" id="tcExport">صدّر المراجعة لولي الأمر</button><input type="file" id="tcFile" accept=".json,application/json" hidden>`; box.appendChild(top); const fb = el('p','fb'); box.appendChild(fb);
     top.querySelector('#tcImport').addEventListener('click', () => top.querySelector('#tcFile').click()); top.querySelector('#tcFile').addEventListener('change', e => importFile(e.target.files[0], fb, true));
-    top.querySelector('#tcExport').addEventListener('click', async () => { const list = (await recAll()).filter(r => r.source === 'import'); if (!list.length){ fb.textContent = 'لا شيء للتصدير.'; fb.className = 'fb bad'; return; } fb.textContent = 'يُجهَّز الملف…'; await saveFile(`muraja-${today()}.json`, await packRecords(list, 'teacher-review'), fb); }); }
+    top.querySelector('#tcExport').addEventListener('click', async () => { const list = (await recAll()).filter(r => r.source === 'import'); if (!list.length){ fb.textContent = 'لا شيء للتصدير.'; fb.className = 'fb bad'; return; } fb.textContent = 'يُجهَّز الملف…'; await saveFile(`muraja-${today()}.json`, await packRecords(list, 'teacher-review'), fb, {note: 'فيه أسماء الأطفال الذين أرسلت عائلاتهم تسجيلاتهم، وأصواتهم، وملاحظات المراجعة'}); }); }
   if (!all.length){ box.appendChild(el('p','note', teacher ? 'استورد ملف الطالب أولًا.' : 'لا تسجيلات لهذا الطفل بعد.')); return; }
   all.forEach(r => { const d = el('div','qi'); const last = r.notes[r.notes.length - 1]; let marks = last && last.by === (teacher ? 'المعلم' : 'ولي الأمر') ? [...(last.marks || [])] : [];
-    d.innerHTML = `<div class="row" style="justify-content:space-between"><span>${teacher ? `<b>${esc(r.kidName || '')}</b> · ` : ''}<span class="chip">${esc(r.kind)}</span> ${esc(r.ref)} <span class="ref">${esc(r.date)}</span></span>${statusBadge(r)}</div>${isQuran(r) && !teacher ? '<p class="note">القرآن: اعتمادك مبدئي ولا يُهدى به؛ الهدية بعد اعتماد الشيخ.</p>' : ''}
-      ${FREE_KINDS.has(r.kind) ? `<p class="note">${esc(r.text)}</p><p class="note">نصٌّ ${(kids[r.kid] || {}).gender === 'f' ? 'اختارته أو قالته' : 'اختاره أو قاله'} بنفسه: استمعوا، واكتبوا ملاحظتكم أو سجّلوها.</p>` : `<p class="note">اضغطوا الكلمة التي ${(kids[r.kid] || {}).gender === 'f' ? 'أخطأت' : 'أخطأ'} فيها لتعليمها:</p><p class="tx" style="font-size:1.2rem" data-w>${wordsHtml(r.text, marks, true)}</p>`}`;
+    d.innerHTML = `<div class="row" style="justify-content:space-between"><span>${teacher ? `<b>${esc(r.kidName || '')}</b> · ` : ''}<span class="chip">${esc(r.kind)}</span> ${esc(r.ref)} <span class="ref">${esc(r.date)}</span></span>${statusBadge(r)}</div>${isQuran(r) && !teacher ? '<p class="note">القرآن: اعتمادكم مبدئي ولا يُهدى به؛ الهدية بعد اعتماد الشيخ.</p>' : ''}
+      ${FREE_KINDS.has(r.kind) ? `<p class="note">${esc(r.text)}</p><p class="note">نصٌّ ${(kids[r.kid] || {}).gender === 'f' ? 'اختارته أو قالته بنفسها' : 'اختاره أو قاله بنفسه'}: استمعوا، واكتبوا ملاحظتكم أو سجّلوها.</p>` : `<p class="note">اضغطوا الكلمة التي ${(kids[r.kid] || {}).gender === 'f' ? 'أخطأت' : 'أخطأ'} فيها لتعليمها:</p><p class="tx" style="font-size:1.2rem" data-w>${wordsHtml(r.text, marks, true)}</p>`}`;
     d.appendChild(mediaEl(r));
     r.notes.forEach(n => { const nn = el('div','ai', `<span class="h">${esc(n.by)} · ${esc(n.date || '')}</span>${n.text ? `<p style="margin:0">${esc(n.text)}</p>` : ''}`); if (n.audio) nn.appendChild(audioEl(n.audio)); d.appendChild(nn); });
-    const ta = document.createElement('textarea'); ta.placeholder = 'ملاحظتك (الخطأ والصواب كما يُكتب ويُقرأ)'; ta.style.minHeight = '4em'; ta.id = 'nt' + r.id; d.appendChild(ta);
+    const ta = document.createElement('textarea'); ta.placeholder = 'ملاحظة (الخطأ والصواب كما يُكتب ويُقرأ)'; ta.style.minHeight = '4em'; ta.id = 'nt' + r.id; d.appendChild(ta);
     const af = document.createElement('input'); af.type = 'file'; af.accept = 'audio/*'; af.setAttribute('capture', ''); af.hidden = true; af.id = 'na' + r.id; d.appendChild(af);
     const row = el('div','btns'); row.style.justifyContent = 'flex-start'; const ab = el('button','btn ghost sm','🎙 أرفقوا ملاحظة صوتية'); ab.type='button'; ab.addEventListener('click', () => af.click()); af.addEventListener('change', () => { ab.textContent = af.files[0] ? '🎙 ' + af.files[0].name.slice(0, 18) : '🎙 أرفقوا ملاحظة صوتية'; });
     const ok = el('button','btn sm','اعتمدوا التسجيل'); ok.type='button'; const fx = el('button','btn warm sm','يحتاج تصحيحًا'); fx.type='button';
@@ -1652,10 +1673,15 @@ async function renderGifts(){
 }
 $('gfImport').addEventListener('click', () => $('gfImportFile').click());
 $('gfImportFile').addEventListener('change', e => importGiftFile(e.target.files[0], $('gfFb')));
+/* nothing from outside the house comes in without the parents' PIN and their look at it (the sheet is in waha_post.js; without it, nothing is imported) */
+async function importOk(title, lines){ return typeof window.importSheet === 'function' ? !!(await window.importSheet(title, lines)) : false; }
 async function importGiftFile(f, fb){
   if (!f) return; let pkg; try { pkg = JSON.parse(await f.text()); } catch (e) { fb.textContent = 'الملف ليس ملف هدايا.'; fb.className = 'fb bad'; return; }
   if (!pkg || !Array.isArray(pkg.items)){ fb.textContent = 'الملف ليس ملف هدايا.'; fb.className = 'fb bad'; return; }
   const all = await dbAll('gift'); let n = 0;
+  const seen = pkg.items.filter(it => it && typeof it === 'object').map(it => pkg.type === 'gift-reply' ? 'ردّ شكر على هدية أُرسلت من هنا' : `هدية من ${String(it.fromName || '؟').slice(0, 40)}${it.ref ? ': ' + String(it.ref).slice(0, 80) : ''}${it.fromPhoto ? ' (مع صورة)' : ''}`);
+  if (!seen.length || !(pkg.type === 'gift' || pkg.type === 'gift-reply')){ fb.textContent = 'الملف ليس ملف هدايا.'; fb.className = 'fb bad'; return; }
+  if (!(await importOk(pkg.type === 'gift' ? 'هدية من خارج البيت' : 'ردّ على هدية', seen))){ fb.textContent = 'لم يدخل شيء.'; fb.className = 'fb'; return; }
   if (pkg.type === 'gift'){ for (const it of pkg.items){ if (!it || typeof it.id !== 'string' || !/^[\w-]{1,40}$/.test(it.id) || all.some(g => g.id === it.id)) continue; await dbPut('gift', {id: it.id, from: -1, fromName: String(it.fromName || '').slice(0, 40), fromPhoto: safePhoto(it.fromPhoto), to: kid, toName: K().name, kind: String(it.kind || '').slice(0, 30), ref: String(it.ref || '').slice(0, 120), text: String(it.text || '').slice(0, 4000), type: /^audio\/[\w.+-]+$/.test(it.type || '') ? it.type : 'audio/webm', blob: unb64(it.b64, /^audio\/[\w.+-]+$/.test(it.type || '') ? it.type : 'audio/webm'), date: String(it.date || '').slice(0, 20), chain: Array.isArray(it.chain) ? it.chain.slice(0, 12).map(x => String(x).slice(0, 40)) : [], status:'sent', source:'import'}); n++; } fb.textContent = n ? `وصلتك ${n} هدايا.` : 'لا هدايا جديدة في الملف.'; }
   else if (pkg.type === 'gift-reply'){ for (const it of pkg.items){ const g = all.find(x => x.id === it.id && x.from >= 0); if (!g || g.status === 'mastered') continue; g.status = 'mastered'; g.masteredDate = it.date; await dbPut('gift', g); bump(`giftsMastered:${g.from}`); n++; } fb.textContent = n ? `أتمّ ${pkg.items[0] && pkg.items[0].by ? esc(pkg.items[0].by) : 'صديقك'} هديتك؛ نبتت شجرتك.` : 'لا ردود جديدة.'; }
   else { fb.textContent = 'الملف ليس ملف هدايا.'; fb.className = 'fb bad'; return; }
@@ -1720,7 +1746,7 @@ function renderAmalPanel(box){
 
 
 /* ================= مراجعة اليوم: ما أتقنتَه يعود إليك بعد 1، 3، 7، 21، 45 يومًا ================= */
-function dueList(){ const out = []; for (const g of Object.keys(GEN)) for (const id of seen(g)){ const m = mget(g, id); if (isDueM(m)){ let q = null; try { q = GEN[g](id); } catch (e) {} if (q && q.a) out.push({g, id, ...q, due: dueOf(m)}); } } return out.sort((a, b) => a.due - b.due); }
+function dueList(){ const out = []; for (const g of Object.keys(GEN)) for (const id of seen(g)){ const m = mget(g, id); if (isDueM(m)){ let q = null; try { q = GEN[g](id); } catch (e) {} if (q && q.a && q.alts && optsOf(q.a, q.alts, 3, g).length >= 2) out.push({g, id, ...q, due: dueOf(m)}); } } return out.sort((a, b) => a.due - b.due); }
 /* what is counted as due is what the review can ask: an item whose game cannot ask it again is not «due» forever */
 function dueCount(){ return dueList().length; }
 let RV = null;
@@ -1741,7 +1767,7 @@ function renderReviseQ(){
     feedback('rvFb', ok ? true : st === 'near' ? 'near' : false, '⟨أصبت|أصبتِ⟩؛ تعود إليك بعد أيام أكثر.', `الجواب: ${q.a}. تعود إليك في لعبتها.`, `قريب! الجواب: ${q.a}`);
     store.set(`rvDone:${kid}`, store.get(`rvDone:${kid}`, 0) + 1); store.set(`rvDay:${kid}:${today()}`, store.get(`rvDay:${kid}:${today()}`, 0) + 1); $('rvNext').hidden = false; $('rvNext').focus(); };
   if (q.type && tier() === 'big') typeBox($('rvTBox'), q.a, {id:'rvIn', onDone: done});
-  else mcq($('rvOpts'), optsOf(q.a, q.alts, 3), q.a, done, q.g === 'sha' ? 'v' : 'm');
+  else mcq($('rvOpts'), optsOf(q.a, q.alts, 3, q.g), q.a, done, q.g === 'sha' ? 'v' : 'm');
   $('rvNext').addEventListener('click', () => { RV.i++; renderReviseQ(); window.scrollTo({top:0}); });
 }
 function renderReviseEnd(){
@@ -1791,8 +1817,11 @@ const PL_LEVELS = [['hyc','hys','hk','uk','gzd'], ['rl','fill','wh','dct','shp']
 const PL_COUNTS = [7, 7, 6];
 function plQuestions(){
   const qs = [];
-  PL_LEVELS.forEach((games, li) => { const byG = {}; games.forEach(g => { byG[g] = shuffle(POOL[g] ? POOL[g]() : []); }); const keys = shuffle(games); let i = 0, guard = 0; const per = {};
-    while (qs.filter(q => q.lvl === li).length < PL_COUNTS[li] && guard++ < 400){ const g = keys[i++ % keys.length]; if ((per[g] || 0) >= 2 || !byG[g].length) continue; const id = byG[g].shift(); let q = null; try { q = GEN[g](id); } catch (e) {} if (q && q.a && q.alts && q.alts.length){ qs.push({g, id, lvl: li, ...q}); per[g] = (per[g] || 0) + 1; } } });
+  /* only the games of the child's age (gamesFor): a six-year-old is not asked to conjugate or to name a poet */
+  const mine = gamesFor(K().age);
+  PL_LEVELS.forEach((all, li) => { const games = all.filter(g => mine.includes(g)); if (!games.length) return; const cap = games.length <= 2 ? 3 : 2;
+    const byG = {}; games.forEach(g => { byG[g] = shuffle(POOL[g] ? POOL[g]() : []); }); const keys = shuffle(games); let i = 0, guard = 0; const per = {};
+    while (qs.filter(q => q.lvl === li).length < PL_COUNTS[li] && guard++ < 400){ const g = keys[i++ % keys.length]; if ((per[g] || 0) >= cap || !byG[g].length) continue; const id = byG[g].shift(); let q = null; try { q = GEN[g](id); } catch (e) {} if (q && q.a && q.alts && optsOf(q.a, q.alts, 3, g).length >= 2){ qs.push({g, id, lvl: li, ...q}); per[g] = (per[g] || 0) + 1; } } });
   return qs;
 }
 let PL = null;
@@ -1802,26 +1831,27 @@ const PL_START = {1: {o:'hayat', t:'hyTalk', label:'الحياة اليومية 
 function renderPlaceBox(){
   const B = $('placeBox'); if (!B) return; const pl = store.get(plKey(), null); const skip = store.get(`placeSkip:${kid}`, false); const fresh = !Object.keys(GNAME).some(g => seen(g).length);
   if (pl || skip || !fresh){ B.hidden = true; return; }
-  B.hidden = false; B.innerHTML = `<p class="lbl" style="margin:0">قبل أن ⟨تبدأ|تبدئي⟩: اختبار تحديد المستوى</p><p class="note" style="margin:6px 0">عشرون سؤالًا من كل الواحات، نحو خمس دقائق. لا نجاح ولا رسوب؛ نعرف فقط من أين نبدأ معك.</p><div class="btns"><button class="btn" type="button" id="plGo">⟨ابدأ|ابدئي⟩</button><button class="btn ghost sm" type="button" id="plLater">لاحقًا</button></div>`;
+  B.hidden = false; B.innerHTML = `<p class="lbl" style="margin:0">قبل أن ⟨تبدأ|تبدئي⟩: اختبار تحديد المستوى</p><p class="note" style="margin:6px 0">أسئلةٌ من كل الواحات تناسب ⟨سنّك|سنّكِ⟩، نحو خمس دقائق. لا نجاح ولا رسوب؛ نعرف فقط من أين نبدأ ⟨معك|معكِ⟩.</p><div class="btns"><button class="btn" type="button" id="plGo">⟨ابدأ|ابدئي⟩</button><button class="btn ghost sm" type="button" id="plLater">لاحقًا</button></div>`;
   $('plGo').addEventListener('click', () => go('place', 'plCard')); $('plLater').addEventListener('click', () => { store.set(`placeSkip:${kid}`, true); B.hidden = true; });
 }
 function renderPlace(){
   const C = $('plBox'); if (PL) return renderPlaceQ();
   const pl = store.get(plKey(), null);
-  C.innerHTML = `<p class="lbl" style="margin:0">اختبار تحديد المستوى</p><p class="ask">${pl ? `⟨أجريتَه|أجريتِه⟩ في ${esc(pl.date)}: ${pl.ok} من ${pl.n}، المستوى ${pl.level}. ⟨تعيده|تعيدينه⟩ الآن؟` : 'عشرون سؤالًا: سبعة سهلة، وسبعة أوسط، وستة أصعب، من كل الواحات. ⟨اختر|اختاري⟩ الجواب ولا ⟨تخف|تخافي⟩ من الخطأ.'}</p><div class="btns"><button class="btn" id="plStart" type="button">${pl ? '⟨أعد|أعيدي⟩ الاختبار' : '⟨ابدأ|ابدئي⟩'}</button><button class="btn ghost" id="plHome" type="button">→ واحتي</button></div>`;
+  C.innerHTML = `<p class="lbl" style="margin:0">اختبار تحديد المستوى</p><p class="ask">${pl ? `⟨أجريتَه|أجريتِه⟩ في ${esc(pl.date)}: ${pl.ok} من ${pl.n}، المستوى ${pl.level}. ⟨تعيده|تعيدينه⟩ الآن؟` : 'أسئلةٌ من كل الواحات تناسب ⟨سنّك|سنّكِ⟩: تبدأ سهلةً ثم تصعب. ⟨اختر|اختاري⟩ الجواب ولا ⟨تخف|تخافي⟩ من الخطأ.'}</p><div class="btns"><button class="btn" id="plStart" type="button">${pl ? '⟨أعد|أعيدي⟩ الاختبار' : '⟨ابدأ|ابدئي⟩'}</button><button class="btn ghost" id="plHome" type="button">→ واحتي</button></div>`;
   $('plHome').addEventListener('click', () => go('home'));
   $('plStart').addEventListener('click', () => { const qs = plQuestions(); if (qs.length < 10){ $('plBox').insertAdjacentHTML('beforeend', '<p class="fb bad">تعذّر تكوين الأسئلة.</p>'); return; } PL = {qs, i:0, log:[]}; renderPlaceQ(); });
 }
 function renderPlaceQ(){
   const C = $('plBox'); const q = PL.qs[PL.i]; if (!q) return renderPlaceEnd();
   C.innerHTML = `<div class="row" style="justify-content:space-between"><span class="chip">السؤال ${PL.i + 1} من ${PL.qs.length}</span><span class="note">${['سهل','أوسط','أصعب'][q.lvl]} · ${GNAME[q.g] || ''}</span></div>${q.html ? q.html : `<p class="ask">${esc(q.q)}</p>`}<div class="opts one" id="plOpts"></div><p class="fb" id="plFb"></p><div class="btns"><button class="btn" id="plNext" type="button" hidden>التالي</button></div>`;
-  mcq($('plOpts'), optsOf(q.a, q.alts, 3), q.a, ok => { PL.log.push({g:q.g, id:q.id, lvl:q.lvl, ok}); feedback('plFb', ok, '⟨أصبت|أصبتِ⟩.', `الجواب: ${q.a}`); $('plNext').hidden = false; $('plNext').focus(); }, q.g === 'sha' ? 'v' : 'm');
+  mcq($('plOpts'), optsOf(q.a, q.alts, 3, q.g), q.a, ok => { PL.log.push({g:q.g, id:q.id, lvl:q.lvl, ok}); feedback('plFb', ok, '⟨أصبت|أصبتِ⟩.', `الجواب: ${q.a}`); $('plNext').hidden = false; $('plNext').focus(); }, q.g === 'sha' ? 'v' : 'm');
   $('plNext').addEventListener('click', () => { PL.i++; renderPlaceQ(); window.scrollTo({top:0}); });
 }
 function renderPlaceEnd(){
   const C = $('plBox'); const byL = {}, byG = {}; PL.log.forEach(l => { byL[l.lvl] = byL[l.lvl] || [0, 0]; byL[l.lvl][0] += l.ok ? 1 : 0; byL[l.lvl][1]++; byG[l.g] = byG[l.g] || [0, 0]; byG[l.g][0] += l.ok ? 1 : 0; byG[l.g][1]++; });
-  const ok = PL.log.filter(l => l.ok).length, n = PL.log.length, level = plLevel(byL); const res = {date: today(), ok, n, level, byL, byG}; store.set(plKey(), res);
-  PL.log.forEach(l => award(l.g, l.id, l.ok)); // الصواب يُحسب محاولة أولى، والخطأ يعود في لعبته
+  const ok = PL.log.filter(l => l.ok).length, n = PL.log.length, level = Math.min(plLevel(byL), K().age <= 9 ? 2 : 3);   /* the workshop (level 3) is played from ten */ const res = {date: today(), ok, n, level, byL, byG}; store.set(plKey(), res);
+  /* the answers stay in the placement's own record: they were guesses on things never taught, so they seed no review
+     (a wrong guess would come back «due» the next day, a lucky one would never get its lesson) */
   if (level === 3 && tier() !== 'small') ['gzw','gzd','gzf'].forEach(k => store.set(`mode:${kid}:${k}`, 'type'));
   const st = PL_START[level]; const weak = Object.keys(byG).filter(g => byG[g][0] < byG[g][1]).map(g => GNAME[g]);
   C.innerHTML = `<p class="lbl" style="margin:0">انتهى اختبار تحديد المستوى</p><p class="big" style="font-size:2.4rem">${ok} / ${n}</p><p class="ask">${[1,2,3].map(li => `${['السهل','الأوسط','الأصعب'][li-1]}: ${byL[li-1] ? byL[li-1].join('/') : '—'}`).join(' · ')}</p><p class="ask">المستوى ${level}: نبدأ من <b>${esc(st.label)}</b>.${weak.length ? ` وما ⟨أخطأتَ|أخطأتِ⟩ فيه (${weak.slice(0, 4).map(esc).join('، ')}) سيأتيك في مهمة اليوم.` : ''}</p><div class="btns"><button class="btn" id="plBegin" type="button">⟨ابدأ|ابدئي⟩ من هناك</button><button class="btn ghost" id="plHome" type="button">→ واحتي</button></div>`;
@@ -2034,8 +2064,10 @@ INIT.tilawa = renderTilawa;
 function recite(btn, v){ const was = TL.box; if (TL.a && TL.rb === btn){ tlStop(); TL.box = was; return; } voiceStop(); tlStop(); TL.box = null;
   const q = []; for (let a = v.a; a <= v.b; a++) q.push(a); let i = 0; const label = btn.textContent; btn.textContent = RES('■ ⟨أوقف|أوقفي⟩'); const a = new Audio(); TL.a = a; TL.rb = btn;
   const end = () => { if (TL.a === a){ TL.a = null; TL.rb = null; } btn.textContent = label; };
+  /* the recitation is not on this device (the pack not downloaded yet, or no network): said beside the button, not silence */
+  const fail = () => { end(); const nx = btn.nextElementSibling; if (!(nx && nx.classList.contains('rfail'))){ const n = el('p','note rfail', 'لم تُحفظ هذه التلاوة على الجهاز بعد.'); n.style.margin = '2px 0 0'; btn.insertAdjacentElement('afterend', n); } };
   const step = () => { if (TL.a !== a) return end(); if (i >= q.length) return end(); a.src = `audio/h/${pad3(v.s)}${pad3(q[i])}.mp3`; i++; a.play().catch(end); };
-  a.onended = step; a.onerror = end; step(); }
+  a.onended = step; a.onerror = fail; step(); }
 /* ---- التتابع ---- */
 const RY_SURAHS = [...Object.keys(QN.surahs).map(Number)].sort((a, b) => (QN.surahs[a].n - QN.surahs[b].n) || (a - b));
 let rySurah = store.get('rySurah', RY_SURAHS[0] || 112);
@@ -2128,13 +2160,17 @@ function kidWeek(i, recs){
     const rk = recs.filter(r => r.kid === i && days.includes(r.date)); const amal = store.get(`amalLog:${i}`, []).filter(x => days.includes(x.date));
     const tri = triAll().filter(t => t.kid === i && days.includes(t.okDate || '')).length; const tests = store.get(`tests:${i}`, []).filter(t => t.date >= since);
     const msh = msHistory(i), msl = msh[msh.length - 1];
-    return {k: kids[i], sec: secLine(i, since, kids[i]), ms: msl ? `تذكّر ${msl.ok} من ${msl.n} مما تعلّمه من قبل (${msl.date})` : '', active, answers, reviews, mastered, newMastered, weak: weak.sort((a, b) => b.m.wrong - a.m.wrong).slice(0, 5), stages, rec: rk.length, recOk: rk.filter(r => r.status === 'approved').length, gifts: store.get(`giftsSent:${i}`, 0), amal: amal.filter(x => x.confirmed).length, amalPend: amal.filter(x => !x.confirmed).length, tri, tests, due: dueCount(), wn: weekPlayed(i), wks: weeksMet(i), stagesAll: stagesDoneCount()}; });
+    /* «مهمة اليوم» over the report's own seven days (the week counter runs Saturday to Friday, and on a Saturday it has one day) */
+    let other = new Set(); try { const S = window.KZ_SECTIONS; if (S && S.playDays) other = new Set(S.playDays(i)); } catch (e) {}
+    const wn7 = days.filter(dt => store.get(`dailyDone:${i}:${dt}`, false) || other.has(dt)).length;
+    return {k: kids[i], wn7, sec: secLine(i, since, kids[i]), ms: msl ? `تذكّر ${msl.ok} من ${msl.n} مما تعلّمه من قبل (${msl.date})` : '', active, answers, reviews, mastered, newMastered, weak: weak.sort((a, b) => b.m.wrong - a.m.wrong).slice(0, 5), stages, rec: rk.length, recOk: rk.filter(r => r.status === 'approved').length, gifts: store.get(`giftsSent:${i}`, 0), amal: amal.filter(x => x.confirmed).length, amalPend: amal.filter(x => !x.confirmed).length, tri, tests, due: dueCount(), wn: weekPlayed(i), wks: weeksMet(i), stagesAll: stagesDoneCount()}; });
 }
 /* the Friday text is one child's, private: what went well first, and nothing of what he stumbles on (that stays on the parent's
    board). Brothers and sisters are not set side by side in anything meant to be sent */
 function weekText(rows){ const days = weekDays(); return rows.map(r => weekOne(r, days)).join('\n\n— — —\n\n'); }
 function weekOne(r, days){ const f = r.k.gender === 'f';
-  const good = [`أيام اللعب: ${r.active} من 7، وأُنجزت «مهمة اليوم» في ${r.wn} من ${WEEK_GOAL} أيام هذا الأسبوع${r.wn >= WEEK_GOAL ? ' ✓' : ''} (أسابيع مكتملة: ${r.wks})`,
+  const mission = r.wn7 >= WEEK_GOAL ? `وأُنجزت «مهمة اليوم» في ${r.wn7} أيام: تمّ الأسبوع ✓` : r.wn7 ? `وأُنجزت «مهمة اليوم» في ${r.wn7 === 1 ? 'يومٍ واحد' : r.wn7 === 2 ? 'يومين' : r.wn7 + ' أيام'} من ${WEEK_GOAL}` : 'ولم تُنجَز «مهمة اليوم» في هذه الأيام';
+  const good = [`أيام اللعب: ${r.active} من 7، ${mission} (أسابيع مكتملة: ${r.wks})`,
     r.newMastered ? `ثبت هذا الأسبوع: ${r.newMastered} (أجاب عنه صحيحًا في يومين مختلفين؛ المجموع ${r.mastered})` : '',
     r.stages.length ? `مراحل فُتحت: ${r.stages.join('، ')}` : '',
     r.rec ? `تسجيلات: ${r.rec} (معتمدة ${r.recOk})${r.gifts ? `، وهدايا مرسلة: ${r.gifts}` : ''}` : '',
@@ -2151,10 +2187,11 @@ async function renderWeekPanel(box){
    ${rows.some(r => r.weak.length) ? `<p class="lbl">لكم وحدكم: ما يحتاج مراجعة</p>` : ''}${rows.map(r => r.weak.length ? `<p class="note" style="margin:4px 0 0"><b>${esc(r.k.name)}</b></p><ul style="margin:0;padding-right:1.2em">${r.weak.map(w => `<li>${esc(RG(describe(w.g, w.id), r.k.gender === 'f'))}</li>`).join('')}</ul>` : '').join('')}
    <p class="lbl">نص التقرير</p>${rows.length > 1 ? `<div class="chips" id="wkWho">${rows.map((r, i) => `<button class="chip2" type="button" data-i="${i}" aria-pressed="${i === who}">${esc(r.k.name)}</button>`).join('')}</div>` : ''}<textarea class="f" id="wkText" rows="12" readonly style="width:100%;font-family:var(--f-ui);font-size:.95rem"></textarea>
    <div class="btns" style="justify-content:flex-start"><button class="btn sm" type="button" id="wkCopy">انسخوا النص</button><button class="btn ghost sm" type="button" id="wkSave">احفظوا ملفًا</button></div><p class="fb" id="wkFb"></p>`;
-  let txt = weekOne(rows[who], days); box.querySelector('#wkText').value = txt;
-  const wb = box.querySelector('#wkWho'); if (wb) wb.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; who = +b.dataset.i; store.set('wkWho', who); txt = weekOne(rows[who], days); box.querySelector('#wkText').value = txt; wb.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+  /* the text shown and copied is written ١٢٣, as the saved file and every screen of the oasis */
+  let txt = AR_NUM(weekOne(rows[who], days)); box.querySelector('#wkText').value = txt;
+  const wb = box.querySelector('#wkWho'); if (wb) wb.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; who = +b.dataset.i; store.set('wkWho', who); txt = AR_NUM(weekOne(rows[who], days)); box.querySelector('#wkText').value = txt; wb.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); });
   box.querySelector('#wkCopy').addEventListener('click', async () => { const fb = box.querySelector('#wkFb'); try { await navigator.clipboard.writeText(txt); fb.textContent = 'نُسخ.'; fb.className = 'fb ok'; } catch (e) { fb.textContent = 'لم يُنسخ شيء.'; fb.className = 'fb bad'; } });
-  box.querySelector('#wkSave').addEventListener('click', () => saveFile(`taqrir-${rows[who].k.name}-${days[0]}.md`, txt, box.querySelector('#wkFb')));
+  box.querySelector('#wkSave').addEventListener('click', () => saveFile(`taqrir-${rows[who].k.name}-${days[0]}.md`, txt, box.querySelector('#wkFb'), rows[who].k));   /* the sheet names this report's child, not the one chosen on the board */
 }
 
 
@@ -2217,11 +2254,13 @@ async function voiceGet(id){ if (id in VX.cache) return VX.cache[id]; try { cons
 async function voicePut(rec){ const d = await idb(); VX.cache[rec.id] = rec; return new Promise((res, rej) => { const t = d.transaction('voice', 'readwrite'); t.objectStore('voice').put(rec); t.oncomplete = res; t.onerror = () => rej(t.error); }); }
 async function voiceDel(id){ const d = await idb(); delete VX.cache[id]; return new Promise(res => { const t = d.transaction('voice', 'readwrite'); t.objectStore('voice').delete(id); t.oncomplete = res; t.onerror = res; }); }
 async function voiceAll(){ try { const d = await idb(); return await new Promise(res => { const q = d.transaction('voice').objectStore('voice').getAll(); q.onsuccess = () => res(q.result || []); q.onerror = () => res([]); }); } catch (e) { return []; } }
-/* القارئ الآلي: وقفٌ على آخر الكلمة، والتاء المربوطة هاءً، وحذف علامات الوقف القرآنية */
+/* القارئ الآلي: وقفٌ على آخر الكلمة، والتاء المربوطة هاءً، وحذف علامات الوقف القرآنية؛ وما بين ﴿﴾ لا يُقرأ أبدًا (آيةٌ تُسمع من الحصري)، فيُحذف قبل الأقواس */
 /* the pause at the end of a phrase drops its last vowel, except the vowel of «you» (ـكَ ـكِ ـتَ ـتِ): without it «أحسنتِ» and «فيكِ»
    reach the speech engine as «أحسنت» and «فيك», which it reads as said to a boy */
-function ttsText(text){ return String(text || '').replace(/[ۖ-ۭ]/g, '').replace(/[﴿﴾«»()\[\]]/g, ' ').replace(/([^\s.،؛؟!:…]+)(?=\s*(?:[.،؛؟!:…]|$))/gu, w => { if (/[كت]ّ?[َِ]$/u.test(w)) return w; const m = w.match(/^(.*?[ء-ي])([ً-ْٰ]*)$/u); if (!m) return w; let b = m[1]; const sh = m[2].includes('ّ') ? 'ّ' : ''; if (b.endsWith('ة')) b = b.slice(0, -1) + 'ه'; return b + sh; }).replace(/\s+/g, ' ').trim(); }
+function ttsText(text){ return String(text || '').replace(/﴿[^﴾]*﴾/g, ' ').replace(/[ۖ-ۭ]/g, '').replace(/[﴿﴾«»()\[\]]/g, ' ').replace(/([^\s.،؛؟!:…]+)(?=\s*(?:[.،؛؟!:…]|$))/gu, w => { if (/[كت]ّ?[َِ]$/u.test(w)) return w; const m = w.match(/^(.*?[ء-ي])([ً-ْٰ]*)$/u); if (!m) return w; let b = m[1]; const sh = m[2].includes('ّ') ? 'ّ' : ''; if (b.endsWith('ة')) b = b.slice(0, -1) + 'ه'; return b + sh; }).replace(/\s+/g, ' ').trim(); }
 let VOICE_AR = null;
+/* an Arabic voice on this device (the parents' board says so too; the child's story card asks for a reader when there is none) */
+function arVoice(){ try { return 'speechSynthesis' in window && speechSynthesis.getVoices().some(v => /^ar/i.test(v.lang)); } catch (e) { return false; } }
 function pickVoice(){ if (!('speechSynthesis' in window)) return null; const vs = speechSynthesis.getVoices(); VOICE_AR = vs.find(v => /^ar/i.test(v.lang) && /female|zeina|hoda|salma|laila/i.test(v.name)) || vs.find(v => /^ar/i.test(v.lang)) || null; return VOICE_AR; }
 try { if ('speechSynthesis' in window){ pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; } } catch (e) {}
 /* نطق مؤجّل يُلغى عند التنقل (حتى لا يبدأ درسٌ فوق شاشة سؤاله) */
@@ -2253,23 +2292,26 @@ const MIC_OK = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia 
 async function micStart(){
   voiceStop(); const stream = await navigator.mediaDevices.getUserMedia({audio:true});
   const type = ['audio/webm;codecs=opus','audio/mp4','audio/ogg'].find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
-  const rec = new MediaRecorder(stream, type ? {mimeType:type} : undefined); const chunks = [];
+  /* speech at 32 kbps (the default is about 128): recordings, backups and the files sent to a teacher a fifth of the size */
+  let rec; try { rec = new MediaRecorder(stream, Object.assign(type ? {mimeType:type} : {}, {audioBitsPerSecond: 32000})); } catch (e) { rec = new MediaRecorder(stream, type ? {mimeType:type} : undefined); } const chunks = [];
   rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
   VX.rec = {rec, stream, chunks, t0: Date.now(), done: new Promise(res => { rec.onstop = () => { stream.getTracks().forEach(t => t.stop()); res(new Blob(chunks, {type: rec.mimeType || type || 'audio/webm'})); }; })};
   rec.start(); return VX.rec;
 }
 async function micStop(){ const r = VX.rec; if (!r) return null; VX.rec = null; try { r.rec.stop(); } catch (e) {} return r.done; }
 /* مكوّن التسجيل الكبير: onSaved(blob) — في عارض لا يسمح بالميكروفون نرجع إلى إرفاق ملف */
+/* opts.minMs: a recording shorter than this (a tap, no voice) is not kept, and the child is asked again */
 function micWidget(box, opts){
   box.innerHTML = ''; const w = el('div','mic'); const b = el('button','micb', '<span class="dot"></span>'); b.type = 'button'; b.setAttribute('aria-label','⟨سجّل|سجّلي⟩');
   const lab = el('p','mlab', opts.label || '⟨اضغط|اضغطي⟩ و⟨سجّل|سجّلي⟩'); const prev = el('div','mprev'); w.append(b, lab, prev); box.appendChild(w);
-  let tick = null;
-  const fin = async blob => { clearInterval(tick); b.classList.remove('on'); lab.textContent = opts.again || '⟨سجّل|سجّلي⟩ مرة أخرى'; prev.innerHTML = ''; const a = audioEl(blob); a.dataset.keep = '1'; prev.appendChild(a); if (opts.onSaved) opts.onSaved(blob); let waited = 0; const t = setInterval(() => { waited += 300; const busy = VX.audio || ('speechSynthesis' in window && speechSynthesis.speaking); if (busy && waited < 8000) return; clearInterval(t); try { const pp = a.play(); if (pp && pp.catch) pp.catch(() => {}); } catch (e) {} }, 300); };
+  let tick = null, began = 0;
+  const fin = async blob => { clearInterval(tick); b.classList.remove('on'); const ms = began ? Date.now() - began : null; began = 0;
+    if (opts.minMs && ms != null && ms < opts.minMs){ lab.textContent = 'لم أسمع شيئًا. ⟨اضغط|اضغطي⟩ ⟨وتكلّم|وتكلّمي⟩، ثم ⟨اضغط|اضغطي⟩ مرةً أخرى'; say(T('لم أسمعك جيدًا، أعد التسجيل', 'لم أسمعكِ جيدًا، أعيدي التسجيل')); return; } lab.textContent = opts.again || '⟨سجّل|سجّلي⟩ مرة أخرى'; prev.innerHTML = ''; const a = audioEl(blob); a.dataset.keep = '1'; prev.appendChild(a); if (opts.onSaved) opts.onSaved(blob); let waited = 0; const t = setInterval(() => { waited += 300; const busy = VX.audio || ('speechSynthesis' in window && speechSynthesis.speaking); if (busy && waited < 8000) return; clearInterval(t); try { const pp = a.play(); if (pp && pp.catch) pp.catch(() => {}); } catch (e) {} }, 300); };
   b.addEventListener('click', async () => {
     if (!MIC_OK){ lab.textContent = 'هذا الجهاز لا يسجّل من هنا؛ ⟨أرفق|أرفقي⟩ تسجيلًا من الجهاز'; const f = document.createElement('input'); f.type = 'file'; f.accept = 'audio/*'; f.setAttribute('capture', ''); f.onchange = () => f.files[0] && fin(f.files[0]); f.click(); return; }
     if (VX.rec && VX.rec.owner !== b) micAbort();   /* a recording left by another button is dropped, never saved here */
     if (VX.rec){ const blob = await micStop(); if (blob && blob.size && document.body.contains(b)) fin(blob); return; }
-    try { await micStart(); b.classList.add('on'); const t0 = Date.now(); lab.textContent = 'أسمعك… ⟨اضغط|اضغطي⟩ ⟨لتتوقف|لتتوقفي⟩'; tick = setInterval(() => { if (!document.body.contains(b)){ clearInterval(tick); return; } lab.textContent = `أسمعك… ${Math.round((Date.now() - t0) / 1000)} ث · ⟨اضغط|اضغطي⟩ ⟨لتتوقف|لتتوقفي⟩`; if (Date.now() - t0 > (opts.max || 120000)) b.click(); }, 500); if (VX.rec){ VX.rec.tick = tick; VX.rec.owner = b; } }
+    try { await micStart(); b.classList.add('on'); const t0 = began = Date.now(); lab.textContent = 'أسمعك… ⟨اضغط|اضغطي⟩ ⟨لتتوقف|لتتوقفي⟩'; tick = setInterval(() => { if (!document.body.contains(b)){ clearInterval(tick); return; } lab.textContent = `أسمعك… ${Math.round((Date.now() - t0) / 1000)} ث · ⟨اضغط|اضغطي⟩ ⟨لتتوقف|لتتوقفي⟩`; if (Date.now() - t0 > (opts.max || 120000)) b.click(); }, 500); if (VX.rec){ VX.rec.tick = tick; VX.rec.owner = b; } }
     catch (e) { lab.textContent = '⟨اسمح|اسمحي⟩ للتطبيق باستعمال الميكروفون ثم ⟨حاول|حاولي⟩'; if (!w.querySelector('.tiny')){ const alt = el('button','tiny','أو ⟨أرفق|أرفقي⟩ تسجيلًا من الجهاز'); alt.type = 'button'; alt.addEventListener('click', () => { const f = document.createElement('input'); f.type = 'file'; f.accept = 'audio/*'; f.setAttribute('capture', ''); f.onchange = () => f.files[0] && fin(f.files[0]); f.click(); }); w.appendChild(alt); } }
   });
 }
@@ -2301,8 +2343,12 @@ const CL = {
   greet: () => pick([T('مرحبًا! واحتك تنتظرك', 'مرحبًا! واحتكِ تنتظركِ'), T('اشتقتُ إليك! هيا نكمل الرحلة', 'اشتقتُ إليكِ! هيا نكمل الرحلة'), T('السلام عليكم! عندي لك رحلة جميلة اليوم', 'السلام عليكم! عندي لكِ رحلة جميلة اليوم')]),
   doneToday: () => T('أكملتَ رحلة اليوم! أحسنت', 'أكملتِ رحلة اليوم! أحسنتِ'),
   right: () => pick([T('أحسنت!', 'أحسنتِ!'), 'ممتاز!', T('صحيح، بارك الله فيك', 'صحيح، بارك الله فيكِ'), T('رائع! تذكّرتَه جيدًا', 'رائع! تذكّرتِه جيدًا')]),
-  near: () => T('قريب جدًّا! انظر إلى الصواب', 'قريب جدًّا! انظري إلى الصواب'),
-  wrong: () => pick([T('لا بأس، انظر إلى الجواب الصحيح', 'لا بأس، انظري إلى الجواب الصحيح'), T('ليس هذا، لكنك ستتذكّره في المرة القادمة', 'ليس هذا، لكنكِ ستتذكّرينه في المرة القادمة')]),
+  /* hear: the child cannot read yet, and the answer is said after the line */
+  near: hear => hear ? T('قريب جدًّا! اسمع الصواب', 'قريب جدًّا! اسمعي الصواب') : T('قريب جدًّا! انظر إلى الصواب', 'قريب جدًّا! انظري إلى الصواب'),
+  wrong: hear => pick([hear ? T('لا بأس، اسمع الجواب الصحيح', 'لا بأس، اسمعي الجواب الصحيح') : T('لا بأس، انظر إلى الجواب الصحيح', 'لا بأس، انظري إلى الجواب الصحيح'), T('ليس هذا، لكنك ستتذكّره في المرة القادمة', 'ليس هذا، لكنكِ ستتذكّرينه في المرة القادمة')]),
+  twoTaps: () => T('اسمع، ثم المس الجواب مرتين', 'اسمعي، ثم المسي الجواب مرتين'),
+  breakWait: () => T('ما زالت الاستراحة. حين يفرغ الرمل نكمل الرحلة', 'ما زالت الاستراحة. حين يفرغ الرمل نكمل الرحلة'),
+  breakOver: () => T('انتهت الاستراحة. هيّا نكمل الرحلة!', 'انتهت الاستراحة. هيّا نكمل الرحلة!'),
   recAsk: () => T('اقرأ هذا بصوتك، وسأحفظه لأهلك', 'اقرئي هذا بصوتكِ، وسأحفظه لأهلكِ'),
   recDone: () => T('صوتك جميل! حفظتُه لأهلك', 'صوتكِ جميل! حفظتُه لأهلكِ'),
   tripEnd: () => T('انتهت رحلة اليوم! انظر ماذا نبت في واحتك', 'انتهت رحلة اليوم! انظري ماذا نبت في واحتكِ'),
@@ -2326,6 +2372,10 @@ function cmpHappy(){ document.querySelectorAll('.cmp').forEach(e => { e.classLis
 /* text: نص أو مصفوفة أجزاء (كل جزء يُبحث عن تسجيل الأب له على حدة، فالاسم والجملة جزءان) */
 function talkRow(text, opts){ const parts = Array.isArray(text) ? text.filter(Boolean) : [text]; const r = el('div','ktalk'); r.innerHTML = `<div class="cmp">${cmpSvg()}</div>`; const b = el('div','bubble'); b.innerHTML = esc(parts.reduce((acc, p, i) => i ? acc + (/[؟!.:،]$/.test(acc) ? ' ' : '، ') + p : p, '')); text = parts; const spoken = (opts && opts.hear) || text; const h = hearBtn(spoken); h.style.marginInlineStart = '8px'; b.appendChild(h); r.appendChild(b); if (!opts || opts.say !== false) sayLater(spoken, 150); return r; }
 const dates = () => store.get(`dates:${kid}`, 0);
+/* dates for a word or a sentence said aloud: once a day for each, and `cap` of a kind a day at most. Saying the same word
+   again is welcome, but it earns nothing more: the dates count learning, not taps */
+function dateOnce(key, n, cap){ const k = `dOnce:${kid}:${today()}`, d = store.get(k, []), kind = key.split(':')[0];
+  if (d.includes(key) || d.filter(x => x.split(':')[0] === kind).length >= cap) return false; d.push(key); store.set(k, d); store.set(`dates:${kid}`, dates() + n); return true; }
 
 /* ---------------- أول لقاء ---------------- */
 let HELLO = {step: 0, kind: 'camel', name: ''};
@@ -2448,7 +2498,7 @@ const TRIP_ALWAYS = ['hsq', 'kz'];
 function gamesFor(age){ return G_AGE[age <= 7 ? 7 : age <= 9 ? 9 : 99]; }
 const SMALL_G = G_AGE[9], BIG_G = G_AGE[99];
 /* fresh: a new item first (the new words of a trip); otherwise a weak item now and then (the due ones come as reviews) */
-function genPick(g, avoid, fresh){ const ids = (POOL[g] ? POOL[g]() : []).filter(id => !avoid.has(g + '|' + id)); if (!ids.length) return null; const nw = ids.filter(id => mget(g, id).n === 0), weak = ids.filter(id => { const m = mget(g, id); return m.n && m.streak < 2 && !isDueM(m); }); const id = pick(fresh && nw.length ? nw : weak.length && Math.random() < .4 ? weak : nw.length ? nw : ids); let q = null; try { q = GEN[g](id); } catch (e) {} return q && q.a && q.alts && q.alts.length ? {g, id, ...q} : null; }
+function genPick(g, avoid, fresh){ const ids = (POOL[g] ? POOL[g]() : []).filter(id => !avoid.has(g + '|' + id)); if (!ids.length) return null; const nw = ids.filter(id => mget(g, id).n === 0), weak = ids.filter(id => { const m = mget(g, id); return m.n && m.streak < 2 && !isDueM(m); }); const id = pick(fresh && nw.length ? nw : weak.length && Math.random() < .4 ? weak : nw.length ? nw : ids); let q = null; try { q = GEN[g](id); } catch (e) {} return q && q.a && q.alts && optsOf(q.a, q.alts, 3, g).length >= 2 ? {g, id, ...q} : null; }
 /* علّم ثم اسأل: كل عنصر جديد تسبقه بطاقة «تعلّم» ثم بطاقة أخرى فاصلة ثم سؤاله (لا نسخ فوري)؛ الجواب بعد الدرس لا يُحتسب في سلسلة الإتقان.
    المنسي (خطأ بعد الدرس) يعود إليه درسه. القصة والمقالة تُقرآن كاملتين قبل أسئلتهما. الألغاز وحدها تحمل مادتها في سؤالها. */
 const SELF_G = new Set(['gzw', 'gzd', 'gzf']);
@@ -2462,7 +2512,7 @@ const LEARN = {
   hyc: id => { const t = HY.things.find(x => x.noun === id); const c = t && COLOR[t.color]; return c && {t: 'الألوان', big: `${t.noun} ${t.g === 'm' ? c.m : c.f}`, swatch: c.css, body: [`«${t.noun}» ${t.g === 'm' ? 'كلمة مذكّرة، فنقول: ' + c.m : 'كلمة مؤنّثة، فنقول: ' + c.f}`, `(مذكّر: ${c.m} · مؤنّث: ${c.f})`]}; },
   uk: id => { const [k, l] = id.split('|'); const u = ALL[k] && ALL[k].unknown.find(x => x.lemma === l); return u && {t: T('كلمة من جذرٍ تعرفه', 'كلمة من جذرٍ تعرفينه'), big: u.verse ? u.verse.word : u.lemma, bagWord: u.lemma, bagMeaning: u.meaning, body: [`${u.lemma}: ${u.meaning}`, u.verse ? `في القرآن: ${vsnip(u.verse)}` : ''], quiet: u.verse ? [vsnip(u.verse), u.verse.word] : [], qv: u.verse ? {s: u.verse.s, a: u.verse.a, b: u.verse.a} : null}; },
   hk: id => { const x = HIK.find(q => q.text === id); return x && {t: x.kind || 'مثل', big: x.text, body: [`معناه: ${x.meaning}`, x.when ? `نقوله ${x.when.replace(/^عندما/, 'عندما')}` : '']}; },
-  rl: id => { const [k, q] = id.split('|'); const P = ALL[k]; const r = P && P.roles.find(x => x.q === q); if (!r) return null; const exact = P.family.filter(x => x.lemma === r.a), loose = P.family.filter(x => strip(x.lemma) === strip(r.a)); const f = exact[0] || (loose.length === 1 ? loose[0] : null); return {t: `من جذر ${P.root}`, big: r.a, bagWord: r.a, bagMeaning: f ? f.meaning : r.q.replace(/؟$/, ''), body: [`${r.q.replace(/؟$/, '')}؟ ← ${r.a}`, f ? `معناها: ${f.meaning}` : '', f && f.sentence ? f.sentence : '']}; },
+  rl: id => { const [k, q] = id.split('|'); const P = ALL[k]; const r = P && P.roles.find(x => x.q === q); if (!r) return null; const exact = P.family.filter(x => x.lemma === r.a), loose = P.family.filter(x => strip(x.lemma) === strip(r.a)); const f = exact[0] || (loose.length === 1 ? loose[0] : null); return {t: `من جذر ${P.root}`, big: r.a, bagWord: r.a, bagMeaning: f ? f.meaning : r.q.replace(/؟$/, ''), reason: f ? `«${r.a}» معناها: ${f.meaning}` : `«${r.a}»: ${r.q.replace(/؟$/, '')}`, body: [`${r.q.replace(/؟$/, '')}؟ ← ${r.a}`, f ? `معناها: ${f.meaning}` : '', f && f.sentence ? f.sentence : '']}; },
   wh: id => { const x = HAD.items.find(q => q.id === id); return x && {t: x.catName || 'من القائل', big: x.focus, body: [`القائل: ${x.speaker || WHO_L[x.cat]}`, x.meaning ? `معناه: ${x.meaning}` : '', x.bookName ? `${x.bookName} ${x.ref || ''}` : ''], quiet: [x.bookName ? `${x.bookName} ${x.ref || ''}` : '']}; },
   hsq: id => { const x = (DATA.hasaniya && DATA.hasaniya.quizzes || []).find(q => q.id === id); return x && {t: `المنظومة الحسنية · ${x.station}`, big: x.verse, body: [x.event ? `الحدث: ${x.event}` : '', x.explain || '']}; },
   tri: id => { const x = triApproved().find(t => t.id === id); return x && {t: 'بثلاث لغات', big: x.lemma, body: [[x.zh, x.en].filter(Boolean).join(' / ')]}; },
@@ -2482,7 +2532,7 @@ function learnCard(g, id){ let L = null; try { L = LEARN[g] && LEARN[g](id); } c
 function needsLearn(c){ if (!c || SELF_G.has(c.g) || !LEARN[c.g]) return false; const m = mget(c.g, c.id); if (!m.lrn) return (c.g === 'kz' || c.g === 'hsq') ? (m.wrong > 0 && !m.ok) : !m.ok; return m.streak === 0 && m.lw != null && m.lw > m.lrn; }
 function markLearned(g, id){ const m = mget(g, id); m.lrn = dayN(); if (m.f == null) m.f = dayN(); store.set(MK(g, id), m); }
 /* الجواب بعد الدرس مباشرة: يُسجَّل محاولةً، ولا يُحتسب في سلسلة الإتقان (الإتقان يُبنى على التذكّر لا على النسخ) */
-function awardAfter(g, id, ok){ const m = mget(g, id); m.n++; if (m.f == null) m.f = dayN(); if (ok === true){ m.ok++; if (m.due == null) m.due = dayN() + 1; } else if (ok === false){ m.wrong++; m.streak = Math.max(0, m.streak - 1); m.due = dayN() + 1; m.lw = dayN(); } m.t = Date.now(); store.set(MK(g, id), m); const sn = seen(g); if (!sn.includes(id)){ sn.push(id); store.set(`seen:${kid}:${g}`, sn); }
+function awardAfter(g, id, ok){ const m = mget(g, id); m.n++; if (m.f == null) m.f = dayN(); if (ok === true){ m.ok++; if (m.due == null || m.due <= dayN()) m.due = dayN() + 1; } else if (ok === false){ m.wrong++; m.streak = Math.max(0, m.streak - 1); m.due = dayN() + 1; m.lw = dayN(); } m.t = Date.now(); store.set(MK(g, id), m); const sn = seen(g); if (!sn.includes(id)){ sn.push(id); store.set(`seen:${kid}:${g}`, sn); }
   /* the answers right after a lesson are a day of play too (the Friday report counts them) */
   const dk = `day:${kid}:${today()}`; const d = store.get(dk, {}); d[g] = (d[g] || 0) + 1; store.set(dk, d); refreshScores(); checkStages(); }
 /* القصة أو المقالة كاملة ثم سؤالان منها. للصغير: قصة قصيرة وأسئلة مباشرة فقط */
@@ -2541,7 +2591,9 @@ function buildTrip(extra, mode){
   const age = K().age; const small = age <= 8; const want = age <= 7 ? 3 : small ? 4 : 5; const qs = [], avoid = new Set();
   const add = c => { if (c && !avoid.has(c.g + '|' + c.id)){ qs.push([c]); avoid.add(c.g + '|' + c.id); return true; } return false; };
   const ok = g => gamesFor(age).includes(g) && POOL[g] && POOL[g]().length > 0;
-  const due = dueList().filter(q => q.g !== 'nt' && q.g !== 'sfr');
+  /* every word the child learnt comes back when it is due (the family's rule, 2.9), whatever game taught it; the other reviews
+     only from the games of the child's age (an item of an older child's game waits in «مراجعة اليوم») */
+  const due = dueList().filter(q => q.g !== 'nt' && q.g !== 'sfr' && (VOCAB_G.includes(q.g) || gamesFor(age).includes(q.g)));
   /* the reviews (the family's rule): every word learnt comes back when it is due, the oldest first: up to 10 in a trip under nine
      and 15 from nine (8 in an extra review), with up to 3 other reviews. And the safety valve: while some word learnt is still
      waiting for its review, no new word comes in, so the reviews never pile up */
@@ -2647,20 +2699,30 @@ function tripOffer(C){
 function tripBreak(C, p){
   const left = () => Math.max(0, p.until - Date.now());
   C.innerHTML = '';
-  const last = p.n >= PARTS_MAX;
-  C.appendChild(talkRow(last ? T('أحسنت! هذه ثالث جلسة اليوم. إن شئت أنهينا هنا، وما بقي يأتي غدًا، أو نكمل بعد الاستراحة.', 'أحسنتِ! هذه ثالث جلسة اليوم. إن شئتِ أنهينا هنا، وما بقي يأتي غدًا، أو نكمل بعد الاستراحة.')
+  const last = p.n >= PARTS_MAX, small = tier() === 'small', over0 = !left();
+  C.appendChild(talkRow(over0 ? CL.breakOver() : last ? T('أحسنت! هذه ثالث جلسة اليوم. إن شئت أنهينا هنا، وما بقي يأتي غدًا، أو نكمل بعد الاستراحة.', 'أحسنتِ! هذه ثالث جلسة اليوم. إن شئتِ أنهينا هنا، وما بقي يأتي غدًا، أو نكمل بعد الاستراحة.')
     : T('استراحة! العب وتحرّك قليلًا، ثم نكمل الرحلة.', 'استراحة! العبي وتحرّكي قليلًا، ثم نكمل الرحلة.')));
   const box = el('div','kcard'); box.style.textAlign = 'center';
-  const clock = el('p','kq big'); clock.setAttribute('aria-live', 'polite'); box.appendChild(clock);
-  const on = el('button','bigplay','▶ نكمل الرحلة'); on.type = 'button'; on.disabled = true;
+  /* the wait: a bar of sand that empties (enough for a child who cannot read a clock), and the clock from nine */
+  const sand = el('div','brk'); sand.setAttribute('aria-hidden', 'true'); sand.innerHTML = '<span>⏳</span><span class="tb"><i></i></span>';
+  const clock = el('p','kq big'); const live = el('p','sr'); live.setAttribute('aria-live', 'polite');
+  box.append(sand, clock, live);
+  const on = el('button','bigplay','▶ نكمل الرحلة'); on.type = 'button';
   const home = el('button','tiny','🏠 واحتي'); home.type = 'button'; home.addEventListener('click', () => { voiceStop(); go('kid'); });
   C.append(box, on);
   if (last){ const stop = el('button','btn ghost','🌙 ' + T('أنهيتُ اليوم', 'أنهيتُ اليوم')); stop.type = 'button'; stop.addEventListener('click', () => { voiceStop(); tripStopToday(); }); C.appendChild(stop); }
   C.appendChild(home);
   const fmt = ms => { const s = Math.ceil(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
-  const tick = () => { if (!document.body.contains(clock)){ clearInterval(iv); return; } const l = left(); clock.textContent = l ? `نكمل بعد ${fmt(l)}` : T('هيّا نكمل!', 'هيّا نكمل!'); on.disabled = l > 0; if (!l) clearInterval(iv); };
+  const mins = ms => { const m = Math.ceil(ms / 60000); return m === 1 ? 'دقيقة واحدة' : m === 2 ? 'دقيقتين' : m <= 10 ? `${m} دقائق` : `${m} دقيقة`; };
+  let wasOn = !over0, lastMin = -1;
+  const tick = () => { if (!document.body.contains(clock)){ clearInterval(iv); return; } const l = left();
+    sand.querySelector('i').style.width = `${Math.round(100 * l / BREAK_MS)}%`;
+    clock.textContent = l ? (small ? '' : `نكمل بعد ${fmt(l)}`) : T('هيّا نكمل!', 'هيّا نكمل!'); clock.hidden = !clock.textContent;
+    on.classList.toggle('wait', l > 0); on.setAttribute('aria-disabled', String(l > 0)); on.textContent = l ? '⏳ نكمل الرحلة' : '▶ نكمل الرحلة';
+    const m = Math.ceil(l / 60000); if (m !== lastMin){ lastMin = m; live.textContent = l ? `نكمل بعد ${mins(l)}` : CL.breakOver(); }
+    if (!l){ clearInterval(iv); if (wasOn){ wasOn = false; chime(true); say(CL.breakOver()); } } };
   const iv = setInterval(tick, 1000); tick();
-  on.addEventListener('click', () => { if (left()) return; const q = partGet(); q.n++; q.used = 0; q.until = 0; q.t = Date.now(); partSet(q); renderTrip(); });
+  on.addEventListener('click', () => { if (left()){ say(CL.breakWait()); return; } const q = partGet(); q.n++; q.used = 0; q.until = 0; q.t = Date.now(); partSet(q); renderTrip(); });
 }
 function renderTrip(){
   const C = $('kidTrip'); C.innerHTML = ''; if (!TRIP){ go('kid'); return; }
@@ -2672,7 +2734,11 @@ function renderTrip(){
         p.until = Date.now() + BREAK_MS; partSet(p); chime(true); return tripBreak(C, p); } } }
   const top = el('div','row'); top.style.justifyContent = 'space-between';
   const x = el('button','tiny','✕ خروج'); x.type = 'button'; x.addEventListener('click', () => { voiceStop(); go('kid'); });
-  const dots = el('div','dots'); TRIP.cards.forEach((c, i) => { const d = document.createElement('i'); if (c.kind === 'learn') d.className = 'learn' + (i < TRIP.res.length ? ' ok' : i === TRIP.i ? ' now' : ''); else if (i < TRIP.res.length) d.className = TRIP.res[i] === false && K().age > 8 ? 'bad' : 'ok'; else if (i === TRIP.i) d.className = 'now'; dots.appendChild(d); });
+  /* a dot per card, and from sixteen cards one bar «٧ من ٢٣»: the dots of a long trip would push the page wider than the phone */
+  let dots;
+  if (TRIP.cards.length > 15){ const n = TRIP.cards.length, at = Math.min(TRIP.i, n); dots = el('div','tbar'); dots.setAttribute('role', 'progressbar'); dots.setAttribute('aria-valuemin', '0'); dots.setAttribute('aria-valuemax', String(n)); dots.setAttribute('aria-valuenow', String(at));
+    dots.innerHTML = `<span class="tb"><i style="width:${Math.round(100 * at / n)}%"></i></span><span class="tn">${Math.min(at + 1, n)} من ${n}</span>`; }
+  else { dots = el('div','dots'); TRIP.cards.forEach((c, i) => { const d = document.createElement('i'); if (c.kind === 'learn') d.className = 'learn' + (i < TRIP.res.length ? ' ok' : i === TRIP.i ? ' now' : ''); else if (i < TRIP.res.length) d.className = TRIP.res[i] === false && K().age > 8 ? 'bad' : 'ok'; else if (i === TRIP.i) d.className = 'now'; dots.appendChild(d); }); }
   top.append(dots, x); C.appendChild(top);
   const c = TRIP.cards[TRIP.i]; if (!c) return tripEnd();
   if (c.g === 'rec') return recCard(C, c);
@@ -2680,9 +2746,11 @@ function renderTrip(){
   if (c.g === 'seen') return seenCard(C, c);
   if (c.g === 'write') return writeCard(C, c);
   if (c.kind === 'learn') return learnView(C, c);
+  if (!(c.type && tier() === 'big') && optsOf(c.a, c.alts, 3, c.g).length < 2){ TRIP.cards.splice(TRIP.i, 1); tripSave(); return renderTrip(); }
   const prompt = c.q || '';
   const lead = c.retry ? CL.retry() : c.kind === 'review' ? CL.remember() : c.after ? CL.now() : null, sp = c.qs || prompt;
-  C.appendChild(talkRow(lead ? [lead, prompt] : prompt, {say: true, hear: lead ? [lead, sp] : sp}));
+  const tapTip = tier() === 'small' && !quranCard(c) && store.get(`tapTip:${kid}`, '') !== today(); if (tapTip) store.set(`tapTip:${kid}`, today());
+  C.appendChild(talkRow(lead ? [lead, prompt] : prompt, {say: !tapTip, hear: lead ? [lead, sp] : sp})); if (tapTip) sayLater([...(lead ? [lead, sp] : [sp]), CL.twoTaps()], 150);
   const card = el('div','kcard'); if (c.html) card.insertAdjacentHTML('beforeend', `<div class="kq">${c.html}</div>`);
   if (c.qv && (() => { for (let a = c.qv.a; a <= c.qv.b; a++) if (!hasH(c.qv.s, a)) return false; return true; })()){ const rb = el('button','tiny', RES('▶ ⟨استمع|استمعي⟩ إلى الآية بصوت الحصري')); rb.type = 'button'; rb.addEventListener('click', () => recite(rb, c.qv)); card.appendChild(rb); }
   const o = el('div','kopts'); const tb = el('div'); card.append(o, tb); const fb = el('p','fb'); fb.setAttribute('role', 'status'); card.appendChild(fb); C.appendChild(card);
@@ -2698,13 +2766,18 @@ function renderTrip(){
       TRIP.cards.splice(at, 0, {...c, retry: true, after: true});
       /* a question from the Hasaniya or «كنوز البيان» was asked before its lesson: after a wrong answer the lesson comes next */
       if ((c.g === 'kz' || c.g === 'hsq') && !c.after){ const L = learnCard(c.g, c.id); if (L) TRIP.cards.splice(TRIP.i + 1, 0, L); } }
-    const line = ok ? CL.right() : near ? CL.near() : CL.wrong(); fb.textContent = ok ? line : `${line}: ${c.a}`; fb.className = 'fb ' + (ok ? 'ok' : near ? 'near' : 'bad'); say(ok ? line : [line, c.a]);
-    if (c.why){ const w = el('p','lrn'); w.style.cssText = 'margin:6px 0 0;opacity:.85'; w.textContent = c.why; card.appendChild(w); }
-    else if (!ok && !near){ const L = learnCard(c.g, c.id);   /* every age: a wrong answer comes with its reason (the meaning, the pattern, the verse), not the answer alone */ if (L && (L.big || L.body.length)){ const why = el('p','lrn'); why.style.cssText = 'margin:6px 0 0;opacity:.85'; why.textContent = [L.big, L.body[0]].filter(Boolean).join(' — ').slice(0, 160); card.appendChild(why); } }
+    const small = tier() === 'small', hearIt = small && !quranCard(c);
+    const line = ok ? CL.right() : near ? CL.near(hearIt) : CL.wrong(hearIt); fb.textContent = ok ? line : `${line}: ${c.a}`; fb.className = 'fb ' + (ok ? 'ok' : near ? 'near' : 'bad');
+    /* every age: a wrong answer comes with its reason (the meaning, the pattern, the verse), not the answer alone */
+    let whyT = c.why || '', whyS = c.whys || c.why || '';
+    if (!whyT && !ok && !near){ const L = learnCard(c.g, c.id); if (L && (L.reason || L.big || L.body.length)) whyS = whyT = L.reason || [L.big, L.body[0]].filter(Boolean).join(' — ').slice(0, 160); }
+    if (whyT){ const w = el('p','lrn'); w.style.cssText = 'margin:6px 0 0;opacity:.85'; w.textContent = whyT; card.appendChild(w); }
+    /* said as well to a child who cannot read yet; a verse's word is never said by the speech engine: it is on the screen, and الحصري reads the verse */
+    say(ok || quranCard(c) ? line : [line, c.a, ...(small && !near && whyS ? [whyS] : [])]);
     TRIP.i++; tripSave(); next.hidden = false; next.focus(); };
   /* a word missing from a verse is recalled, never chosen among other words dressed as the verse: from nine it is always typed */
   if (c.type && tier() === 'big' && (c.g === 'fill' || Math.random() < .5)) typeBox(tb, c.a, {id:'ktIn', onDone: done});
-  else mcq(o, optsOf(c.a, c.alts, K().age <= 7 ? 2 : 3), c.a, done, 'm');
+  else { MCQ_QURAN = quranCard(c); mcq(o, optsOf(c.a, c.alts, K().age <= 7 ? 2 : 3), c.a, done, 'm'); }
   o.querySelectorAll('.opt').forEach(b => b.addEventListener('pointerdown', () => {}, {passive: true}));
   next.addEventListener('click', () => { voiceStop(); renderTrip(); window.scrollTo({top: 0}); });
 }
@@ -2726,7 +2799,7 @@ async function renderKidBag(){ const tok = ++KB_TOK;
   const head = (t, n) => { const h = el('p','lbl', `${t} (${n})`); h.style.cssText = 'grid-column:1/-1;margin:8px 0 0'; list.appendChild(h); };
   [...(known.length ? [['كلماتٌ ' + T('عرفتُها', 'عرفتُها'), known]] : []), ...(learning.length ? [['كلماتٌ ' + T('أتعلّمها', 'أتعلّمها'), learning]] : [])].forEach(([t, arr]) => { head(t, arr.length); arr.forEach(it => { const d = el('div','kcard kw'); d.innerHTML = `${tier() === 'small' && picOf(it.w) ? `<p class="pic" aria-hidden="true">${picOf(it.w)}</p>` : ''}<p class="kq" style="font-family:var(--f-q);margin:0">${esc(it.w)}</p>${it.m ? `<p class="lrn" style="margin:2px 0">${esc(it.m)}</p>` : ''}`; const row = el('div','row'); row.style.justifyContent = 'center'; row.appendChild(hearBtn([it.w, it.m].filter(Boolean)));
     const mb = el('button','tiny', recd.has(it.w) ? '✓ ' + T('سجّلتَها', 'سجّلتِها') + ' · ⟨أعد|أعيدي⟩' : '🎙 ' + T('قلها بصوتك', 'قوليها بصوتكِ')); mb.type = 'button'; const box = el('div');
-    mb.addEventListener('click', () => { if (box.childElementCount){ box.innerHTML = ''; return; } micWidget(box, {label: T('اضغط وقل الكلمة', 'اضغطي وقولي الكلمة'), max: 15000, onSaved: async blob => { try { await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid, kidName: K().name, kind: 'كلمة', ref: 'حقيبة الكلمات', text: it.w, date: today(), type: blob.type || 'audio/webm', blob, status: 'pending', notes: [], source: 'local'}); chime(true); cmpHappy(); mb.textContent = '✓ ' + T('سجّلتَها', 'سجّلتِها'); store.set(`dates:${kid}`, dates() + 1); } catch (e) {} }}); });
+    mb.addEventListener('click', () => { if (box.childElementCount){ box.innerHTML = ''; return; } micWidget(box, {label: T('اضغط وقل الكلمة', 'اضغطي وقولي الكلمة'), max: 15000, onSaved: async blob => { try { await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid, kidName: K().name, kind: 'كلمة', ref: 'حقيبة الكلمات', text: it.w, date: today(), type: blob.type || 'audio/webm', blob, status: 'pending', notes: [], source: 'local'}); chime(true); cmpHappy(); mb.textContent = '✓ ' + T('سجّلتَها', 'سجّلتِها'); dateOnce('w:' + it.w, 1, 5); } catch (e) {} }, minMs: 800}); });
     row.appendChild(mb); d.append(row, box); list.appendChild(d); }); });
   C.appendChild(list);
 }
@@ -2745,7 +2818,7 @@ async function renderKidSay(){
   const next = el('button','bigplay','التالي ◀'); next.type = 'button'; next.hidden = true; C.appendChild(next);
   const skip = el('button','tiny', ((cmpGet() || {}).kind === 'owl' ? 'لا أعرف، أسمعيني الجواب' : 'لا أعرف، أسمعني الجواب')); skip.type = 'button'; C.appendChild(skip);
   const reveal = () => { if (!rev.hidden) return; rev.hidden = false; say(['نقول:', it.options[0]]); next.hidden = false; skip.remove(); };
-  micWidget(mb, {label: T('اضغط وقل الجملة', 'اضغطي وقولي الجملة'), again: T('أعدها بعد أن تسمع الجواب', 'أعيديها بعد أن تسمعي الجواب'), max: 20000, onSaved: async blob => { try { await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid, kidName: K().name, kind: 'جملة', ref: it.id, text: `${it.q} ← ${it.options[0]}`, date: today(), type: blob.type || 'audio/webm', blob, status: 'pending', notes: [], source: 'local'}); } catch (e) { mb.appendChild(el('p','fb bad','تعذّر حفظ التسجيل.')); } if (rev.hidden){ chime(true); cmpHappy(); store.set(`dates:${kid}`, dates() + 2); SAY.n++; } reveal(); }});
+  micWidget(mb, {label: T('اضغط وقل الجملة', 'اضغطي وقولي الجملة'), again: T('أعدها بعد أن تسمع الجواب', 'أعيديها بعد أن تسمعي الجواب'), max: 20000, onSaved: async blob => { try { await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid, kidName: K().name, kind: 'جملة', ref: it.id, text: `${it.q} ← ${it.options[0]}`, date: today(), type: blob.type || 'audio/webm', blob, status: 'pending', notes: [], source: 'local'}); } catch (e) { mb.appendChild(el('p','fb bad','تعذّر حفظ التسجيل.')); } if (rev.hidden){ chime(true); cmpHappy(); dateOnce('s:' + it.id, 2, 3); SAY.n++; } reveal(); }, minMs: 800});
   skip.addEventListener('click', reveal);
   next.addEventListener('click', () => { voiceStop(); SAY.i++; renderKidSay(); window.scrollTo({top: 0}); });
 }
@@ -2774,7 +2847,7 @@ function renderKidFam(){
   C.appendChild(talkRow(`السؤال ${FAM.i + 1}: ${q.q}`, {say: false}));
   const card = el('div','kcard'); if (q.html) card.insertAdjacentHTML('beforeend', `<div class="kq">${q.html}</div>`); const o = el('div','kopts'); const fb = el('p','fb'); card.append(o, fb); C.appendChild(card);
   const next = el('button','bigplay','التالي ◀'); next.type = 'button'; next.hidden = true; C.appendChild(next);
-  mcq(o, optsOf(q.a, q.alts, 3), q.a, st => { const ok = st === true || st === 'ok'; FAM.res = FAM.res || []; FAM.res[FAM.i] = ok; if (ok) FAM.ok++; chime(ok); if (ok) cmpHappy(); fb.textContent = ok ? 'أحسنتم!' : `الجواب: ${q.a}`; fb.className = 'fb ' + (ok ? 'ok' : 'bad'); next.hidden = false; }, 'm');
+  mcq(o, optsOf(q.a, q.alts, 3, q.g), q.a, st => { const ok = st === true || st === 'ok'; FAM.res = FAM.res || []; FAM.res[FAM.i] = ok; if (ok) FAM.ok++; chime(ok); if (ok) cmpHappy(); fb.textContent = ok ? 'أحسنتم!' : `الجواب: ${q.a}`; fb.className = 'fb ' + (ok ? 'ok' : 'bad'); next.hidden = false; }, 'm');
   next.addEventListener('click', () => { voiceStop(); FAM.i++; renderKidFam(); window.scrollTo({top: 0}); });
 }
 INIT.kidFam = renderKidFam;
@@ -2804,6 +2877,7 @@ function learnView(C, c){
   const quiet = new Set((c.quiet || []).concat(c.body.filter(b => /^في القرآن:/.test(b))));
   const all = [c.big, ...c.body].filter(Boolean).filter(x => !quiet.has(x) && !/^(صحيح|سنن|الأربعون)/.test(x)).map(x => x.replace(/ ۞ /g, '، '));
   const hb = hearBtn(all); hb.style.alignSelf = 'center'; card.appendChild(hb);
+  if (c.story && !arVoice()){ const n = el('p','lrn', T('لا صوت عربيًّا في هذا الجهاز: اطلب من أهلك أن يقرؤوا لك القصة.', 'لا صوت عربيًّا في هذا الجهاز: اطلبي من أهلكِ أن يقرؤوا لكِ القصة.')); n.style.textAlign = 'center'; card.appendChild(n); }
   if (c.qv && (() => { for (let a = c.qv.a; a <= c.qv.b; a++) if (!hasH(c.qv.s, a)) return false; return true; })()){ const rb = el('button','tiny', RES('▶ ⟨استمع|استمعي⟩ إلى الآية بصوت الحصري')); rb.type = 'button'; rb.style.alignSelf = 'center'; rb.addEventListener('click', () => recite(rb, c.qv)); card.appendChild(rb); }
   C.appendChild(card);
   sayLater(all, 250); if (!c.story){ const [g, ...rest] = c.id.split('|'); markLearned(g, rest.join('|')); }
@@ -3000,13 +3074,13 @@ function renderMeasure(){
   const it = MS.items[MS.i]; if (!it) return measureEnd(C);
   let q = null; try { q = GEN[it.g](it.id); } catch (e) {}
   if (!q || !q.a){ MS.res.push(null); MS.i++; return renderMeasure(); }
-  C.appendChild(talkRow(MS.i === 0 ? [T('قياس الشهر: أسئلةٌ مما تعلّمتَه من قبل، لنعرف ما بقي معك. أجب بما تعرف، ولا بأس إن لم تعرف', 'قياس الشهر: أسئلةٌ مما تعلّمتِه من قبل، لنعرف ما بقي معكِ. أجيبي بما تعرفين، ولا بأس إن لم تعرفي'), q.q] : q.q, {say: true}));
+  C.appendChild(talkRow(MS.i === 0 ? [T('قياس الشهر: أسئلةٌ مما تعلّمتَه من قبل، لنعرف ما بقي معك. أجب بما تعرف، ولا بأس إن لم تعرف', 'قياس الشهر: أسئلةٌ مما تعلّمتِه من قبل، لنعرف ما بقي معكِ. أجيبي بما تعرفين، ولا بأس إن لم تعرفي'), q.qs || q.q] : q.qs || q.q, {say: true}));
   const card = el('div','kcard'); if (q.html) card.insertAdjacentHTML('beforeend', `<div class="kq">${q.html}</div>`);
   const o = el('div','kopts'); card.appendChild(o); C.appendChild(card);
   /* one answer per question: the first tap (an option or «لا أعرف») is kept, anything during the pause is ignored */
   const idx = MS.i; let taken = false;
   const answer = v => { if (taken || MS.i !== idx || MS.res.length !== idx) return; taken = true; skip.disabled = true; MS.res.push(v); MS.i++; setTimeout(() => { voiceStop(); renderMeasure(); window.scrollTo({top: 0}); }, 450); };
-  mcq(o, optsOf(q.a, q.alts, K().age <= 7 ? 2 : 3), q.a, ok => answer(!!ok), 'm', true);
+  MCQ_QURAN = quranCard(Object.assign({g: it.g}, q)); mcq(o, optsOf(q.a, q.alts, K().age <= 7 ? 2 : 3, it.g), q.a, ok => answer(!!ok), 'm', true);
   const skip = el('button','tiny', 'لا أعرف'); skip.type = 'button'; skip.addEventListener('click', () => { for (const b of o.children) b.disabled = true; answer(false); }); C.appendChild(skip);
 }
 function measureEnd(C){
@@ -3014,7 +3088,7 @@ function measureEnd(C){
   MS.items.forEach((it, i) => { const b = byG[it.g] || (byG[it.g] = [0, 0]); b[1]++; if (MS.res[i]) b[0]++; });
   const h = msHistory(); h.push({day: dayN(), date: today(), ok, n, byG, kind: 'ret', k: K().age <= 7 ? 3 : 4}); store.set(`ms:${kid}`, h.slice(-24)); MS = null;
   /* no «more than last time»: a difference of a question or two is chance */
-  C.appendChild(talkRow(T(`شكرًا لك! تذكّرتَ ${ok} من ${n} مما تعلّمتَه من قبل. بارك الله فيك`, `شكرًا لكِ! تذكّرتِ ${ok} من ${n} مما تعلّمتِه من قبل. بارك الله فيكِ`), {say: true}));
+  C.appendChild(talkRow(T('شكرًا لك! سيرى أهلك ما تذكّرتَه مما تعلّمتَه من قبل. بارك الله فيك', 'شكرًا لكِ! سيرى أهلكِ ما تذكّرتِه مما تعلّمتِه من قبل. بارك الله فيكِ'), {say: true}));   /* the score is for the parents (their board): a child is not told a number */
   const b = el('button','bigplay','◀ واحتي'); b.type = 'button'; b.addEventListener('click', () => go('kid')); C.appendChild(b);
 }
 INIT.kidMs = renderMeasure;

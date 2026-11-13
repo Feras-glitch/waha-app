@@ -338,7 +338,7 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
       if (parentOn()) { if (cb) setTimeout(cb, 0); return; }
       /* the PIN typed at the parents' entry opens the session; one typed for anything else (a certificate, a file) is spent on it */
       var sess = IN_PE;
-      return _require(function () { if (sess) PARENT_UNTIL = Date.now() + 15 * 60 * 1000; if (cb) return cb.apply(this, arguments); }, message);
+      return _require(function () { if (sess) { PARENT_UNTIL = Date.now() + 15 * 60 * 1000; try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () {}); } catch (e) {} } if (cb) return cb.apply(this, arguments); }, message);
     };
     if (typeof parentEntry === 'function') { var _pe = parentEntry; parentEntry = function () { IN_PE = true; try { return _pe.apply(this, arguments); } finally { IN_PE = false; } }; }
     /* opening a progress file replaces what the child has learned here (and what the oasis reads from it): the parent's step */
@@ -346,6 +346,8 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
     var _map = showMap;
     showMap = function () { PARENT_UNTIL = 0; var r = _map.apply(this, arguments); if (WANT_PARENT) openParentNow(); return r; };
     document.addEventListener('visibilitychange', function () { if (document.hidden) PARENT_UNTIL = 0; });
+    /* the parents' screen left open closes with its session (15 minutes from the PIN): the child's map comes back */
+    setInterval(function () { var ps = document.getElementById('parentScreen'); if (ps && ps.style.display === 'block' && !parentOn()) { try { showMap(); } catch (e) {} } }, 5000);
     var _showPin = showPinModal;
     showPinModal = function (title, subtitle) {
       _showPin(title, subtitle);
@@ -547,7 +549,9 @@ var KZ_HS_NEEDS = ['STORAGE_USERS', 'STORAGE_ACTIVE', 'STORAGE_PIN', 'createNewU
     ['منطقة الوالدين محمية، أدخل الرقم السري', 'لوحة الحسنية: اكتبوا رمز وليّ الأمر'], ['🔐 إدارة الرقم السري', '🔐 رمز وليّ الأمر'],
     ['ضبط الرقم السري', 'ضبط رمز وليّ الأمر'], ['تغيير الرقم السري', 'تغيير رمز وليّ الأمر'], ['إزالة الرقم السري', 'إزالة رمز وليّ الأمر'],
     ['تم ضبط الرقم السري', 'ضُبط رمز وليّ الأمر'], ['🔐 الرقم السري', '🔐 رمز وليّ الأمر'], ['نسيت الرقم؟', 'نسيتم الرمز؟'],
-    ['يطلبان الرقم السري', 'يطلبان رمز وليّ الأمر'], ['(بالرقم السري)', '(برمز وليّ الأمر)']
+    ['يطلبان الرقم السري', 'يطلبان رمز وليّ الأمر'], ['(بالرقم السري)', '(برمز وليّ الأمر)'],
+    /* 2.11: the recordings leave only through the parents (their PIN and consent), and the parents are spoken to in the plural */
+    ['ولا تُرسل إلا عندما تضغط زر الإرسال بنفسك', 'ولا تخرج منه إلا برمز وليّ الأمر وموافقته'], ['تساعدك على التحقق', 'تساعدكم على التحقق']
   ];
   /* labels that are one word alone (a tile «تذكّر», the 🔊 buttons' «استمع»): rewritten only when they are the whole text, never inside a word */
   var HS_FEM_EXACT = [['تذكّر', 'تذكّري'], ['استمع', 'استمعي']];

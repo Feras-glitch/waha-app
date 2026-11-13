@@ -62,7 +62,7 @@ async def main():
         ok(code2 != code, 'a new recovery code replaces the used one')
         await p.check('#rcSaved'); await p.click('#recDone'); await p.wait_for_selector('.ph-top')
         f = await p.evaluate(FAM)
-        ok(not f.get('pinResets') and f['pinLog'][-1]['k'] == 'code', 'a reset proven by the code revokes nothing and is logged')
+        ok(len(f.get('pinResets') or []) == 1 and f['pinLog'][-1]['k'] == 'code', 'a reset proven by the code is logged and shown like a change of PIN (2.11: a child who found the code cannot reset in silence)')
         await forgot(p); await p.fill('#rcIn', code); await p.click('#recForm button[type=submit]'); await p.wait_for_timeout(300)
         ok('غير صحيح' in await p.inner_text('#rcErr'), 'the old code no longer works')
 
@@ -110,7 +110,7 @@ async def main():
         ok(code3 not in (code, code2), 'a new recovery code after the waited reset')
         await p.check('#rcSaved'); await p.click('#recDone'); await p.wait_for_selector('.ph-top')
         f = await p.evaluate(FAM)
-        ok(len(f['pinResets']) == 1 and f.get('resetReq') is None, 'waited reset recorded (approvals revoked as before)')
+        ok(len(f['pinResets']) == 2 and f['pinLog'][-1]['k'] == 'reset-wait' and f.get('resetReq') is None, 'waited reset recorded (approvals revoked as before)')
         await fresh(p, HS); await p.wait_for_selector('#kzHome'); await p.wait_for_timeout(400)
         await p.evaluate("exportProgress()"); await p.wait_for_selector('#kzSheet')
         st = await p.inner_text('#kzSheet')
