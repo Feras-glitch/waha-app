@@ -19,7 +19,7 @@
 ## العمل
 ```bash
 python3 src/tools/build.py          # يبني src/dist/ (ويتوقف عند خطأ نحوي، أو اسم مكرر، أو تغيّر في الحسنية يمسّ الربط)
-python3 src/tools/test_all.py       # تسع عشرة مجموعة اختبار (Playwright بايثون + Chromium)
+python3 src/tools/test_all.py       # عشرون مجموعة اختبار (Playwright بايثون + Chromium)
 python3 src/tools/publish.py        # ينسخ src/dist/ إلى web/
 node web/tests/smoke.js             # اختبار الدخان (Playwright نود)
 ```

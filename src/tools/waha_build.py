@@ -304,6 +304,73 @@ def qpc_prepare(D):
     return sorted({G['%d:%d' % k]['page_number'] for k in need}), idx[0]
 
 
+KZ_QPC_CHECK = r"""
+const fs = require('fs'), vm = require('vm'); const ctx = {}; vm.createContext(ctx);
+const [dataP, engineP, ramP, qP] = process.argv.slice(1);
+vm.runInContext(fs.readFileSync(dataP, 'utf8') + '\n;this.__L = LESSONS;', ctx);
+const arr = (p, name) => { const src = fs.readFileSync(p, 'utf8'), head = '\nvar ' + name + '=', i = src.indexOf(head + '['), j = src.indexOf('\n];', i);
+  if (i < 0 || j < 0) throw new Error('no ' + name + ' in ' + p); return vm.runInContext('(' + src.slice(i + head.length, j + 2) + ')', ctx); };
+const Q = JSON.parse(fs.readFileSync(qP, 'utf8')), all = [];
+const walk = (o, w) => { if (Array.isArray(o)) o.forEach(x => walk(x, w));
+  else if (o && typeof o === 'object') { if (o.v && o.v.s) all.push([w, o.v, o.o]); for (const k in o) if (k !== 'v') walk(o[k], w); } };
+ctx.__L.forEach(l => { (l.verses || []).forEach(v => all.push(['lesson ' + l.id, v, null])); for (const k in l) if (k !== 'verses') walk(l[k], 'lesson ' + l.id); });
+arr(engineP, 'EXTRA').forEach(b => walk(b, 'question ' + b.id));
+arr(ramP, 'RAMADAN').forEach(r => walk(r, 'ramadan ' + r.id));
+const bad = [];
+all.forEach(([w, v, o]) => { const ref = v.s + ':' + v.a + (v.a2 ? '-' + v.a2 : '');
+  const P = ctx.kzPlace(Object.assign({}, v, {ans: o && o[0]}), Q);
+  if (!P) { bad.push(w + ' ' + ref + ': its words are not found in the ayah'); return; }
+  const n = k => P.ay.reduce((m, A) => m + Object.keys(A[k]).length, 0);
+  if (P.blank && !n('bl')) bad.push(w + ' ' + ref + ': the hidden word is not found');
+  if (/[{[]/.test(v.t) && !n('hl')) bad.push(w + ' ' + ref + ': no coloured word is found'); });
+process.stdout.write(JSON.stringify({n: all.length, bad}));
+"""
+
+
+def check_chamber_verses(kzq):
+    """Every verse «كنوز البيان» shows (a lesson's, a question's, a Ramadan touch's) must be placed in the Mushaf's glyphs by the
+    page's own code (kzPlace in data.js): its words found in the ayah, its coloured words coloured, a question's hidden word hidden.
+    Returns (how many verses, what cannot be placed)."""
+    import subprocess, tempfile
+    with tempfile.NamedTemporaryFile('w', suffix='.json', delete=False, encoding='utf-8') as f:
+        json.dump(kzq, f, ensure_ascii=False); tmp = f.name
+    try:
+        r = subprocess.run(['node', '-e', KZ_QPC_CHECK, P('parts', 'data.js'), P('parts', 'engine.js'), P('parts', 'f_ramadan.js'), tmp],
+                           capture_output=True, text=True)
+    finally:
+        os.unlink(tmp)
+    if r.returncode:
+        raise SystemExit('kunuz: checking the verses in the Mushaf script failed:\n' + r.stderr[:1200])
+    out = json.loads(r.stdout)
+    return out['n'], out['bad']
+
+
+def qpc_for_chambers(js):
+    """«كنوز البيان» (2.13, the family's choice): every verse its pages show (the lessons, the questions, Ramadan's touches) is
+    drawn in the Mushaf's script, with the lesson's own line under it. The page finds the lesson's words in the ayah itself
+    (engine.js, kzQ), so it carries, for each ayah named in its code ({…, s:N, a:N[, a2:N]}): [page, glyphs, the Tanzil text]
+    (the basmala of an ayah 1 left out, as in the glyphs). Returns that map and the pages whose fonts it needs."""
+    G = json.load(open(os.path.join(QPC_DIR, 'qpc-v2-ayah-by-ayah-glyphs.json'), encoding='utf-8'))
+    T = json.load(open(os.path.join(ROOT, 'quran', 'tanzil-uthmani.json'), encoding='utf-8'))
+    out, bad = {}, []
+    for m in re.finditer(r'\bs:(\d+),a:(\d+)(?:,a2:(\d+))?', js):
+        s, a = int(m.group(1)), int(m.group(2))
+        for x in range(a, int(m.group(3) or a) + 1):
+            key = '%d:%d' % (s, x)
+            if key not in G or key not in T:
+                bad.append(m.group(0))
+                continue
+            t = T[key].split()
+            if s not in (1, 9) and x == 1 and len(t) > 4 and _qs(' '.join(t[:4])) == 'بسم الله الرحمن الرحيم':
+                t = t[4:]
+            if len(t) != len(G[key]['text'].split(' ')) - 1:
+                continue   # 13:37: its words do not go one to one with the glyphs, so it stays in the written text
+            out[key] = [G[key]['page_number'], G[key]['text'], ' '.join(t)]
+    if bad:
+        raise SystemExit('kunuz: no such ayah: ' + ', '.join(bad[:10]))
+    return out, sorted({v[0] for v in out.values()})
+
+
 def qpc_fonts(pages):
     """dist/fonts/qpc/: the fonts of these pages, and qpc.css naming each one qpcN (font-display: block, so a glyph is never shown in
     another font, where its code is an unrelated Arabic presentation form)."""
@@ -334,7 +401,7 @@ def check_needs(app, post, bridge):
             raise SystemExit('waha %s: the Claude artifact runtime is not used in the product (ENG-16)' % name)
 
 
-def build(verbose=True, icon='', csp=''):
+def build(verbose=True, icon='', csp='', extra_pages=()):
     page, data, app = rd('parts', 'waha', 'page.html'), rd('parts', 'waha', 'data.json'), rd('parts', 'waha', 'app.js')
     import json as _j
     D = _j.loads(data)
@@ -384,6 +451,7 @@ def build(verbose=True, icon='', csp=''):
                 raise SystemExit('waha %s.js syntax error:\n%s' % (name, r.stderr[:800]))
     os.makedirs(P('dist'), exist_ok=True)
     open(P('dist', 'index.html'), 'w', encoding='utf-8').write(out)
+    qpc_pages = sorted(set(qpc_pages) | set(extra_pages))   # and the pages «كنوز البيان» shows
     qpc_fonts(qpc_pages)
     if verbose:
         print('waha: %d KB; warnings %d; Mushaf script: %d ayat, %d verses placed, %d page fonts' % (len(out.encode('utf-8')) // 1024, miss, len(D['qpc']), qpc_n, len(qpc_pages)))

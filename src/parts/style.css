@@ -145,6 +145,11 @@ h1:focus,h2:focus{outline:none}
   box-shadow:inset 0 0 0 5px var(--surface),inset 0 0 0 6px var(--frame)}
 .verse blockquote{margin:0;font-family:var(--font-quran);font-size:clamp(1.45rem,4.8vw,1.85rem);line-height:2.4;text-align:center;color:var(--ink)}
 .orn{color:var(--ax);font-size:1.05em}
+/* a lesson's verse in the Mushaf's own script (KFGQPC QPC V2, 2.13): each word a glyph of its page's font, never bolded or slanted by
+   the browser; under it the lesson's own line, in the written text, with its coloured letter */
+.verse .qpc{font-size:1.15em;line-height:2.15;font-weight:400;font-style:normal;font-synthesis:none;-webkit-user-select:none;user-select:none}
+.verse.qv blockquote{line-height:2.2}
+.vline{margin:2px 0 0;font-family:var(--font-quran);font-size:clamp(1.1rem,3.8vw,1.3rem);line-height:2;text-align:center;color:var(--ink-2)}
 .verse figcaption{display:flex;flex-wrap:wrap;justify-content:center;gap:2px 14px;font-size:.88rem;color:var(--ink-2);margin-top:4px}
 .verse figcaption a{color:var(--ax);text-underline-offset:4px}
 .vplay{font:inherit;font-size:.9rem;color:var(--ax);background:none;border:1.5px solid currentColor;border-radius:999px;padding:6px 14px;min-height:40px;cursor:pointer}

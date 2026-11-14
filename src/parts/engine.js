@@ -55,9 +55,31 @@ function go(html){
 var NO_WEB=true;
 function vAud(v){var A=window.WAHA_AUDIO,r=A&&A.h&&A.h[v.s],b=v.a2||v.a,x; if(!r) return false;
   for(x=v.a;x<=b;x++){ if(!r.some(function(p){return x>=p[0]&&x<=p[1];})) return false; } return true;}
+/* 2.13 (the family's choice): a lesson's verse in the Mushaf's own script (KFGQPC QPC V2, the fonts in ../fonts/qpc): the whole
+   ayah, or ayat, each word a glyph of its page's font, the words the lesson colours coloured whole; and under it the lesson's own
+   line in the written text, with its coloured letter (the Mushaf's glyphs colour only whole words). Where the lesson's words sit
+   in the glyphs is found by kzPlace (data.js); a verse it cannot place is shown in the written text, as before, and the build
+   stops on any such verse. KZQ: "s:a" -> [page, glyphs, the Tanzil text], from the build (tools/waha_build.py, qpc_for_chambers).
+   A file that leaves the app keeps the written text. */
+var KZQ=/*@KZ_QPC@*/{};
+function kzQ(v){
+  var P=kzPlace(v,KZQ); if(!P) return null;
+  var hide=P.blank&&!v.done, html=P.ay.map(function(A){ var g=A.q[1].split(' '),o=[],k;
+    for(k=0;k<g.length;k++){ if(A.bl[k]&&hide){ if(!A.bl[k-1]) o.push('<span class="blank"></span>'); continue; } o.push(A.hl[k]||A.bl[k]?'<mark>'+g[k]+'</mark>':g[k]); }
+    return '<span class="qpc" style="font-family:qpc'+A.q[0]+'" role="img" aria-label="'+escA('سورة '+v.n+': '+n2a(A.x)+(hide&&Object.keys(A.bl).length?'، وفيها كلمةٌ ناقصة':''))+'">'+o.join(' ')+'</span>'; }).join(' ');
+  /* the lesson's line: the words it colours, each run with the word before it, «…» between them */
+  var ws=P.ws,parts=[],last=-2;
+  if(!P.blank) ws.forEach(function(w,i){ if(!(w.mk||(ws[i+1]&&ws[i+1].mk))) return; if(last>=0&&i>last+1) parts.push('…'); parts.push(w.src); last=i; });
+  return {html:html,line:parts.length?fmt(parts.join(' ').replace(/\} \{/g,' ')):''};   /* «{مِنْ} {إِمْلَاقٍ}» is one coloured run */
+}
+/* a page's font that cannot load is never replaced by another font, where its glyph codes would read as other letters */
+var QPC_BAD={};
+try{document.fonts.addEventListener('loadingerror',function(e){(e.fontfaces||[]).forEach(function(f){var m=/^["']?qpc(\d+)["']?$/.exec(f.family),sel,st;
+  if(!m||QPC_BAD[m[1]]) return; QPC_BAD[m[1]]=1; sel='.qpc[style="font-family:qpc'+m[1]+'"]'; st=document.createElement('style');
+  st.textContent=sel+'{font-size:0!important}'+sel+'::before{content:"تعذّر تحميل خطّ المصحف لهذه الآية";font:700 1rem var(--font-body);color:var(--ink-2)}'; document.head.appendChild(st);});});}catch(e){}
 function verse(v,o){
-  var out=!!(o&&o.out), link='<a href="https://quran.com/'+v.s+'/'+v.a+(v.a2?'-'+v.a2:'')+'" target="_blank" rel="noopener">⟨استمع|استمعي⟩ للتلاوة ↗</a>';
-  return '<figure class="verse"><blockquote><span class="orn">﴿</span> '+fmt(v.t)+' <span class="orn">﴾</span></blockquote>'+
+  var out=!!(o&&o.out), Q=out?null:kzQ(v), link='<a href="https://quran.com/'+v.s+'/'+v.a+(v.a2?'-'+v.a2:'')+'" target="_blank" rel="noopener">⟨استمع|استمعي⟩ للتلاوة ↗</a>';
+  return '<figure class="verse'+(Q?' qv':'')+'"><blockquote>'+(Q?Q.html:'<span class="orn">﴿</span> '+fmt(v.t)+' <span class="orn">﴾</span>')+'</blockquote>'+(Q&&Q.line?'<p class="vline">'+Q.line+'</p>':'')+
     '<figcaption><span>'+(v.p?'من ':'')+'سورة '+v.n+' · '+(v.a2?((v.a2-v.a===1?'الآيتان ':'الآيات ')+n2a(v.a)+'–'+n2a(v.a2)):'الآية '+n2a(v.a))+'</span>'+
     (v.nolink?'':(!out&&vAud(v)?'<button class="vplay" type="button" data-act="vplay" data-s="'+v.s+'" data-a="'+v.a+'" data-b="'+(v.a2||v.a)+'">▶ ⟨استمع|استمعي⟩ للتلاوة</button>':
       (out||!NO_WEB?link:'')))+'</figcaption></figure>';
@@ -443,7 +465,7 @@ function itemHTML(b){
   if(b.v){
     var vt=b.v.t;
     if(vt.indexOf('ـــــ')>=0) vt=s.done?vt.replace('ـــــ','{'+b.o[0]+'}'):vt.replace('ـــــ','<span class="blank" role="img" aria-label="كلمةٌ ناقصة"></span>');
-    h+=verse({t:vt,n:b.v.n,s:b.v.s,a:b.v.a,a2:b.v.a2,p:b.v.p,nolink:!s.done});
+    h+=verse({t:vt,raw:b.v.t,ans:b.o&&b.o[0],done:s.done,n:b.v.n,s:b.v.s,a:b.v.a,a2:b.v.a2,p:b.v.p,nolink:!s.done});
   }
   h+='<h2 class="q">'+fmt(b.q)+'</h2>';
   if(b.k==='mcq'||b.k==='verse') h+=optsHTML(s.ord,'a',s.done,s.c,s.done);
