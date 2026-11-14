@@ -11,6 +11,7 @@
 | `parts/hasaniya_early.js` · `parts/hasaniya_late.js` | طبقة تكامل الحسنية (المخزن المنفصل، أطفال العائلة، الرمز، الموافقة، 🌴) |
 | `parts/static/` | ملفات مشتركة: `manifest.json`، والخطوط، وجسر أندرويد |
 | `parts/sw.js` | قالب عامل الخدمة الواحد |
+| `quran/` | القرآن: `qpc-v2/` خطّ مصحف المدينة (مجمع الملك فهد) ورموز كل آية، و`tanzil-uthmani.json` النصّ العثماني المكتوب؛ انظر `quran/qpc-v2/README.md`. لا يُعدَّل يدويًّا |
 | `parts/README.md` | دليل العائلة (هو نفسه دليل مشروع Claude) |
 | `tools/` | البناء والنشر والاختبارات |
 | `tools/archive/` | الأصل كما استُلم، وسجلّ التعديلات التي طُبّقت عليه |
@@ -18,7 +19,7 @@
 ## العمل
 ```bash
 python3 src/tools/build.py          # يبني src/dist/ (ويتوقف عند خطأ نحوي، أو اسم مكرر، أو تغيّر في الحسنية يمسّ الربط)
-python3 src/tools/test_all.py       # ثماني عشرة مجموعة اختبار (Playwright بايثون + Chromium)
+python3 src/tools/test_all.py       # تسع عشرة مجموعة اختبار (Playwright بايثون + Chromium)
 python3 src/tools/publish.py        # ينسخ src/dist/ إلى web/
 node web/tests/smoke.js             # اختبار الدخان (Playwright نود)
 ```

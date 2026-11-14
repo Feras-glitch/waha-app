@@ -18,7 +18,9 @@
   function quranFree(t) {
     t = String(t == null ? '' : t)
       .replace(/﴿[^﴾]*﴾/g, ' ')                 /* a quoted verse */
-      .replace(/\{[^{}]*\}/g, ' ');              /* the Hasaniya's way of quoting a verse in a story */
+      .replace(/\{[^{}]*\}/g, ' ')               /* the Hasaniya's way of quoting a verse in a story */
+      .replace(/[\uFB51-\uFD3D]+/g, ' ');        /* the Mushaf script's glyph codes (QPC, from U+FB51; V2 uses U+FC41–U+FCFC): read aloud they
+                                                  are other letters. ﴾﴿ (U+FD3E–F) and ﷺ (U+FDFA) are above this range and stay */
     return t.split(/(\s+)/).map(function (w) { return UTHM.test(w) ? '' : w; }).join('');
   }
   function esc(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }

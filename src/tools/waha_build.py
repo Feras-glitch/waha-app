@@ -10,7 +10,7 @@ parts/waha_post.js (runs last: gendered address, parent gate before any export, 
 In the head: the shared manifest, local fonts, the Android bridge (js/android-shim.js) and WAHA_APP (shows the Hasaniya tile).
 History: tools/archive/ keeps the page as received on 2026-10-22 and the reviewed edits applied to it.
 """
-import os, re, sys
+import json, os, re, shutil, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 P = lambda *a: os.path.join(ROOT, *a)
@@ -21,6 +21,7 @@ HEAD = ('<meta name="viewport" content="width=device-width,initial-scale=1,viewp
         '<meta name="theme-color" content="#1f4a28">'
         '<link rel="icon" href="@ICON@">'
         '<link rel="stylesheet" href="fonts/fonts.css">'
+        '<link rel="stylesheet" href="fonts/qpc/qpc.css">'   # the Mushaf's own script (KFGQPC QPC V2), the pages the oasis shows
         '<script>window.WAHA_APP = 1;</script>'
         '<script src="js/android-shim.js"></script>'
         '<script src="js/guard.js"></script>'   # the family rules every section keeps: no Quran by the speech engine, no browser save of a child's voice or picture
@@ -209,6 +210,116 @@ def check_verses(D):
 WAHA_NEEDS = ['say', 'ttsSay', 'tripLogSave', 'pinSet', 'pinSave', 'pinCheck', 'pinGate', 'go', 'kidsSheet', 'kidEditSheet', 'onKid', 'saveFile']
 
 
+# ---------- the Mushaf's own script: KFGQPC QPC V2 (the Madinah Mushaf), ayah after ayah ----------
+# src/quran/qpc-v2/: QUL's ayah-by-ayah glyph map (each ayah = one glyph per word of its page's font, the pause marks among them,
+# then the ayah's end mark), and the 604 page fonts of the King Fahd Complex (fonts/pNNN.woff2, converted losslessly; README.md).
+# The oasis carries the glyphs of every ayah it shows and the fonts of their pages only.
+QPC_DIR = os.path.join(ROOT, 'quran', 'qpc-v2')
+QMARK = re.compile(r'^[\u06D6-\u06ED\u06DE]+$')   # a pause mark or the hizb sign: a token of its own, in Tanzil as in QPC V2
+_qn = lambda w: re.sub(r'[\u0640\u06D6-\u06ED]', '', w)                       # without tatweel and the small marks (Tanzil versions differ)
+_qs = lambda w: re.sub(r'[\u064B-\u065F\u0670]', '', _qn(w)).replace('ٱ', 'ا')   # the bare letters
+
+
+def _find(seq, sub, start=0):
+    for i in range(max(start, 0), len(seq) - len(sub) + 1):
+        if seq[i:i + len(sub)] == sub:
+            return i
+    return -1
+
+
+def qpc_prepare(D):
+    """D['qpc'] = {"s:a": [page, glyphs]} for every ayah the oasis shows (the Mushaf pages, every verse it quotes, the chambers' verses,
+    and 1:1 for the basmala). A verse that points at a word (to colour it) gets qw, its index among the ayah's glyphs; a riddle that
+    hides words gets qb. The index is found on the Tanzil text (src/quran/tanzil-uthmani.json), whose tokens go one to one with
+    the glyphs in 6235 ayat of 6236 (13:37 is shown without a coloured word). Returns the pages whose fonts the oasis needs."""
+    G = json.load(open(os.path.join(QPC_DIR, 'qpc-v2-ayah-by-ayah-glyphs.json'), encoding='utf-8'))
+    T = json.load(open(os.path.join(ROOT, 'quran', 'tanzil-uthmani.json'), encoding='utf-8'))
+    need, bad, idx = {(1, 1)}, [], [0]
+    for pg in D['quran']['pages']:
+        for x in pg['ayat']:
+            need.add((x[0], x[1]))
+    for L in (D.get('kunuz') or {}).get('lessons', []):
+        for v in L.get('verses') or []:
+            if isinstance(v.get('s'), int) and isinstance(v.get('a'), int):
+                need.update((v['s'], x) for x in range(v['a'], (v.get('a2') or v['a']) + 1))
+
+    def tokens(s, a):
+        t = T['%d:%d' % (s, a)].split()
+        if s != 1 and a == 1 and len(t) > 4 and _qs(' '.join(t[:4])) == 'بسم الله الرحمن الرحيم':
+            t = t[4:]
+        return t
+
+    def place(o, path):
+        s, a, key = o['s'], o['a'], '%d:%d' % (o['s'], o['a'])
+        need.add((s, a))
+        text, word = o.get('text') or '', o.get('word') or ''
+        if not word and '……' not in text:
+            return
+        if key not in G or key not in T:
+            return bad.append('%s %s: no glyphs' % (path, key))
+        toks = tokens(s, a)
+        if len(toks) != len(G[key]['text'].split(' ')) - 1:
+            return   # 13:37: shown whole, nothing coloured
+        nm = [i for i, t in enumerate(toks) if not QMARK.match(t)]
+        W, WS = [_qn(toks[i]) for i in nm], [_qs(toks[i]) for i in nm]
+        loc = lambda ws, st=0: (lambda i: i if i >= 0 else _find(WS, [_qs(w) for w in ws], st))(_find(W, [_qn(w) for w in ws], st))
+        parts = [[w for w in p.split() if not QMARK.match(w)] for p in text.split('……')]
+        lo, hi = 0, len(W)
+        if len(parts) == 2:   # a riddle: the words between what it shows
+            b, c = parts
+            i = loc(b) if b else 0
+            j = loc(c, i + len(b)) if c else len(W)
+            if i < 0 or j < 0 or j <= i + len(b):
+                return bad.append('%s %s: the hidden words are not found' % (path, key))
+            o['qb'] = [nm[k] for k in range(i + len(b), j)]
+        elif parts[0]:
+            lo = loc(parts[0])
+            if lo < 0:
+                return bad.append('%s %s: the text is not in the ayah' % (path, key))
+            hi = lo + len(parts[0])
+        if word:
+            ws = [w for w in word.split() if not QMARK.match(w)]
+            i = loc(ws, lo)
+            if i < 0 or i >= hi:
+                i = loc(ws)
+            if i < 0:
+                return bad.append('%s %s: «%s» is not in the ayah' % (path, key, word))
+            o['qw'] = [nm[k] for k in range(i, i + len(ws))]
+        idx[0] += 1
+
+    def walk(o, path):
+        if isinstance(o, dict):
+            if isinstance(o.get('s'), int) and isinstance(o.get('a'), int) and 1 <= o['s'] <= 114:
+                place(o, path)
+            for k, v in o.items():
+                if not (path == '' and k in ('quran', 'kunuz', 'qpc')):   # the Mushaf pages, the chambers and this map; not alghaz/quran
+                    walk(v, path + '/' + str(k))
+        elif isinstance(o, list):
+            for i, v in enumerate(o):
+                walk(v, path + '/' + str(i))
+    walk(D, '')
+    if bad:
+        raise SystemExit('waha: verses the Mushaf script cannot place:\n  ' + '\n  '.join(bad[:30]))
+    D['qpc'] = {'%d:%d' % k: [G['%d:%d' % k]['page_number'], G['%d:%d' % k]['text']] for k in sorted(need)}
+    return sorted({G['%d:%d' % k]['page_number'] for k in need}), idx[0]
+
+
+def qpc_fonts(pages):
+    """dist/fonts/qpc/: the fonts of these pages, and qpc.css naming each one qpcN (font-display: block, so a glyph is never shown in
+    another font, where its code is an unrelated Arabic presentation form)."""
+    out = P('dist', 'fonts', 'qpc')
+    os.makedirs(out, exist_ok=True)
+    css = ['/* خط مصحف المدينة (مجمع الملك فهد، QPC V2): خطّ لكل صفحة، يُحمَّل حين تُعرض آيةٌ منها. المصدر: src/quran/qpc-v2/README.md */']
+    for p in pages:
+        f = 'p%03d.woff2' % p
+        src = os.path.join(QPC_DIR, 'fonts', f)
+        if not os.path.exists(src):
+            raise SystemExit('waha: the Mushaf font of page %d is missing (src/quran/qpc-v2/fonts/%s)' % (p, f))
+        shutil.copyfile(src, os.path.join(out, f))
+        css.append('@font-face{font-family:qpc%d;src:url(%s) format("woff2");font-display:block}' % (p, f))
+    open(os.path.join(out, 'qpc.css'), 'w', encoding='utf-8').write('\n'.join(css) + '\n')
+
+
 def check_needs(app, post, bridge):
     miss = [n for n in WAHA_NEEDS if not re.search(r'^(?:async\s+)?function\s+%s\s*\(' % n, app, re.M)]
     bare = [n for n in WAHA_NEEDS if not re.search(r'(?<![\w.])%s\s*=\s*(?:async\s+)?function\b' % n, post)]
@@ -232,6 +343,7 @@ def build(verbose=True, icon='', csp=''):
     check_gender(D)
     check_verses(D)
     D['kunuz'] = kunuz_for_trip()
+    qpc_pages, qpc_n = qpc_prepare(D)
     # the home-language glosses (Traditional Chinese, pinyin, English), when present: each must name a word of the palms
     gp = os.path.join(ROOT, 'parts', 'waha', 'glosses.json')
     if os.path.exists(gp):
@@ -272,8 +384,9 @@ def build(verbose=True, icon='', csp=''):
                 raise SystemExit('waha %s.js syntax error:\n%s' % (name, r.stderr[:800]))
     os.makedirs(P('dist'), exist_ok=True)
     open(P('dist', 'index.html'), 'w', encoding='utf-8').write(out)
+    qpc_fonts(qpc_pages)
     if verbose:
-        print('waha: %d KB; warnings %d' % (len(out.encode('utf-8')) // 1024, miss))
+        print('waha: %d KB; warnings %d; Mushaf script: %d ayat, %d verses placed, %d page fonts' % (len(out.encode('utf-8')) // 1024, miss, len(D['qpc']), qpc_n, len(qpc_pages)))
     return miss
 
 

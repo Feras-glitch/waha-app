@@ -241,10 +241,32 @@ function typeBox(box, answer, opts){
 function markSpan(text, span){ return markMany(text, span ? [span] : []); }
 function markMany(text, spans){ const hits = spans.map(sp => [text.indexOf(sp), sp]).filter(h => h[0] >= 0).sort((a, b) => a[0] - b[0]); let out = '', k = 0;
   for (const [i, sp] of hits){ if (i < k) continue; out += esc(text.slice(k, i)) + '<mark>' + esc(sp) + '</mark>'; k = i + sp.length; } return out + esc(text.slice(k)); }
-function verseHtml(v, cls){ return `<p class="q ${cls||'s'}">﴿${markSpan(v.text, v.word)}﴾</p><p class="ref" style="margin:0">${v.name}: ${v.a}</p>`; }
+/* ---------------- the Mushaf's own script: KFGQPC QPC V2 (the Madinah Mushaf), ayah after ayah (2.12) ----------------
+   DATA.qpc["s:a"] = [page, glyphs]: one glyph per word of that page's font (the pause marks are glyphs of their own), then the ayah's
+   end mark with its number; the font of each page is qpcN (fonts/qpc/qpc.css). A whole ayah is always shown. A verse the app points
+   into carries qw, the indices of its word among the glyphs (to colour it), or qb, those of the words a riddle hides; both are found
+   when the app is built (tools/waha_build.py). An ayah without glyphs falls back to the Unicode text, as before. The glyphs sit in
+   code points of Arabic Presentation Forms-A (from U+FC41), meaningless outside their font: a screen reader is given the surah and
+   the ayah, and the family guard strips them from anything spoken. */
+const QPC = DATA.qpc || {};
+/* a page's font that cannot load is never replaced by another font, where its glyph codes would read as other Arabic letters:
+   the ayat of that page say so instead */
+const QPC_BAD = new Set();
+try { document.fonts.addEventListener('loadingerror', e => { for (const f of e.fontfaces || []){ const m = /^["']?qpc(\d+)["']?$/.exec(f.family); if (!m || QPC_BAD.has(m[1])) continue; QPC_BAD.add(m[1]);
+  const st = document.createElement('style'), sel = `.qpc[style="font-family:qpc${m[1]}"]`; st.textContent = `${sel}{font-size:0!important}${sel}::before{content:"تعذّر تحميل خطّ المصحف لهذه الآية";font:700 1rem var(--f-ui);color:var(--date)}`; document.head.appendChild(st); } }); } catch (e) {}
+function qpcRun(s, a, o){ const q = QPC[`${s}:${a}`]; if (!q) return null; o = o || {};
+  const hl = new Set(o.mark || []), bl = new Set(o.blank || []), out = [];
+  q[1].split(' ').forEach((g, i) => { if (bl.has(i)){ if (!bl.has(i - 1)) out.push('<span class="qbl">……</span>'); } else out.push(hl.has(i) ? `<mark>${g}</mark>` : g); });
+  return `<span class="qpc" style="font-family:qpc${q[0]}" role="img" aria-label="${esc(`${SNAME(s)}: ${a}`)}">${out.join(' ')}</span>`; }
+function qpcRange(s, a, b, o){ const r = []; for (let x = a; x <= (b || a); x++){ const h = qpcRun(s, x, x === a ? o : null); if (!h) return null; r.push(h); } return r.join(' '); }
+/* the basmala before a surah: the four words of al-Fatiha's first ayah, without its end mark */
+function qpcBasmala(){ const q = QPC['1:1']; return q ? `<span class="qpc" style="font-family:qpc${q[0]}" role="img" aria-label="بسم الله الرحمن الرحيم">${q[1].split(' ').slice(0, 4).join(' ')}</span>` : null; }
+function verseHtml(v, cls){ const r = qpcRun(v.s, v.a, {mark: v.qw}); if (r) return `<p class="q ${cls||'s'} qp">${r}</p><p class="ref" style="margin:0">${v.name}: ${v.a}</p>`;
+  return `<p class="q ${cls||'s'}">﴿${markSpan(v.text, v.word)}﴾</p><p class="ref" style="margin:0">${v.name}: ${v.a}</p>`; }
 /* مقطع من الآية حول الكلمة (n كلمات قبلها وبعدها) للآيات الطويلة، مع «…» في الطرفين */
 function snip(text, word, n){ const ws = text.split(' '); if (ws.length <= 2 * (n || 8) + 1) return text; const i = ws.indexOf(word); if (i < 0) return text; const a = Math.max(0, i - (n || 8)), b = Math.min(ws.length, i + (n || 8) + 1); return (a ? '… ' : '') + ws.slice(a, b).join(' ') + (b < ws.length ? ' …' : ''); }
-function blankHtml(v, short){ const t = short ? snip(v.text, v.word, 8) : v.text; return `<p class="q s">﴿${esc(t).replace(esc(v.word), '<mark>……</mark>')}﴾</p><p class="ref" style="margin:0">${v.name}: ${v.a}</p>`; }
+function blankHtml(v, short){ const bl = v.qb || v.qw; const r = bl && bl.length ? qpcRun(v.s, v.a, {blank: bl}) : null; if (r) return `<p class="q s qp">${r}</p><p class="ref" style="margin:0">${v.name}: ${v.a}</p>`;
+  const t = short ? snip(v.text, v.word, 8) : v.text; return `<p class="q s">﴿${esc(t).replace(esc(v.word), '<mark>……</mark>')}﴾</p><p class="ref" style="margin:0">${v.name}: ${v.a}</p>`; }
 
 /* ---- the growing oasis: 22 stages, each unlocks one thing in the child's scene ---- */
 const STAGES = [
@@ -513,7 +535,8 @@ function drawPalm(){
   D.family.forEach((f, i) => { const c = document.createElementNS('http://www.w3.org/2000/svg','circle'); c.setAttribute('cx', cx-50+ (i%6)*20); c.setAttribute('cy', 70 + Math.floor(i/6)*18 + (i%2)*6); c.setAttribute('r', 7); if(!op.includes(f.lemma)) c.setAttribute('opacity','.35'); ds.appendChild(c); });
 }
 function hl(text, word){ return text.split(' ').map(w => strip(w)===strip(word) ? `<mark>${w}</mark>` : w).join(' '); }
-function ayahHtml(v){ return `<p class="q">﴿${hl(v.text, v.word)}﴾</p><p class="ref">${v.name}: ${v.a}</p>`; }
+function ayahHtml(v){ const r = qpcRun(v.s, v.a, {mark: v.qw}); if (r) return `<p class="q qp">${r}</p><p class="ref">${v.name}: ${v.a}</p>`;
+  return `<p class="q">﴿${hl(v.text, v.word)}﴾</p><p class="ref">${v.name}: ${v.a}</p>`; }
 function renderPalm(){
   $('seedRoot').textContent = D.root; $('seedText').textContent = D.seed + '.';
   $('seedN').textContent = `نخلة ${D.root}: في محفوظك ${D.total} مرة، في ${D.family.length} كلمات.`;
@@ -539,11 +562,11 @@ function openSheet(f){
   s.innerHTML = `<div class="top"><h2>${f.lemma}</h2><button class="x" aria-label="إغلاق">✕</button></div>
    <div class="row"><span class="chip">${f.pattern}</span><span>${f.role}</span></div>
    <div><p class="lbl" style="margin:0">المعنى <span class="draft">(مسودة)</span></p><p style="margin:0;font-size:1.25rem">${f.meaning}</p></div>
-   <div><p class="lbl" style="margin:0 0 6px">من محفوظك · ${f.count} مرة</p>${f.verses.map(v => ayahHtml(v) + `<div class="btns" style="justify-content:flex-start"><button class="btn ghost sm recb" type="button" data-ref="${v.name}: ${v.a}" data-text="${esc(v.text)}">🎙 ⟨سجّل|سجّلي⟩ الآية</button></div>`).join('')}</div>
+   <div><p class="lbl" style="margin:0 0 6px">من محفوظك · ${f.count} مرة</p>${f.verses.map(v => ayahHtml(v) + `<div class="btns" style="justify-content:flex-start"><button class="btn ghost sm recb" type="button" data-ref="${v.name}: ${v.a}" data-s="${v.s}" data-a="${v.a}" data-text="${esc(v.text)}">🎙 ⟨سجّل|سجّلي⟩ الآية</button></div>`).join('')}</div>
    <div><p class="lbl" style="margin:0">في يومنا <span class="draft">(مسودة)</span></p><p class="sent">${f.sentence}</p></div>
    <div id="triBlock"></div>`;
   showSheet(); s.querySelector('.x').focus(); s.querySelector('.x').addEventListener('click', closeSheet); renderTriBlock(s.querySelector('#triBlock'), D.rootKey, f.lemma);
-  s.querySelectorAll('.recb').forEach(bt => bt.addEventListener('click', e => { e.stopPropagation(); recordFrom('آية', bt.dataset.ref, bt.dataset.text); }));
+  s.querySelectorAll('.recb').forEach(bt => bt.addEventListener('click', e => { e.stopPropagation(); recordFrom('آية', bt.dataset.ref, bt.dataset.text, null, {qa: {s: +bt.dataset.s, a: +bt.dataset.a}}); }));
 }
 
 /* الوزن المناسب */
@@ -618,7 +641,7 @@ const gwMode = modeChips('gwMode', 'gzw', () => gwNext());
 const gwClues = () => gwCur.clues.map(t => ({t})).concat(gwCur.blank ? [{v: gwCur.blank}] : []);
 function gwRender(){
   const L = $('gwClues'); L.innerHTML = '';
-  gwClues().slice(0, gwShown).forEach(c => { const li = el('li', c.v ? 'ay' : null); li.innerHTML = c.v ? `﴿${esc(c.v.text)}﴾ <span class="ref">${c.v.name}: ${c.v.a}</span>` : esc(c.t); L.appendChild(li); });
+  gwClues().slice(0, gwShown).forEach(c => { const li = el('li', c.v ? 'ay' : null); li.innerHTML = c.v ? `${(r => r ? `<p class="q s qp" style="margin:0">${r}</p>` : `﴿${esc(c.v.text)}﴾ `)(c.v.qb && c.v.qb.length ? qpcRun(c.v.s, c.v.a, {blank: c.v.qb}) : null)}<span class="ref">${c.v.name}: ${c.v.a}</span>` : esc(c.t); L.appendChild(li); });
   $('gwMore').disabled = gwDone || gwShown >= gwClues().length; $('gwCount').textContent = `تلميح ${gwShown} من ${gwClues().length}`;
 }
 function gwDoneFn(st){ gwDone = true; gwAt = gwShown; gwShown = gwClues().length; gwRender();
@@ -867,8 +890,8 @@ function hcNext(){ hcCur = pickW('hyc', HY.things, x => x.noun, hcCur && hcCur.n
 $('hcNext').addEventListener('click', hcNext);
 function renderColors(){ if (!hcCur) hcNext(); const T = $('hcTable'); if (T.childElementCount) return;
   T.innerHTML = `<tr><th></th><th>مذكّر</th><th>مؤنّث</th><th>جمع</th><th>صار</th><th>اللون</th></tr>` + HY.colors.map(c => `<tr><td><i style="display:inline-block;width:18px;height:18px;border-radius:50%;background:${c.css};border:1px solid var(--line)"></i></td><td>${c.m}</td><td>${c.f}</td><td>${c.pl}</td><td>${c.verb}</td><td>${c.noun}</td></tr>`).join('');
-  const V = $('hcVerses'); V.innerHTML = '<p class="lbl">ألوانٌ في محفوظك</p>'; const byA = {}; HY.colors.filter(c => c.verse).forEach(c => { const k = c.verse.s + ':' + c.verse.a; (byA[k] = byA[k] || {v: c.verse, w: []}).w.push(c.verse.word); });
-  Object.values(byA).forEach(({v, w}) => V.insertAdjacentHTML('beforeend', `<p class="q s">﴿${markMany(v.text, w)}﴾</p><p class="ref" style="margin:0">${v.name}: ${v.a}</p>`));
+  const V = $('hcVerses'); V.innerHTML = '<p class="lbl">ألوانٌ في محفوظك</p>'; const byA = {}; HY.colors.filter(c => c.verse).forEach(c => { const k = c.verse.s + ':' + c.verse.a; const e = (byA[k] = byA[k] || {v: c.verse, w: [], qi: []}); e.w.push(c.verse.word); e.qi.push(...(c.verse.qw || [])); });
+  Object.values(byA).forEach(({v, w, qi}) => { const r = qpcRun(v.s, v.a, {mark: qi}); V.insertAdjacentHTML('beforeend', `${r ? `<p class="q s qp">${r}</p>` : `<p class="q s">﴿${markMany(v.text, w)}﴾</p>`}<p class="ref" style="margin:0">${v.name}: ${v.a}</p>`); });
   const N = $('hcNisba'); HY.nisba.forEach(c => N.insertAdjacentHTML('beforeend', `<div class="sw"><i style="background:${c.css}"></i><span style="display:flex;flex-direction:column;min-width:0"><span class="w">${c.m} / ${c.f}</span><span class="c">من «${c.src}»: ${esc(c.srcMeaning)}</span></span></div>`)); }
 INIT.hyColors = renderColors;
 
@@ -1045,14 +1068,14 @@ const GEN = {
   kz: id => { const x = kzFind(id); if (!x || !x.q.o || x.q.o.length < 2) return null; const v = (x.L.verses || [])[0], blank = /ـــ/.test(x.q.q);
     const qq = kzPlain(x.q.q), qs = blank ? T('اختر الكلمة الناقصة في الآية.', 'اختاري الكلمة الناقصة في الآية.') : kzSay(x.L, qq);
     return {q: qq, qs: qs !== qq ? qs : undefined, quranOpts: x.q.o.some(o => kzQuran(x.L, kzPlain(o))), a: kzPlain(x.q.o[0]), alts: x.q.o.slice(1).map(kzPlain), why: kzPlain(x.q.why), whys: x.q.why ? kzSay(x.L, kzPlain(x.q.why)) : undefined, label: `كنوز البيان: ${x.L.title}`,
-      html: `<p class="note" style="margin:0 0 4px">💎 ${esc(x.L.title)}</p>` + (v && !blank ? `<p style="font-family:var(--f-q);font-size:1.15rem;line-height:1.9;margin:0">${esc(kzPlain(v.t))} <span class="ref">(${esc(v.n)} ${v.a})</span></p>` : '')}; },
+      html: `<p class="note" style="margin:0 0 4px">💎 ${esc(x.L.title)}</p>` + (v && !blank ? ((r => r ? `<p class="q s qp">${r}</p><p class="ref" style="margin:0">${esc(v.n)}: ${v.a2 ? `${v.a}–${v.a2}` : v.a}</p>` : `<p style="font-family:var(--f-q);font-size:1.15rem;line-height:1.9;margin:0">${esc(kzPlain(v.t))} <span class="ref">(${esc(v.n)} ${v.a})</span></p>`)(qpcRange(v.s, v.a, v.a2))) : '')}; },
   rl: id => { const [k, q] = id.split('|'); const P = ALL[k]; const r = P && P.roles.find(x => x.q === q); if (!r) return null; return {q:`${P.root}: ${r.q}`, a:r.a, alts:r.opts.filter(o => o !== r.a), type:true, label:`الوزن: ${r.q} (${P.root})`}; },
   drv: id => { const [k, l] = id.split('|'); const P = ALL[k]; const f = P && P.family.find(x => x.lemma === l); if (!f) return null; return {q:`من جذر ${P.root} على وزن ${dvPattern(f)}: ما الكلمة؟`, a:f.lemma, alts:P.family.filter(x => x !== f).map(x => x.lemma), type:true, label:`⟨اشتقّ|اشتقّي⟩: ${f.lemma}`}; },
   fill: id => { const [k, sa, w] = id.split('|'); const P = ALL[k]; let hit = null; P && P.family.forEach(f => f.verses.forEach(v => { if (`${v.s}:${v.a}` === sa && strip(v.word) === w) hit = {f, v}; })); if (!hit) return null;
     return {q: '⟨أكمل|أكملي⟩ الكلمة الناقصة في الآية', qv: {s: hit.v.s, a: hit.v.a, b: hit.v.a}, html: blankHtml(hit.v, true), a:hit.v.word, alts:P.family.filter(x => x !== hit.f).slice(0, 5).map(x => x.verses[0].word), type:true, label:`الكلمة الناقصة: ${hit.v.word} (${hit.v.name}: ${hit.v.a})`}; },
   uk: id => { const [k, l] = id.split('|'); const P = ALL[k]; const u = P && P.unknown.find(x => x.lemma === l); if (!u) return null; const v = u.verse; const a = u.options[u.answer];
     return {q:`ما معنى «${v ? v.word : u.lemma}» في الآية؟`, qs: v ? 'ما معنى الكلمة الملوّنة في الآية؟' : null, qv: v ? {s: v.s, a: v.a, b: v.a} : null,
-      html: v ? `<p class="q s">﴿${esc(snip(v.text, v.word, 8)).replace(esc(v.word), `<mark>${esc(v.word)}</mark>`)}﴾</p><p class="ref" style="margin:0">${v.name}: ${v.a} · ${T('كلمة من جذرٍ تعرفه', 'كلمة من جذرٍ تعرفينه')}</p>` : '',
+      html: v ? `${(r => r ? `<p class="q s qp">${r}</p>` : `<p class="q s">﴿${esc(snip(v.text, v.word, 8)).replace(esc(v.word), `<mark>${esc(v.word)}</mark>`)}﴾</p>`)(qpcRun(v.s, v.a, {mark: v.qw}))}<p class="ref" style="margin:0">${v.name}: ${v.a} · ${T('كلمة من جذرٍ تعرفه', 'كلمة من جذرٍ تعرفينه')}</p>` : '',
       a, alts: ukAlts(u, a), label:`كلمة من جذرٍ معروف: ${u.lemma}`}; },
   gzw: id => { const x = GZ.quran.find(q => q.id === id); if (!x) return null; return {q:`من أنا؟ ${x.clues.slice(0, 2).join(' ')}`, a:strip(x.answer), alts:x.options.slice(1).map(strip), type:true, label:`من أنا؟ ${x.answer}`}; },
   gzd: id => { const [g, w] = id.split('|'); const G = GZ.dots.find(x => x.id === g); const t = G && G.words.find(x => x.word === w); if (!t) return null; const alts = G.words.filter(x => x !== t).map(x => x.word); let guard = 0; while (alts.length < 3 && guard++ < 40){ const w = pick(GZ.dots).words[0].word; if (w !== t.word && !alts.includes(w)) alts.push(w); } return {q:`رسمها «${G.rasm}»، ومعناها: ${t.meaning}. ما الكلمة؟`, a:t.word, alts, type:true, label:`النقاط: ${t.word}`}; },
@@ -1533,12 +1556,13 @@ function audioEl(blob){
 }
 function wordsHtml(text, marks, clickable){ return text.split(/\s+/).map((w, i) => `<span class="${clickable ? 'tok' : ''} ${marks.includes(i) ? 'rw' : ''}" data-i="${i}" style="${marks.includes(i) ? 'background:color-mix(in srgb,var(--bad) 22%,var(--bg));border-radius:6px;padding:0 4px' : ''}">${esc(w)}</span>`).join(' '); }
 function recordFrom(kind, ref, text, fromGift, opts){
-  opts = opts || {}; const s = $('sheet'); s.innerHTML = `<div class="top"><h2 style="font-family:var(--f-ui);font-size:1.3rem">🎙 ⟨سجّل|سجّلي⟩ بصوتك</h2><button class="x" aria-label="إغلاق">✕</button></div>
-   <span class="chip" style="align-self:flex-start">${esc(kind)} · ${esc(ref)}</span>${opts.html || `<p class="q s">${esc(text)}</p>`}
+  opts = opts || {}; const qa = opts.qa && Number.isInteger(opts.qa.s) && Number.isInteger(opts.qa.a) ? {s: opts.qa.s, a: opts.qa.a} : null, qh = qa ? qpcRun(qa.s, qa.a) : null;
+  const s = $('sheet'); s.innerHTML = `<div class="top"><h2 style="font-family:var(--f-ui);font-size:1.3rem">🎙 ⟨سجّل|سجّلي⟩ بصوتك</h2><button class="x" aria-label="إغلاق">✕</button></div>
+   <span class="chip" style="align-self:flex-start">${esc(kind)} · ${esc(ref)}</span>${opts.html || (qh ? `<p class="q s qp">${qh}</p>` : `<p class="q s">${esc(text)}</p>`)}
    ${MIC_OK ? '<div id="rcMic"></div><p class="note" style="margin:0">أو ⟨أرفق|أرفقي⟩ تسجيلًا من الجهاز:</p>' : '<ol class="note" style="margin:0;padding-right:1.2em"><li>⟨اقرأ|اقرئي⟩ النص بصوتٍ عالٍ ⟨وسجّله|وسجّليه⟩ بمسجّل جهازك.</li><li>ثم ⟨اضغط|اضغطي⟩ «⟨أرفق|أرفقي⟩ التسجيل» ⟨واختر|واختاري⟩ الملف.</li></ol>'}
    <input type="file" id="rcFile" accept="audio/*" capture hidden><div class="btns"><button class="btn ${MIC_OK ? 'ghost sm' : ''}" type="button" id="rcPick">⟨أرفق|أرفقي⟩ التسجيل</button></div><div id="rcPrev"></div><p class="fb" id="rcFb"></p>`;
   showSheet(); s.querySelector('.x').addEventListener('click', () => { voiceStop(); closeSheet(); });
-  const save = async f => { const r = {id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid, kidName: K().name, kind, ref, text, date: today(), type: f.type || 'audio/mpeg', blob: f, status:'pending', notes:[], source:'local', fromGift: fromGift || null, ...(opts.extra || {})};
+  const save = async f => { const r = {id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid, kidName: K().name, kind, ref, text, date: today(), type: f.type || 'audio/mpeg', blob: f, status:'pending', notes:[], source:'local', fromGift: fromGift || null, ...(qa ? {qa} : {}), ...(opts.extra || {})};
     try { await recPut(r); if (opts.onSaved) opts.onSaved(r); $('rcFb').textContent = 'حُفظ التسجيل في رفّك، وسيراه ولي الأمر.'; $('rcFb').className = 'fb ok'; $('rcPick').textContent = '⟨أرفق|أرفقي⟩ تسجيلًا آخر'; return true; }
     catch (err) { $('rcFb').textContent = 'تعذّر الحفظ على هذا الجهاز.'; $('rcFb').className = 'fb bad'; return false; } };
   if (MIC_OK && typeof micWidget === 'function') micWidget($('rcMic'), {label: '⟨اضغط|اضغطي⟩ ⟨وسجّل|وسجّلي⟩', max: 180000, onSaved: save});
@@ -1558,7 +1582,7 @@ async function renderShelf(){
     d.appendChild(mediaEl(r));
     r.notes.forEach(n => { const nn = el('div','ai', `<span class="h">${esc(n.by)} · ${esc(n.date || '')}</span>${n.text ? `<p style="margin:0">${esc(n.text)}</p>` : ''}${n.marks && n.marks.length ? `<p class="note">الكلمات المعلَّمة بالأحمر هي التي يطلب منك إعادتها.</p>` : ''}`); if (n.audio) nn.appendChild(audioEl(n.audio)); d.appendChild(nn); });
     const row = el('div','btns'); row.style.justifyContent = 'flex-start';
-    if (r.status !== 'approved'){ const re = el('button','btn ghost sm','🎙 ⟨أعد|أعيدي⟩ التسجيل'); re.type='button'; re.addEventListener('click', () => recordFrom(r.kind, r.ref, r.text, r.fromGift, r.page ? {extra:{page:r.page, unit:r.unit}} : undefined)); row.appendChild(re); }
+    if (r.status !== 'approved'){ const re = el('button','btn ghost sm','🎙 ⟨أعد|أعيدي⟩ التسجيل'); re.type='button'; re.addEventListener('click', () => recordFrom(r.kind, r.ref, r.text, r.fromGift, r.page ? {html: (pg => pg ? pageHtml(pg) : undefined)(QN.pages.find(x => x.p === r.page)), extra:{page:r.page, unit:r.unit}} : {qa: r.qa})); row.appendChild(re); }
     if (giftable(r)){ const gb = el('button','btn sm','🎁 ⟨أهدِه|أهدِيه⟩'); gb.type='button'; gb.addEventListener('click', () => giftSheet(r)); row.appendChild(gb); }
     const del = el('button','btn ghost sm','⟨احذف|احذفي⟩'); del.type='button'; del.addEventListener('click', async () => { if (!del.dataset.c){ del.dataset.c = '1'; del.textContent = '⟨متأكد|متأكدة⟩؟'; return; } await recDel(r.id); recCountApproved(); renderShelf(); }); row.appendChild(del);
     d.appendChild(row); L.appendChild(d); });
@@ -1632,7 +1656,7 @@ async function giftSheet(r){
   showSheet(); s.querySelector('.x').addEventListener('click', closeSheet);
   s.querySelector('#gsTo').addEventListener('click', async e => { const b = e.target.closest('button'); if (!b) return; const chain = await giftChain(r);
     if (b.dataset.i === 'out'){ const q = store.get(`giftReq:${kid}`, []); if (!q.some(x => x.recId === r.id)) q.push({recId: r.id, date: today()}); store.set(`giftReq:${kid}`, q); $('gsFb').textContent = 'أُرسل طلبك إلى ولي الأمر؛ هو الذي يصدّر الهدية ويقرر ظهور صورتك.'; $('gsFb').className = 'fb ok'; return; }
-    const to = +b.dataset.i; const g = {id: 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), from: kid, fromName: K().name, fromPhoto: K().photo || null, to, toName: kids[to].name, recId: r.id, kind: r.kind, ref: r.ref, text: r.text, type: r.type, blob: r.blob, date: today(), chain, status:'sent', source:'local'};
+    const to = +b.dataset.i; const g = {id: 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), from: kid, fromName: K().name, fromPhoto: K().photo || null, to, toName: kids[to].name, recId: r.id, kind: r.kind, ref: r.ref, text: r.text, ...(r.qa ? {qa: r.qa} : {}), type: r.type, blob: r.blob, date: today(), chain, status:'sent', source:'local'};
     await dbPut('gift', g); bump(`giftsSent:${kid}`); checkStages(); $('gsFb').textContent = `أُهديت إلى ${kids[to].name}. إذا ${(kids[to] || {}).gender === 'f' ? 'أتمّتها' : 'أتمّها'} نبتت شجرتك.`; $('gsFb').className = 'fb ok'; });
 }
 const giftBlank = g => { const ws = g.text.split(/\s+/); const cands = ws.map((w, i) => ({w, i, n: N1(w).length})).filter(x => x.n >= 3); const pickI = cands.length ? cands[hash(g.id) % cands.length].i : ws.length - 1; return {ws, i: pickI, answer: ws[pickI]}; };
@@ -1664,7 +1688,7 @@ async function renderGifts(){
         else typeBox(box.querySelector('.tb'), b.answer, {id:'gi' + g.id, noFocus:true, onDone: done}); }
       else { d.appendChild(el('p','note', `⟨أتممتَها|أتممتِها⟩${g.masteredDate ? ' في ' + esc(g.masteredDate) : ''}. ${g.source === 'import' ? '⟨أرسل|أرسلي⟩ ردّ الشكر ليعرف مُهديك.' : 'نبتت شجرة ' + esc(g.fromName) + '.'}`)); }
       const row = el('div','btns'); row.style.justifyContent = 'flex-start';
-      const rb = el('button','btn ghost sm','🎙 ⟨سجّلها|سجّليها⟩ بصوتك'); rb.type='button'; rb.addEventListener('click', () => recordFrom(g.kind, g.ref, g.text, g.id)); row.appendChild(rb);
+      const rb = el('button','btn ghost sm','🎙 ⟨سجّلها|سجّليها⟩ بصوتك'); rb.type='button'; rb.addEventListener('click', () => recordFrom(g.kind, g.ref, g.text, g.id, {qa: g.qa})); row.appendChild(rb);
       if (g.source === 'import' && g.status === 'mastered' && !g.replied){ const xb = el('button','btn sm','⟨صدّر|صدّري⟩ ردّ الشكر'); xb.type='button'; xb.addEventListener('click', async () => { await saveFile(`radd-${K().name}-${today()}.json`, JSON.stringify({v:1, type:'gift-reply', items:[{id: g.id, toName: g.fromName, by: K().name, date: g.masteredDate}]}), $('gfFb')); g.replied = true; await dbPut('gift', g); }); row.appendChild(xb); }
       d.appendChild(row);
     } else if (g.status === 'mastered') d.appendChild(el('p','note', `${(kids[g.to] || {}).gender === 'f' ? 'أتمّتها' : 'أتمّها'} ${esc(g.toName)}${g.masteredDate ? ' في ' + esc(g.masteredDate) : ''}؛ نبتت شجرتك.`));
@@ -1912,7 +1936,10 @@ const AR_NUM = n => String(n).replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
 const BASMALA = (() => { const f = QN.pages.find(p => p.p === 1); return f ? f.ayat[0][2] : 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ'; })();
 const SNAME = s => (QN.surahs[s] || {}).name || s;
 function pageTitle(pg){ const first = pg.ayat[0], last = pg.ayat[pg.ayat.length - 1]; const ss = [...new Set(pg.ayat.map(a => a[0]))]; return ss.length === 1 ? `${SNAME(first[0])} ${first[1]}–${last[1]}` : `${SNAME(first[0])} ${first[1]} → ${SNAME(last[0])} ${last[1]}`; }
-function pageHtml(pg){ let h = '', cur = null; pg.ayat.forEach(([s, a, t]) => { if (s !== cur){ cur = s; if (a === 1 && s !== 1 && s !== 9) h += `<p class="lbl" style="text-align:center;margin:8px 0 2px">سورة ${esc(SNAME(s))}</p><p class="q s" style="text-align:center;margin:0">${esc(BASMALA)}</p>`; else if (a !== 1) h += `<p class="lbl" style="text-align:center;margin:8px 0 2px">${esc(SNAME(s))}</p>`; else h += `<p class="lbl" style="text-align:center;margin:8px 0 2px">سورة ${esc(SNAME(s))}</p>`; } h += `<span class="q s">${esc(t)} ﴿${AR_NUM(a)}﴾ </span>`; }); return `<div style="line-height:2.1;text-align:justify;font-family:var(--f-q)">${h}</div>`; }
+function pageHtml(pg){ let h = '', cur = null; const bas = () => (b => b ? `<p class="q s qp" style="text-align:center;margin:0">${b}</p>` : `<p class="q s" style="text-align:center;margin:0">${esc(BASMALA)}</p>`)(qpcBasmala());
+  pg.ayat.forEach(([s, a, t]) => { if (s !== cur){ cur = s; if (a === 1 && s !== 1 && s !== 9) h += `<p class="lbl" style="text-align:center;margin:8px 0 2px">سورة ${esc(SNAME(s))}</p>${bas()}`; else if (a !== 1) h += `<p class="lbl" style="text-align:center;margin:8px 0 2px">${esc(SNAME(s))}</p>`; else h += `<p class="lbl" style="text-align:center;margin:8px 0 2px">سورة ${esc(SNAME(s))}</p>`; }
+    const r = qpcRun(s, a); h += r ? `<span class="qp">${r}</span> ` : `<span class="q s">${esc(t)} ﴿${AR_NUM(a)}﴾ </span>`; });
+  return `<div class="qpage" style="line-height:2.1;text-align:justify;font-family:var(--f-q)">${h}</div>`; }
 const pageText = pg => pg.ayat.map(([s, a, t]) => `${t} ﴿${AR_NUM(a)}﴾`).join(' ');
 let muUnit = store.get('muUnit', (QN.units[0] || {}).id);
 function pageRecs(all, p, k){ return all.filter(r => r.kind === 'صفحة' && r.page === p && r.kid === k); }
@@ -2023,8 +2050,8 @@ function tlRender(box, ayat){
   }
   const q = []; let h = '', curS = null;
   ayat.forEach(([s, a, t]) => { if (!hasH(s, a)) return;
-    if (s !== curS){ curS = s; h += `<p class="lbl tl-sn">سورة ${esc(SNAME(s))}</p>`; if (a === 1 && s !== 1 && s !== 9){ h += `<p class="q tl-ay tl-b" data-i="${q.length}">${esc(BASMALA)}</p>`; q.push({s: 1, a: 1, basm: true}); } }
-    h += `<span class="tl-ay" role="button" tabindex="0" data-i="${q.length}">${esc(t)} ﴿${AR_NUM(a)}﴾</span> `; q.push({s, a}); });
+    if (s !== curS){ curS = s; h += `<p class="lbl tl-sn">سورة ${esc(SNAME(s))}</p>`; if (a === 1 && s !== 1 && s !== 9){ const b = qpcBasmala(); h += `<p class="q tl-ay tl-b${b ? ' qp' : ''}" data-i="${q.length}">${b || esc(BASMALA)}</p>`; q.push({s: 1, a: 1, basm: true}); } }
+    const r = qpcRun(s, a); h += `<span class="tl-ay${r ? ' qp' : ''}" role="button" tabindex="0" data-i="${q.length}">${r || `${esc(t)} ﴿${AR_NUM(a)}﴾`}</span> `; q.push({s, a}); });
   if (!q.length){ B.innerHTML = '<p class="note">لا تلاوة للتعلّم لهذه الآيات في نسخة التطبيق هذه.</p>'; return; }
   const rep = store.get('tlRep', 1), gap = store.get('tlGap', false);
   B.innerHTML = `<div class="btns" style="justify-content:flex-start;align-items:center"><button class="btn sm tl-go" type="button">${RES('▶ ⟨استمع|استمعي⟩ آيةً آية')}</button>
@@ -2090,14 +2117,14 @@ async function renderRelay(){
   const recs = Array.from({length: n}, (_, i) => recOf(i + 1)); const have = recs.filter(Boolean).length; const complete = have === n;
   if (complete){ const done = store.get(`relayDone:${kid}`, []); const part = new Set(Array.from({length: n}, (_, i) => ryAssign(s, i + 1))); if (part.has(kid) && !done.includes(s)){ done.push(s); store.set(`relayDone:${kid}`, done); checkStages(); } }
   const starts = kids.map((k, i) => `<button class="chip2" type="button" data-st="${i}" aria-pressed="${ryPlan(s)[0] === k.id}">${avatarHtml(k, 22)} ${esc(k.name)}</button>`).join('');
-  B.innerHTML = `<p class="ask" style="margin:6px 0">سورة ${esc(SNAME(s))}: سُجّلت ${have} من ${n} آية${complete ? ' — <b>اكتملت بأصواتكم</b>' : ''}.</p><div class="row" style="gap:6px;flex-wrap:wrap"><span class="note">يبدأ التناوب من:</span><span class="chips" id="ryStart">${starts}</span></div><div class="btns" style="justify-content:flex-start"><button class="btn sm" type="button" id="ryPlay" ${have ? '' : 'disabled'}>▶ ⟨استمع|استمعي⟩ إلى السورة بأصواتكم (${have})</button></div><div id="ryPlayer"></div>${s !== 1 && s !== 9 ? `<p class="q s" style="text-align:center">${esc(BASMALA)}</p>` : ''}<div class="queue" id="ryList"></div>`;
+  B.innerHTML = `<p class="ask" style="margin:6px 0">سورة ${esc(SNAME(s))}: سُجّلت ${have} من ${n} آية${complete ? ' — <b>اكتملت بأصواتكم</b>' : ''}.</p><div class="row" style="gap:6px;flex-wrap:wrap"><span class="note">يبدأ التناوب من:</span><span class="chips" id="ryStart">${starts}</span></div><div class="btns" style="justify-content:flex-start"><button class="btn sm" type="button" id="ryPlay" ${have ? '' : 'disabled'}>▶ ⟨استمع|استمعي⟩ إلى السورة بأصواتكم (${have})</button></div><div id="ryPlayer"></div>${s !== 1 && s !== 9 ? (b => b ? `<p class="q s qp" style="text-align:center">${b}</p>` : `<p class="q s" style="text-align:center">${esc(BASMALA)}</p>`)(qpcBasmala()) : ''}<div class="queue" id="ryList"></div>`;
   B.querySelector('#ryStart').addEventListener('click', e => { const b = e.target.closest('button[data-st]'); if (!b) return; ryPlan(s, +b.dataset.st); renderRelay(); });
   B.querySelector('#ryPlay').addEventListener('click', () => playSeq(recs.map((r, i) => r && ({blob:r.blob, label:`آية ${AR_NUM(i + 1)} · ${r.kidName}`})).filter(Boolean), B.querySelector('#ryPlayer')));
   const L = B.querySelector('#ryList');
   for (let a = 1; a <= n; a++){ const who = ryAssign(s, a); const k = kids[who]; const r = recs[a - 1]; const d = el('div','qi');
-    d.innerHTML = `<div class="row" style="justify-content:space-between"><span>${avatarHtml(k, 26)} <b>${esc(k.name)}</b></span>${r ? statusBadge(r) : '<span class="badge wait">لم تُسجَّل</span>'}</div><p class="q s" style="margin:4px 0">${esc(ayahOf(s, a))} ﴿${AR_NUM(a)}﴾</p>`;
+    d.innerHTML = `<div class="row" style="justify-content:space-between"><span>${avatarHtml(k, 26)} <b>${esc(k.name)}</b></span>${r ? statusBadge(r) : '<span class="badge wait">لم تُسجَّل</span>'}</div>${(q => q ? `<p class="q s qp" style="margin:4px 0">${q}</p>` : `<p class="q s" style="margin:4px 0">${esc(ayahOf(s, a))} ﴿${AR_NUM(a)}﴾</p>`)(qpcRun(s, a))}`;
     const row = el('div','btns'); row.style.justifyContent = 'flex-start';
-    if (who === kid){ const rb = el('button','btn sm' + (r ? ' ghost' : ''), r ? '🎙 ⟨أعد|أعيدي⟩ تسجيلها' : '🎙 ⟨سجّل|سجّلي⟩ آيتك'); rb.type = 'button'; rb.addEventListener('click', () => recordFrom('آية', `${SNAME(s)} ${s}:${a}`, ayahOf(s, a), null, {onSaved: () => { if (cur.t === 'relay') renderRelay(); }})); row.appendChild(rb); }
+    if (who === kid){ const rb = el('button','btn sm' + (r ? ' ghost' : ''), r ? '🎙 ⟨أعد|أعيدي⟩ تسجيلها' : '🎙 ⟨سجّل|سجّلي⟩ آيتك'); rb.type = 'button'; rb.addEventListener('click', () => recordFrom('آية', `${SNAME(s)} ${s}:${a}`, ayahOf(s, a), null, {qa: {s, a}, onSaved: () => { if (cur.t === 'relay') renderRelay(); }})); row.appendChild(rb); }
     if (r){ const pb = el('button','btn ghost sm','▶'); pb.type = 'button'; pb.setAttribute('aria-label','⟨استمع|استمعي⟩'); pb.addEventListener('click', () => { const old = d.querySelector('audio'); if (old) old.remove(); else d.appendChild(audioEl(r.blob)); }); row.appendChild(pb); }
     d.appendChild(row); L.appendChild(d); }
 }
@@ -2507,10 +2534,10 @@ const vsnip = v => v ? `${snip(v.text, v.word, 7)} (${v.name} ${v.a})` : '';
 const LEARN = {
   /* the verse is never read by the device's voice: it is heard from the recitation pack (al-Husary), or not at all */
   kz: id => { const x = kzFind(id); if (!x) return null; const v = (x.L.verses || [])[0];
-    return {t: `كنوز البيان · ${KZD.axes[x.L.ax] || ''}`, big: v ? kzPlain(v.t) : x.L.title, body: [x.L.take, ...(x.L.secret || []).slice(0, 2)].map(kzPlain), quiet: v ? [`${v.n} ${v.a}`, kzPlain(v.t)] : [], qv: v && v.s ? {s: v.s, a: v.a, b: v.a2 || v.a} : null}; },
+    return {t: `كنوز البيان · ${KZD.axes[x.L.ax] || ''}`, big: v ? kzPlain(v.t) : x.L.title, body: [x.L.take, ...(x.L.secret || []).slice(0, 2)].map(kzPlain), quiet: v ? [`${v.n} ${v.a}`, kzPlain(v.t)] : [], qv: v && v.s ? {s: v.s, a: v.a, b: v.a2 || v.a} : null, qbig: v && v.s ? {s: v.s, a: v.a, b: v.a2 || v.a, ref: `${v.n}: ${v.a2 ? `${v.a}–${v.a2}` : v.a}`} : null}; },
   hys: id => { const x = HY.situations.find(q => q.id === id); return x && {t: 'ماذا نقول؟', big: x.options[0], body: [x.q, `في هذا الموقف نقول: ${x.options[0]}`]}; },
   hyc: id => { const t = HY.things.find(x => x.noun === id); const c = t && COLOR[t.color]; return c && {t: 'الألوان', big: `${t.noun} ${t.g === 'm' ? c.m : c.f}`, swatch: c.css, body: [`«${t.noun}» ${t.g === 'm' ? 'كلمة مذكّرة، فنقول: ' + c.m : 'كلمة مؤنّثة، فنقول: ' + c.f}`, `(مذكّر: ${c.m} · مؤنّث: ${c.f})`]}; },
-  uk: id => { const [k, l] = id.split('|'); const u = ALL[k] && ALL[k].unknown.find(x => x.lemma === l); return u && {t: T('كلمة من جذرٍ تعرفه', 'كلمة من جذرٍ تعرفينه'), big: u.verse ? u.verse.word : u.lemma, bagWord: u.lemma, bagMeaning: u.meaning, body: [`${u.lemma}: ${u.meaning}`, u.verse ? `في القرآن: ${vsnip(u.verse)}` : ''], quiet: u.verse ? [vsnip(u.verse), u.verse.word] : [], qv: u.verse ? {s: u.verse.s, a: u.verse.a, b: u.verse.a} : null}; },
+  uk: id => { const [k, l] = id.split('|'); const u = ALL[k] && ALL[k].unknown.find(x => x.lemma === l); return u && {t: T('كلمة من جذرٍ تعرفه', 'كلمة من جذرٍ تعرفينه'), big: u.verse ? u.verse.word : u.lemma, bagWord: u.lemma, bagMeaning: u.meaning, body: [`${u.lemma}: ${u.meaning}`, u.verse ? `في القرآن: ${vsnip(u.verse)}` : ''], quiet: u.verse ? [vsnip(u.verse), u.verse.word] : [], qv: u.verse ? {s: u.verse.s, a: u.verse.a, b: u.verse.a} : null, vq: u.verse || null}; },
   hk: id => { const x = HIK.find(q => q.text === id); return x && {t: x.kind || 'مثل', big: x.text, body: [`معناه: ${x.meaning}`, x.when ? `نقوله ${x.when.replace(/^عندما/, 'عندما')}` : '']}; },
   rl: id => { const [k, q] = id.split('|'); const P = ALL[k]; const r = P && P.roles.find(x => x.q === q); if (!r) return null; const exact = P.family.filter(x => x.lemma === r.a), loose = P.family.filter(x => strip(x.lemma) === strip(r.a)); const f = exact[0] || (loose.length === 1 ? loose[0] : null); return {t: `من جذر ${P.root}`, big: r.a, bagWord: r.a, bagMeaning: f ? f.meaning : r.q.replace(/؟$/, ''), reason: f ? `«${r.a}» معناها: ${f.meaning}` : `«${r.a}»: ${r.q.replace(/؟$/, '')}`, body: [`${r.q.replace(/؟$/, '')}؟ ← ${r.a}`, f ? `معناها: ${f.meaning}` : '', f && f.sentence ? f.sentence : '']}; },
   wh: id => { const x = HAD.items.find(q => q.id === id); return x && {t: x.catName || 'من القائل', big: x.focus, body: [`القائل: ${x.speaker || WHO_L[x.cat]}`, x.meaning ? `معناه: ${x.meaning}` : '', x.bookName ? `${x.bookName} ${x.ref || ''}` : ''], quiet: [x.bookName ? `${x.bookName} ${x.ref || ''}` : '']}; },
@@ -2519,11 +2546,11 @@ const LEARN = {
   ajc: id => { const x = (AJ.counts || []).find(c => c.q === id); return x && {t: 'من نظم الآجرومية', big: `${x.q}: ${x.n}`, body: [x.items.join('، ')]}; },
   ajd: id => { const x = AJ.defs.find(d => d.term === id); return x && {t: 'من الآجرومية', big: x.term, body: [`قال ابن آجرّوم: ${x.d}`]}; },
   drv: id => { const [k, l] = id.split('|'); const P = ALL[k]; const f = P && P.family.find(x => x.lemma === l); return f && {t: `من جذر ${P.root}، على وزن ${dvPattern(f)}`, big: f.lemma, bagWord: f.lemma, bagMeaning: f.meaning, body: [`معناها: ${f.meaning}`, f.sentence || '']}; },
-  cnj: id => { const x = CJ.items.find(y => cjId(y) === id); return x && {t: `تصريف «${x.lemma}» في ${x.aspectName}`, big: `${x.pron}: ${cjDisp(x.form)}`, body: [x.verse ? `في القرآن: ${vsnip(x.verse)}` : ''], quiet: x.verse ? [vsnip(x.verse)] : []}; },
+  cnj: id => { const x = CJ.items.find(y => cjId(y) === id); return x && {t: `تصريف «${x.lemma}» في ${x.aspectName}`, big: `${x.pron}: ${cjDisp(x.form)}`, body: [x.verse ? `في القرآن: ${vsnip(x.verse)}` : ''], quiet: x.verse ? [vsnip(x.verse)] : [], vq: x.verse || null}; },
   irb: id => { const x = irbFind(id); return x && {t: 'الإعراب', big: x.s.sentence, body: [`«${x.w.w}»: ${x.w.i}`]}; },
   sha: id => { const x = SH.abyat.find(q => q.id === id); return x && {t: `بيت لـ${x.poet}`, big: x.verses.map(v => `${v.a} ۞ ${v.b}`).join('\n'), body: [x.meaning ? `معناه: ${x.meaning}` : '']}; },
   pml: id => { const [qid, li] = id.split('|'); const q = SH.qasaid.find(x => x.id === qid); const l = q && q.lines[+li]; return l && {t: `${q.title}، ${q.poet}`, big: l.text, body: [q.lesson || '']}; },
-  fill: id => { const [k, sa, w] = id.split('|'); let v = null; ALL[k] && ALL[k].family.forEach(f => f.verses.forEach(x => { if (`${x.s}:${x.a}` === sa && strip(x.word) === w) v = x; })); return v && {t: `سورة ${v.name}، الآية ${v.a}`, big: snip(v.text, v.word, 7), body: [`⟨انتبه|انتبهي⟩ للكلمة: ${v.word}`], quiet: [snip(v.text, v.word, 7), `⟨انتبه|انتبهي⟩ للكلمة: ${v.word}`], qv: {s: v.s, a: v.a, b: v.a}}; },
+  fill: id => { const [k, sa, w] = id.split('|'); let v = null; ALL[k] && ALL[k].family.forEach(f => f.verses.forEach(x => { if (`${x.s}:${x.a}` === sa && strip(x.word) === w) v = x; })); return v && {t: `سورة ${v.name}، الآية ${v.a}`, big: snip(v.text, v.word, 7), qbig: {s: v.s, a: v.a, mark: v.qw}, body: [`⟨انتبه|انتبهي⟩ للكلمة: ${v.word}`], quiet: [snip(v.text, v.word, 7), `⟨انتبه|انتبهي⟩ للكلمة: ${v.word}`], qv: {s: v.s, a: v.a, b: v.a}}; },
   dct: id => { const x = DCT.find(y => strip(y.w) === id); return x && {t: 'كلمة', big: x.w, bagWord: x.w, bagMeaning: x.m, body: [`معناها: ${x.m}`]}; },
 };
 LEARN.shl = LEARN.sha;
@@ -2645,7 +2672,7 @@ function recCardPick(){
 function memoVerseOfDay(){
   const set = memoSet(), all = []; (DATA.quran && DATA.quran.pages || []).forEach(pg => pg.ayat.forEach(x => { if (set.has(`${x[0]}:${x[1]}`) && x[2] && x[2].split(/\s+/).length <= (K().age <= 8 ? 14 : 30)) all.push(x); }));
   if (!all.length) return null; const x = all[(dayN() * 7 + kid) % all.length];
-  return {kind: 'آية', ref: `${SNAME(x[0])} ${AR_NUM(x[1])}`, text: x[2], quran: true, qv: hasH(x[0], x[1]) ? {s: x[0], a: x[1], b: x[1]} : null};
+  return {kind: 'آية', ref: `${SNAME(x[0])} ${AR_NUM(x[1])}`, text: x[2], quran: true, qa: {s: x[0], a: x[1]}, qv: hasH(x[0], x[1]) ? {s: x[0], a: x[1], b: x[1]} : null};
 }
 let TRIP = null;
 /* «قارئ الأسبوع» chosen by the parents in the corner (the week runs from Saturday): every child's oasis shows it */
@@ -2871,7 +2898,7 @@ function glossHtml(gl){ return `<p class="hgloss"><span lang="zh-Hant">${esc(gl.
 function ageWords(n){ return n >= 3 && n <= 10 ? `${n} سنوات` : `${n} سنة`; }
 function learnView(C, c){
   C.appendChild(talkRow(c.story ? CL.listen() : CL.learn(), {say: false}));
-  const card = el('div','kcard learn'); card.innerHTML = `<span class="chip" style="align-self:center">📖 ${esc(c.t || '')}</span>${c.swatch ? `<span style="align-self:center;width:56px;height:56px;border-radius:50%;background:${c.swatch};border:2px solid var(--line)"></span>` : ''}${c.big ? `<p class="kq big" style="font-family:var(--f-q)">${esc(c.big).replace(/ ۞ /g, '<br>').replace(/\n/g, '<br><br>')}</p>` : ''}${c.body.map(b => `<p class="lrn">${esc(b)}</p>`).join('')}${c.words && c.words.length ? `<div class="kwords">${c.words.map(w => `<span>${esc(w)}</span>`).join('')}</div>` : ''}`;
+  const card = el('div','kcard learn'); card.innerHTML = `<span class="chip" style="align-self:center">📖 ${esc(c.t || '')}</span>${c.swatch ? `<span style="align-self:center;width:56px;height:56px;border-radius:50%;background:${c.swatch};border:2px solid var(--line)"></span>` : ''}${(qh => qh ? `<p class="kq big q qp">${qh}</p>${c.qbig.ref ? `<p class="ref" style="margin:0;text-align:center">${esc(c.qbig.ref)}</p>` : ''}` : c.big ? `<p class="kq big" style="font-family:var(--f-q)">${esc(c.big).replace(/ ۞ /g, '<br>').replace(/\n/g, '<br><br>')}</p>` : '')(c.qbig ? qpcRange(c.qbig.s, c.qbig.a, c.qbig.b, c.qbig.mark ? {mark: c.qbig.mark} : null) : null)}${c.body.map(b => /^في القرآن:/.test(b) && c.vq && QPC[`${c.vq.s}:${c.vq.a}`] ? `<p class="lrn" style="margin-bottom:0">في القرآن:</p>${verseHtml(c.vq)}` : `<p class="lrn">${esc(b)}</p>`).join('')}${c.words && c.words.length ? `<div class="kwords">${c.words.map(w => `<span>${esc(w)}</span>`).join('')}</div>` : ''}`;
   { const pc = tier() === 'small' ? picOf(c.bagWord) : ''; if (pc){ const big = card.querySelector('.kq.big'); const p = el('p','pic', pc); p.setAttribute('aria-hidden', 'true'); (big ? big : card.firstChild).insertAdjacentElement('beforebegin', p); } }
   { const gl = glossOf(c); if (gl){ const big = card.querySelector('.kq.big'); (big || card.firstChild).insertAdjacentHTML('afterend', glossHtml(gl)); } }
   const quiet = new Set((c.quiet || []).concat(c.body.filter(b => /^في القرآن:/.test(b))));
@@ -2949,14 +2976,14 @@ function seenCard(C, c){
 }
 function recCard(C, c){
   const it = c.recItem; C.appendChild(talkRow(CL.recAsk()));
-  const card = el('div','kcard'); card.innerHTML = `<span class="chip" style="align-self:center">${esc(it.kind)} · ${esc(it.ref)}</span><p class="kq" style="font-family:var(--f-q)">${esc(it.text).replace(' ۞ ', '<br>')}</p>`;
+  const card = el('div','kcard'); card.innerHTML = `<span class="chip" style="align-self:center">${esc(it.kind)} · ${esc(it.ref)}</span>${(r => r ? `<p class="kq q qp">${r}</p>` : `<p class="kq" style="font-family:var(--f-q)">${esc(it.text).replace(' ۞ ', '<br>')}</p>`)(it.quran && it.qa ? qpcRun(it.qa.s, it.qa.a) : null)}`;
   if (it.qv){ const rb = el('button','tiny', RES('▶ ⟨استمع|استمعي⟩ إليها بصوت الحصري أولًا')); rb.type = 'button'; rb.addEventListener('click', () => recite(rb, it.qv)); card.appendChild(rb); }
   else if (!it.quran) card.querySelector('.kq').appendChild(hearBtn(it.text));   /* a verse is never read by the speech engine */
   C.appendChild(card);
   const mb = el('div'); C.appendChild(mb); const next = el('button','bigplay','التالي ◀'); next.type = 'button'; next.hidden = true; C.appendChild(next);
   const skip = el('button','tiny', T('تخطَّ هذه المرة', 'تخطَّي هذه المرة')); skip.type = 'button'; C.appendChild(skip);
   micWidget(mb, {label: T('اضغط وسجّل', 'اضغطي وسجّلي'), onSaved: async blob => { if (!document.body.contains(mb) || TRIP.cards[TRIP.i] !== c && next.hidden) return;
-    SAVING.add(c); try { await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid, kidName: K().name, kind: it.kind, ref: it.ref, text: it.text, date: today(), type: blob.type || 'audio/webm', blob, status: 'pending', notes: [], source: 'local'}); }
+    SAVING.add(c); try { await recPut({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid, kidName: K().name, kind: it.kind, ref: it.ref, text: it.text, ...(it.quran && it.qa ? {qa: {s: it.qa.s, a: it.qa.a}} : {}), date: today(), type: blob.type || 'audio/webm', blob, status: 'pending', notes: [], source: 'local'}); }
     catch (e) { const er = el('p','fb bad', 'تعذّر حفظ التسجيل على هذا الجهاز. ⟨اضغط|اضغطي⟩ «⟨تخطَّ|تخطَّي⟩» و⟨أكمل|أكملي⟩.'); mb.appendChild(er); return; } finally { SAVING.delete(c); }
     if (TRIP.cards[TRIP.i] !== c) return; chime(true); cmpHappy(); say(CL.recDone()); if (!next.hidden) return; store.set(`dates:${kid}`, dates() + 2); TRIP.res.push(true); TRIP.i++; tripSave(); next.hidden = false; skip.remove(); }});
   const adv = () => { voiceStop(); renderTrip(); window.scrollTo({top: 0}); };
