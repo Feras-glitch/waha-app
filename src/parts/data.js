@@ -3,6 +3,31 @@ var AR='٠١٢٣٤٥٦٧٨٩';
 function n2a(n){return String(n).replace(/\d/g,function(d){return AR[d];});}
 function fmt(s){return String(s).replace(/\{([^}]+)\}/g,'<mark>$1</mark>').replace(/\[([^\]]+)\]/g,'<b class="key">$1</b>');}
 function plain(s){return String(s).replace(/[{}\[\]]/g,'');}
+/* 2.13: where a lesson's words sit in the Mushaf's glyphs (engine.js draws them, the build checks every verse with it). The words
+   are found by their consonants, the same in the written and the Mushaf spelling (اسْطَاعُوا = ٱسْطَٰعُوٓا۟), from the start of a word
+   of the ayah to the end of one. Q: "s:a" -> [page, glyphs, the Tanzil text]. Returns null when the verse cannot be placed. */
+function qSk(w){return String(w).replace(/[\u0640\u064B-\u065F\u0670\u06D6-\u06ED]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ة/g,'ت').replace(/[اويىءئؤ]/g,'');}
+/* the words of a lesson's text without its marks: whether the lesson colours each (mk), and its own markup (a {…} over several
+   words given to each word, so one can be shown alone); a blank «ـــــ» stands for the words of the answer (bl) */
+function kzWords(t,ans){var out=[],open=false;
+  String(t).replace(/۝/g,' ').split(/\s+/).forEach(function(w){ if(!w) return;
+    if(w==='ـــــ'){ String(ans||'').split(/\s+/).forEach(function(x){ if(x) out.push({bare:x,bl:true,src:x}); }); return; }
+    var was=open,mk=was,i,c; for(i=0;i<w.length;i++){c=w.charAt(i); if(c==='{'){open=true;mk=true;} else if(c==='}') open=false; else if(c==='[') mk=true;}
+    out.push({bare:w.replace(/[{}\[\]]/g,''),mk:mk,src:(was?'{':'')+w+(open?'}':'')}); });
+  return out;}
+function kzPlace(v,Q){
+  var b=v.a2||v.a,x,q,ay=[],tk=[],st=[],S='',L='',pos,from=0,p,raw=String(v.raw||v.t),ws;
+  for(x=v.a;x<=b;x++){ q=Q[v.s+':'+x]; if(!q) return null; ay.push({x:x,q:q,hl:{},bl:{}});
+    q[2].split(' ').forEach(function(t,j){ tk.push([ay.length-1,j]); st.push(S.length); S+=qSk(t); }); }
+  st.push(S.length);
+  ws=kzWords(raw,v.ans); ws.forEach(function(w){ w.k=qSk(w.bare); L+=w.k; });
+  if(!L) return null;
+  while((pos=S.indexOf(L,from))>=0){ if(st.indexOf(pos)>=0&&st.indexOf(pos+L.length)>=0) break; from=pos+1; }
+  if(pos<0) return null;
+  p=pos; ws.forEach(function(w){ var p0=p,p1=p+w.k.length; p=p1; if(!(w.mk||w.bl)||p1===p0) return;
+    tk.forEach(function(t,k){ if(st[k]<p1&&st[k+1]>p0) ay[t[0]][w.bl?'bl':'hl'][t[1]]=1; }); });
+  return {ay:ay,ws:ws,blank:raw.indexOf('ـــــ')>=0};
+}
 var STAR='<svg viewBox="0 0 24 24" aria-hidden="true"><rect class="s" x="5.5" y="5.5" width="13" height="13"/><rect class="s" x="5.5" y="5.5" width="13" height="13" transform="rotate(45 12 12)"/><circle class="hole" cx="12" cy="12" r="2.6"/></svg>';
 var BACK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
 var SPEAKER='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M15.5 9a4 4 0 0 1 0 6"/><path d="M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>';

@@ -93,6 +93,15 @@ assert js.count('/*@HS_VERSES@*/{}') == 1
 js = js.replace('/*@HS_VERSES@*/{}', json.dumps({v['id']: [v['text'], v.get('stationTitle', '')] for v in _hs}, ensure_ascii=False, separators=(',', ':')))
 assert js.count("/*@EXPORT_CSS@*/''") == 1
 js = js.replace("/*@EXPORT_CSS@*/''", json.dumps(export_css, ensure_ascii=False))
+# the verses of the chambers in the Mushaf's own script (2.13): the glyphs and the Tanzil text of every ayah they name
+sys.path.insert(0, P('tools'))
+import waha_build
+assert js.count('/*@KZ_QPC@*/{}') == 1
+KZQ, KZQ_PAGES = waha_build.qpc_for_chambers(js)
+js = js.replace('/*@KZ_QPC@*/{}', json.dumps(KZQ, ensure_ascii=False, separators=(',', ':')))
+KZQ_N, _kzq_bad = waha_build.check_chamber_verses(KZQ)
+if _kzq_bad:
+    raise SystemExit('kunuz: verses the Mushaf script cannot place:\n  ' + '\n  '.join(_kzq_bad[:40]))
 assert '</script' not in js.lower().replace('<\\/script', ''), 'raw </script> inside JS'
 node_check('kunuz', '(function(){\n' + js + '\n})();')
 shell = rd('parts/shell.html')
@@ -108,9 +117,7 @@ if kunuz.index('src="../js/guard.js"') < kunuz.index('src="../js/android-shim.js
 write('kunuz/index.html', kunuz)
 
 # ---------- the oasis (front page) ----------
-sys.path.insert(0, P('tools'))
-import waha_build
-waha_build.build(icon=ICON, csp=CSP_META)
+waha_build.build(icon=ICON, csp=CSP_META, extra_pages=KZQ_PAGES)
 _oasis = open(os.path.join(DIST, 'index.html'), encoding='utf-8').read()
 if CSP_META not in _oasis:
     raise SystemExit('the oasis page has no CSP')
@@ -187,4 +194,4 @@ node_check('sw', sw)
 write('sw.js', sw)
 
 size = sum(os.path.getsize(os.path.join(b, f)) for b, _, fs in os.walk(DIST) for f in fs)
-print('kunuz %d KB · product %d files, %d KB · sw waha-%s' % (len(kunuz.encode('utf-8')) // 1024, len(assets), size // 1024, version))
+print('kunuz %d KB, %d verses in the Mushaf script · product %d files, %d KB · sw waha-%s' % (len(kunuz.encode('utf-8')) // 1024, KZQ_N, len(assets), size // 1024, version))
